@@ -1,0 +1,6 @@
+{
+  "name": "Hệ thống quản lý Ký túc xá Homestay",
+  "description": "Hệ thống quản lý ký túc xá, đặt phòng, thanh toán dịch vụ và bàn giao tài sản, trả phòng liên thông toàn diện dành cho khách thuê, sale, quản lý và kế toán.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans";
+  
+  --animate-float-slow: float-slow 8s ease-in-out infinite;
+  --animate-float-delayed: float-delayed 10s ease-in-out infinite;
+  --animate-float-fast: float-fast 6s ease-in-out infinite;
+  --animate-float-rot: float-rot 12s ease-in-out infinite;
+
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-18px) rotate(4deg); }
+  }
+  @keyframes float-delayed {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-24px) rotate(-6deg); }
+  }
+  @keyframes float-fast {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-12px) rotate(3deg); }
+  }
+  @keyframes float-rot {
+    0%, 100% { transform: translateY(0px) rotate(-4deg); }
+    50% { transform: translateY(-20px) rotate(8deg); }
+  }
+}
+
+@layer base {
+  :root {
+    --color-primary: #B7705F;
+    --color-secondary: #D29F91;
+    --color-accent: #EAD3CC;
+  }
+  
+  html {
+    font-family: var(--font-sans);
+    color: #222222;
+  }
+
+  body {
+    background-color: #FAF5F3;
+  }
+}
+
+@layer utilities {
+  .text-title {
+    color: #222222;
+  }
+  .text-subtitle {
+    color: #666666;
+  }
+}

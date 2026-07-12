@@ -1,512 +1,568 @@
 import React, { useState, useEffect } from 'react';
-import { Search, PenSquare, ArrowLeft, Save, Plus, Trash2, AlertTriangle, CheckCircle, Clock, Send, Info, Eye } from 'lucide-react';
+import { Search, Save, Trash2, AlertTriangle, Clock, Send, Eye, PenSquare, Filter, ChevronDown } from 'lucide-react';
 
-interface Asset {
+// Bản ghi phân bổ tài sản theo phòng (Manager)
+interface AssetRecord {
   id: string;
+  maTaiSan: string;
+  tenTaiSan: string;
+  branch: string;
   room: string;
-  item: string;
+  soLuong: number;
+  occupant: string;
   condition: string;
   lastUpdated: string;
-  occupant: string;
   notes?: string;
   isPendingDeletion?: boolean;
   deletionReason?: string;
+  isVirtual?: boolean;
 }
 
-const DEFAULT_ASSETS: Asset[] = [
-  { id: 'TS-102-01', room: 'P.102', item: 'Máy lạnh Daikin 1.5HP', condition: 'Tốt', lastUpdated: '15/10/2023', occupant: 'Trần Văn B', notes: 'Máy chạy êm, làm lạnh tốt.' },
-  { id: 'TS-102-02', room: 'P.102', item: 'Tủ lạnh Aqua 90L', condition: 'Hư hỏng nhẹ', lastUpdated: '10/09/2023', occupant: 'Trần Văn B', notes: 'Bị rỉ nước nhẹ ở khay đá.' },
-  { id: 'TS-201-01', room: 'P.201', item: 'Giường tầng gỗ', condition: 'Tốt', lastUpdated: '20/10/2023', occupant: 'Lê Thị C', notes: 'Khung chắc chắn, không mối mọt.' },
+// Manager chỉ quản lý chi nhánh của mình
+const MANAGER_BRANCH = 'Chi nhánh 1';
+
+const DEFAULT_RECORDS: AssetRecord[] = [
+  { id: 'MR-001', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', branch: 'Chi nhánh 1', room: 'P.102', soLuong: 1, occupant: 'Trần Văn B', condition: 'Tốt', lastUpdated: '15/10/2023', notes: 'Máy chạy êm, làm lạnh tốt.' },
+  { id: 'MR-002', maTaiSan: 'TS-002', tenTaiSan: 'Tủ lạnh Aqua 90L', branch: 'Chi nhánh 1', room: 'P.102', soLuong: 1, occupant: 'Trần Văn B', condition: 'Hư hỏng nhẹ', lastUpdated: '10/09/2023', notes: 'Bị rỉ nước nhẹ ở khay đá.' },
+  { id: 'MR-003', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', branch: 'Chi nhánh 1', room: 'P.103', soLuong: 1, occupant: 'Phạm Thị D', condition: 'Tốt', lastUpdated: '05/11/2023' },
+  { id: 'MR-004', maTaiSan: 'TS-004', tenTaiSan: 'Bình nóng lạnh Ariston 20L', branch: 'Chi nhánh 1', room: 'P.101', soLuong: 1, occupant: 'Nguyễn Văn A', condition: 'Tốt', lastUpdated: '01/10/2023' },
+  { id: 'MR-005', maTaiSan: 'TS-003', tenTaiSan: 'Giường tầng gỗ', branch: 'Chi nhánh 1', room: 'P.101', soLuong: 2, occupant: 'Nguyễn Văn A', condition: 'Tốt', lastUpdated: '05/11/2023' },
 ];
 
+type ModalMode = 'view' | 'edit' | null;
+
+const conditionCls = (cond: string, isPending?: boolean) => {
+  if (isPending) return 'bg-[#FAF5F3] text-[#8C4A3A] border border-[#EAD3CC]';
+  switch (cond) {
+    case 'Tốt': return 'bg-green-50 text-green-700 border border-green-200';
+    case 'Hư hỏng nhẹ': return 'bg-orange-50 text-orange-700 border border-orange-200';
+    case 'Cần thay thế': return 'bg-red-50 text-red-700 border border-red-100';
+    case 'Đã thanh lý': return 'bg-gray-100 text-gray-500 border border-gray-200';
+    default: return 'bg-gray-50 text-gray-500 border border-gray-200';
+  }
+};
+
 export default function AssetsManagement() {
-  // State for assets with localStorage persistence
-  const [assets, setAssets] = useState<Asset[]>(() => {
-    const saved = localStorage.getItem('manager_assets');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return DEFAULT_ASSETS;
+  // ── State: data ──────────────────────────────────────────────────────────
+  const [records, setRecords] = useState<AssetRecord[]>(() => {
+    const s = localStorage.getItem('asset_records_manager_v2');
+    if (s) try { return JSON.parse(s); } catch {}
+    return DEFAULT_RECORDS;
   });
 
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [showAddAsset, setShowAddAsset] = useState(false);
+  const [adminRecords, setAdminRecords] = useState<any[]>(() => {
+    const s = localStorage.getItem('asset_records_admin_v2');
+    if (s) try { return JSON.parse(s); } catch {}
+    return [];
+  });
+
+  // ── State: UI ────────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterRoom, setFilterRoom] = useState('Tất cả');
   const [filterCondition, setFilterCondition] = useState('Tất cả');
+  const [selectedRecord, setSelectedRecord] = useState<AssetRecord | null>(null);
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+  
+  const [isRoomDropdownOpen, setIsRoomDropdownOpen] = useState(false);
+  const [roomSearchQuery, setRoomSearchQuery] = useState('');
 
-  // Form states for adding new asset
-  const [newItem, setNewItem] = useState('');
-  const [newRoom, setNewRoom] = useState('P.101');
-  const [newCondition, setNewCondition] = useState('Tốt');
-  const [newNotes, setNewNotes] = useState('');
-
-  // Form states for updating asset
+  // ── State: edit form ─────────────────────────────────────────────────────
   const [editRoom, setEditRoom] = useState('');
+  const [editSoLuong, setEditSoLuong] = useState<number | ''>('');
   const [editCondition, setEditCondition] = useState('');
   const [editNotes, setEditNotes] = useState('');
-  const [showDeleteRequestForm, setShowDeleteRequestForm] = useState(false);
+  const [showDeleteForm, setShowDeleteForm] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
 
-  // Save to localStorage when assets change
+  // ── Persistence ───────────────────────────────────────────────────────────
+  const saveRecords = (updated: AssetRecord[]) => {
+    setRecords(updated);
+    localStorage.setItem('asset_records_manager_v2', JSON.stringify(updated));
+  };
+
   useEffect(() => {
-    localStorage.setItem('manager_assets', JSON.stringify(assets));
-  }, [assets]);
-
-  // Handle adding new asset
-  const handleAddAsset = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItem.trim()) {
-      alert('Vui lòng nhập tên tài sản!');
-      return;
-    }
-
-    const cleanRoomNum = newRoom.replace(/[^0-9]/g, '');
-    const randomNum = Math.floor(10 + Math.random() * 90);
-    const generatedId = `TS-${cleanRoomNum}-${randomNum}`;
-    const today = new Date().toLocaleDateString('vi-VN');
-
-    const newAsset: Asset = {
-      id: generatedId,
-      room: newRoom,
-      item: newItem.trim(),
-      condition: newCondition,
-      lastUpdated: today,
-      occupant: 'Chưa có',
-      notes: newNotes.trim()
+    const sync = () => {
+      const s = localStorage.getItem('asset_records_manager_v2');
+      if (s) try { setRecords(JSON.parse(s)); } catch {}
+      const sa = localStorage.getItem('asset_records_admin_v2');
+      if (sa) try { setAdminRecords(JSON.parse(sa)); } catch {}
     };
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, []);
 
-    setAssets(prev => [newAsset, ...prev]);
-    
-    // Reset form
-    setNewItem('');
-    setNewRoom('P.101');
-    setNewCondition('Tốt');
-    setNewNotes('');
-    setShowAddAsset(false);
-    alert(`Đã thêm thành công tài sản mới với Mã: ${generatedId}`);
+  // ── Derived: chỉ hiển thị tài sản thuộc chi nhánh manager ───────────────
+  const myRecords = records.filter(r => r.branch === MANAGER_BRANCH);
+  const myAdminRecords = adminRecords.filter(r => r.branch === MANAGER_BRANCH);
+  
+  // Tính toán số lượng chưa phân bổ
+  const adminTotals: Record<string, number> = {};
+  const adminNames: Record<string, string> = {};
+  myAdminRecords.forEach(r => {
+    adminTotals[r.maTaiSan] = (adminTotals[r.maTaiSan] || 0) + r.soLuong;
+    adminNames[r.maTaiSan] = r.tenTaiSan;
+  });
+
+  const managerTotals: Record<string, number> = {};
+  myRecords.forEach(r => {
+    managerTotals[r.maTaiSan] = (managerTotals[r.maTaiSan] || 0) + r.soLuong;
+  });
+
+  const unallocatedRecords: AssetRecord[] = [];
+  Object.keys(adminTotals).forEach(maTaiSan => {
+    const unallocated = adminTotals[maTaiSan] - (managerTotals[maTaiSan] || 0);
+    if (unallocated > 0) {
+      unallocatedRecords.push({
+        id: `UNALLOC_${maTaiSan}`,
+        maTaiSan,
+        tenTaiSan: adminNames[maTaiSan],
+        branch: MANAGER_BRANCH,
+        room: 'Chưa phân bổ',
+        soLuong: unallocated,
+        occupant: '--',
+        condition: 'Tốt',
+        lastUpdated: '-',
+        isVirtual: true
+      } as AssetRecord);
+    }
+  });
+
+  const allDisplayRecords = [...unallocatedRecords, ...myRecords];
+  const roomOptions = ['Tất cả', ...Array.from(new Set(myRecords.map(r => r.room))).sort()];
+
+  const filtered = allDisplayRecords.filter(r => {
+    const q = searchTerm.toLowerCase();
+    const matchSearch = r.tenTaiSan.toLowerCase().includes(q)
+      || r.maTaiSan.toLowerCase().includes(q)
+      || r.room.toLowerCase().includes(q);
+    const matchRoom = filterRoom === 'Tất cả' || r.room === filterRoom;
+    const matchCond = filterCondition === 'Tất cả' || r.condition === filterCondition;
+    return matchSearch && matchRoom && matchCond;
+  });
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleOpenView = (r: AssetRecord) => {
+    setSelectedRecord(r);
+    setModalMode('view');
   };
 
-  // Sync edit form states when an asset is selected
-  const handleOpenEdit = (asset: Asset) => {
-    setSelectedAsset(asset);
-    setEditRoom(asset.room);
-    setEditCondition(asset.condition);
-    setEditNotes(asset.notes || '');
-    setShowDeleteRequestForm(false);
+  const handleOpenEdit = (r: AssetRecord) => {
+    setSelectedRecord(r);
+    setEditRoom(r.isVirtual ? '' : r.room);
+    setEditSoLuong(r.soLuong);
+    setEditCondition(r.condition);
+    setEditNotes(r.notes || '');
+    setShowDeleteForm(false);
     setDeleteReason('');
+    setIsRoomDropdownOpen(false);
+    setRoomSearchQuery('');
+    setModalMode('edit');
   };
 
-  // Handle saving edits
+  const closeModal = () => { setModalMode(null); setSelectedRecord(null); };
+
   const handleSaveEdit = () => {
-    if (!selectedAsset) return;
-
-    setAssets(prev => prev.map(item => {
-      if (item.id === selectedAsset.id) {
-        return {
-          ...item,
-          room: editRoom,
-          condition: editCondition,
-          notes: editNotes,
-          lastUpdated: new Date().toLocaleDateString('vi-VN')
-        };
-      }
-      return item;
-    }));
-
-    setSelectedAsset(null);
-    alert('Đã lưu cập nhật thông tin tài sản thành công!');
-  };
-
-  // Submit Deletion Request to Admin
-  const handleSubmitDeleteRequest = () => {
-    if (!selectedAsset) return;
-    if (!deleteReason.trim()) {
-      alert('Vui lòng nhập lý do xóa tài sản (ví dụ: dữ liệu nhập sai hoàn toàn)!');
-      return;
+    if (!selectedRecord) return;
+    const qty = parseInt(editSoLuong as string) || 0;
+    const isVirtual = selectedRecord.isVirtual;
+    
+    if (qty <= 0) {
+       if (!isVirtual) {
+          saveRecords(records.filter(r => r.id !== selectedRecord.id));
+       }
+       closeModal();
+       return;
     }
 
-    setAssets(prev => prev.map(item => {
-      if (item.id === selectedAsset.id) {
-        return {
-          ...item,
-          isPendingDeletion: true,
-          deletionReason: deleteReason,
-          condition: 'Chờ duyệt xóa',
-          lastUpdated: new Date().toLocaleDateString('vi-VN')
-        };
-      }
-      return item;
-    }));
+    if (!editRoom.trim() || editRoom === 'Chưa phân bổ') {
+       alert('Vui lòng nhập tên phòng!');
+       return;
+    }
 
-    setSelectedAsset(null);
-    alert(`Đã gửi yêu cầu xóa vĩnh viễn tài sản ${selectedAsset.id} do nhập sai thông tin lên Admin phê duyệt!`);
+    const unallocatedAmount = adminTotals[selectedRecord.maTaiSan] - (managerTotals[selectedRecord.maTaiSan] || 0);
+
+    if (isVirtual) {
+       if (qty > selectedRecord.soLuong) {
+          alert('Số lượng phân bổ không được lớn hơn số lượng hiện có!');
+          return;
+       }
+       const newRecord: AssetRecord = {
+          id: 'MR-' + Date.now(),
+          maTaiSan: selectedRecord.maTaiSan,
+          tenTaiSan: selectedRecord.tenTaiSan,
+          branch: MANAGER_BRANCH,
+          room: editRoom,
+          soLuong: qty,
+          occupant: '--',
+          condition: editCondition,
+          lastUpdated: new Date().toLocaleDateString('vi-VN'),
+          notes: editNotes
+       };
+       saveRecords([...records, newRecord]);
+    } else {
+       const maxAllowed = selectedRecord.soLuong + unallocatedAmount;
+       if (qty > maxAllowed) {
+          alert(`Số lượng tối đa có thể cập nhật là ${maxAllowed}`);
+          return;
+       }
+       saveRecords(records.map(r => r.id === selectedRecord.id
+         ? { ...r, room: editRoom, soLuong: qty, condition: editCondition, notes: editNotes, lastUpdated: new Date().toLocaleDateString('vi-VN') }
+         : r
+       ));
+    }
+    closeModal();
   };
 
-  // Quick action: Set status to liquidated directly (Business liquidation)
-  const handleMarkStatus = (status: 'Đã thanh lý') => {
-    if (!selectedAsset) return;
-    
-    setAssets(prev => prev.map(item => {
-      if (item.id === selectedAsset.id) {
-        return {
-          ...item,
-          condition: status,
-          isPendingDeletion: false, // Clear delete request since status is changed
-          lastUpdated: new Date().toLocaleDateString('vi-VN')
-        };
-      }
-      return item;
-    }));
-
-    setSelectedAsset(null);
-    alert(`Đã cập nhật trạng thái tài sản thành "${status}" thành công! Dữ liệu lịch sử vẫn được bảo toàn.`);
+  const handleSendDeleteRequest = () => {
+    if (!selectedRecord) return;
+    if (!deleteReason.trim()) { alert('Vui lòng nhập lý do yêu cầu xóa!'); return; }
+    saveRecords(records.map(r => r.id === selectedRecord.id
+      ? { ...r, isPendingDeletion: true, deletionReason: deleteReason, condition: 'Chờ duyệt xóa', lastUpdated: new Date().toLocaleDateString('vi-VN') }
+      : r
+    ));
+    closeModal();
+    alert(`Đã gửi yêu cầu xóa tài sản ${selectedRecord.maTaiSan} lên Admin phê duyệt!`);
   };
-
-  // Filtered Assets list
-  const filteredAssets = assets.filter(item => {
-    const matchesSearch = 
-      item.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.room.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesCondition = filterCondition === 'Tất cả' || item.condition === filterCondition;
-
-    return matchesSearch && matchesCondition;
-  });
 
   return (
     <div className="p-8 h-full max-w-7xl mx-auto">
-      {/* Page Header */}
-      <div className="flex justify-between items-end mb-8">
-         <div>
-            <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Quản lý tài sản</h1>
-            <p className="text-sm text-[#666666]">Xem danh sách, cập nhật tình trạng sử dụng hoặc lập biên bản thanh lý, hủy bỏ tài sản.</p>
-         </div>
-         <button onClick={() => setShowAddAsset(true)} className="px-4 py-2 bg-[#B7705F] text-white rounded-lg text-sm font-medium hover:bg-[#a06050] transition-colors flex items-center shadow-sm">
-            <Plus className="w-4 h-4 mr-2" /> Thêm tài sản mới
-         </button>
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Quản lý tài sản</h1>
+        <p className="text-sm text-[#666666]">
+          Xem và cập nhật tình trạng tài sản tại <strong className="text-[#8C4A3A]">{MANAGER_BRANCH}</strong>.
+          Việc thêm hoặc xóa tài sản do Admin quản lý.
+        </p>
       </div>
 
-
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-[#EAD3CC]/50 mb-6 flex flex-wrap gap-4 items-center">
-         <div className="flex-1 min-w-[300px] relative">
-            <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Tìm theo tên tài sản, mã tài sản hoặc phòng..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
-            />
-         </div>
-         <div className="flex items-center space-x-2">
-            <span className="text-xs font-semibold text-[#666666]">Tình trạng:</span>
-            <select 
-              value={filterCondition}
-              onChange={(e) => setFilterCondition(e.target.value)}
-              className="border border-gray-200 rounded-lg text-sm px-4 py-2 bg-white focus:outline-none focus:border-[#B7705F]"
-            >
-               <option value="Tất cả">Tất cả trạng thái</option>
-               <option value="Tốt">Tốt</option>
-               <option value="Hư hỏng nhẹ">Hư hỏng nhẹ</option>
-               <option value="Cần thay thế">Cần thay thế</option>
-               <option value="Đã thanh lý">Đã thanh lý</option>
-               <option value="Chờ duyệt xóa">Chờ duyệt xóa</option>
-            </select>
-         </div>
+      {/* ── Filter bar ─────────────────────────────────────────────────── */}
+      <div className="bg-white p-3.5 rounded-xl shadow-sm border border-[#EAD3CC]/50 mb-4 flex flex-wrap gap-3 items-center">
+        <div className="flex-1 min-w-[240px] relative">
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+          <input type="text" placeholder="Tìm theo tên, mã tài sản, phòng..." value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]" />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-4 h-4 text-[#999]" />
+          <select value={filterRoom} onChange={e => setFilterRoom(e.target.value)}
+            className="border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:border-[#B7705F]">
+            {roomOptions.map(r => <option key={r} value={r}>{r === 'Tất cả' ? 'Tất cả phòng' : r}</option>)}
+          </select>
+          <select value={filterCondition} onChange={e => setFilterCondition(e.target.value)}
+            className="border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:border-[#B7705F]">
+            <option value="Tất cả">Tất cả trạng thái</option>
+            <option value="Tốt">Tốt</option>
+            <option value="Hư hỏng nhẹ">Hư hỏng nhẹ</option>
+            <option value="Cần thay thế">Cần thay thế</option>
+            <option value="Đã thanh lý">Đã thanh lý</option>
+          </select>
+        </div>
       </div>
 
-      {/* Assets Table */}
+      {/* ── Table ──────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-[#EAD3CC]/50 overflow-hidden">
-         <table className="w-full text-left text-sm">
-            <thead className="bg-[#FAF5F3] text-[#666666]">
-               <tr>
-                  <th className="px-6 py-4 font-medium">Mã Tài Sản</th>
-                  <th className="px-6 py-4 font-medium">Tên Tài Sản</th>
-                  <th className="px-6 py-4 font-medium">Phòng</th>
-                  <th className="px-6 py-4 font-medium">Khách Đang Ở</th>
-                  <th className="px-6 py-4 font-medium">Trạng thái</th>
-                  <th className="px-6 py-4 font-medium text-right">Thao Tác</th>
-               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-               {filteredAssets.length === 0 ? (
-                 <tr>
-                    <td colSpan={6} className="text-center py-12 text-gray-400">Không tìm thấy tài sản nào phù hợp.</td>
-                 </tr>
-               ) : (
-                 filteredAssets.map((item, idx) => (
-                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-mono text-xs font-bold text-[#B7705F]">{item.id}</td>
-                      <td className="px-6 py-4 font-semibold text-gray-900">
-                         {item.item}
-                         {item.isPendingDeletion && (
-                           <span className="ml-2 inline-flex items-center px-1.5 py-0.5 bg-red-50 text-red-700 text-[10px] font-semibold rounded border border-red-200">
-                              Chờ Admin xóa
-                           </span>
-                         )}
-                      </td>
-                      <td className="px-6 py-4 text-[#666666] font-medium">{item.room}</td>
-                      <td className="px-6 py-4 text-[#666666] text-xs">{item.occupant}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded text-xs font-semibold ${
-                          item.condition === 'Tốt' ? 'bg-green-50 text-green-600' : 
-                          item.condition === 'Hư hỏng nhẹ' ? 'bg-orange-50 text-orange-600' :
-                          item.condition === 'Cần thay thế' ? 'bg-red-50 text-red-600' :
-                          item.condition === 'Đã thanh lý' ? 'bg-gray-100 text-gray-700 border border-gray-200' :
-                          'bg-purple-50 text-purple-700 border border-purple-200'
-                        }`}>
-                          {item.condition}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                         <button 
-                           onClick={() => handleOpenEdit(item)} 
-                           className="px-3.5 py-1.5 text-xs font-semibold text-[#B7705F] bg-orange-50 hover:bg-[#F3E1DC] rounded-lg transition-colors inline-block"
-                         >
-                            Cập nhật
-                         </button>
-                      </td>
-                   </tr>
-                 ))
-               )}
-            </tbody>
-         </table>
+        <table className="w-full text-left text-sm">
+          <thead className="bg-[#FAF5F3] text-[#666666]">
+            <tr>
+              <th className="px-5 py-3.5 font-semibold text-xs">Mã TS</th>
+              <th className="px-5 py-3.5 font-semibold text-xs">Tên tài sản</th>
+              <th className="px-5 py-3.5 font-semibold text-xs">Phòng</th>
+              <th className="px-5 py-3.5 font-semibold text-xs text-center">Số lượng</th>
+              <th className="px-5 py-3.5 font-semibold text-xs">Tình trạng</th>
+              <th className="px-5 py-3.5 font-semibold text-xs text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-12 text-gray-400 text-sm">
+                  Không tìm thấy tài sản phù hợp.
+                </td>
+              </tr>
+            ) : filtered.map(item => (
+              <tr key={item.id} className="hover:bg-[#FAF5F3]/40 transition-colors">
+                <td className="px-5 py-3 font-mono text-xs font-bold text-[#B7705F]">{item.maTaiSan}</td>
+                <td className="px-5 py-3">
+                  <p className="font-semibold text-gray-900 text-sm">{item.tenTaiSan}</p>
+                  {item.isPendingDeletion && (
+                    <span className="mt-0.5 inline-flex items-center px-1.5 py-0.5 bg-[#FAF5F3] text-[#8C4A3A] text-[10px] font-semibold rounded border border-[#EAD3CC]">
+                      Chờ Admin xóa
+                    </span>
+                  )}
+                </td>
+                <td className="px-5 py-3 text-sm text-[#555] font-medium">{item.room}</td>
+                <td className="px-5 py-3 text-sm text-gray-900 font-bold text-center">{item.soLuong}</td>
+                <td className="px-5 py-3">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${conditionCls(item.condition, item.isPendingDeletion)}`}>
+                    {item.isPendingDeletion ? 'Chờ duyệt xóa' : item.condition}
+                  </span>
+                </td>
+                <td className="px-5 py-3">
+                  <div className="flex items-center justify-end gap-0.5">
+                    <button onClick={() => handleOpenView(item)} title="Chi tiết"
+                      className="p-1.5 text-[#8C4A3A] hover:bg-[#EAD3CC]/40 rounded-lg transition-colors">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleOpenEdit(item)} title="Chỉnh sửa"
+                      className="p-1.5 text-[#555] hover:bg-gray-100 rounded-lg transition-colors">
+                      <PenSquare className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* Modal Add Asset */}
-      {showAddAsset && (
-         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <form onSubmit={handleAddAsset} className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
-               <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-[#8C4A3A]">Thêm tài sản mới</h2>
-                  <button type="button" onClick={() => setShowAddAsset(false)} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
-               </div>
-               <div className="p-6 space-y-4">
+      {/* ── Modal: View ────────────────────────────────────────────────── */}
+      {modalMode === 'view' && selectedRecord && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-[#8C4A3A]">Chi tiết tài sản</h2>
+                <p className="text-xs text-[#666] mt-0.5">Mã: {selectedRecord.maTaiSan}</p>
+              </div>
+              <button onClick={closeModal} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <span className="block text-xs font-bold text-[#666] mb-1">Tên tài sản</span>
+                <p className="text-base font-bold text-gray-900">{selectedRecord.tenTaiSan}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <span className="block text-xs font-bold text-[#666] mb-1">Phòng</span>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecord.room}</p>
+                </div>
+                {(() => {
+                  const unallocated = (adminTotals[selectedRecord.maTaiSan] || 0) - (managerTotals[selectedRecord.maTaiSan] || 0);
+                  return (
+                    <div>
+                      <span className="block text-xs font-bold text-[#666] mb-1">Số lượng</span>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {selectedRecord.soLuong}
+                        <span className="text-[#8C4A3A] font-normal ml-1">(Số lượng tồn: {unallocated})</span>
+                      </p>
+                    </div>
+                  );
+                })()}
+                <div>
+                  <span className="block text-xs font-bold text-[#666] mb-1">Cập nhật cuối</span>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecord.lastUpdated}</p>
+                </div>
+              </div>
+              <div>
+                <span className="block text-xs font-bold text-[#666] mb-1">Tình trạng</span>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${conditionCls(selectedRecord.condition, selectedRecord.isPendingDeletion)}`}>
+                  {selectedRecord.isPendingDeletion ? 'Chờ duyệt xóa' : selectedRecord.condition}
+                </span>
+              </div>
+              {selectedRecord.notes && (
+                <div>
+                  <span className="block text-xs font-bold text-[#666] mb-1">Ghi chú</span>
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs text-gray-700 leading-relaxed">{selectedRecord.notes}</div>
+                </div>
+              )}
+              {selectedRecord.isPendingDeletion && (
+                <div className="bg-[#FAF5F3] border border-[#EAD3CC] p-3 rounded-lg flex items-start gap-2">
+                  <Clock className="w-4 h-4 text-[#B7705F] shrink-0 mt-0.5 animate-pulse" />
                   <div>
-                     <label className="block text-sm font-semibold text-[#666666] mb-2">Tên tài sản</label>
-                     <input 
-                       type="text" 
-                       value={newItem}
-                       onChange={(e) => setNewItem(e.target.value)}
-                       required
-                       className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]" 
-                       placeholder="Ví dụ: Bình nóng lạnh Ariston 20L, Tivi LG 43inch..." 
-                     />
+                    <p className="text-xs font-bold text-[#8C4A3A]">Đang chờ Admin phê duyệt xóa</p>
+                    <p className="text-xs text-[#666] mt-0.5">Lý do: {selectedRecord.deletionReason}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <label className="block text-sm font-semibold text-[#666666] mb-2">Vị trí (Phòng)</label>
-                        <select 
-                          value={newRoom}
-                          onChange={(e) => setNewRoom(e.target.value)}
-                          className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]"
-                        >
-                           <option value="P.101">P.101</option>
-                           <option value="P.102">P.102</option>
-                           <option value="P.201">P.201</option>
-                           <option value="P.202">P.202</option>
-                           <option value="P.301">P.301</option>
-                           <option value="P.302">P.302</option>
-                        </select>
-                     </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-[#666666] mb-2">Tình trạng ban đầu</label>
-                        <select 
-                          value={newCondition}
-                          onChange={(e) => setNewCondition(e.target.value)}
-                          className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]"
-                        >
-                           <option value="Tốt">Tốt</option>
-                           <option value="Hư hỏng nhẹ">Hư hỏng nhẹ</option>
-                           <option value="Cần thay thế">Cần thay thế</option>
-                        </select>
-                     </div>
-                  </div>
-                  <div>
-                     <label className="block text-sm font-semibold text-[#666666] mb-2">Mô tả chi tiết / Ghi chú</label>
-                     <textarea 
-                       rows={3} 
-                       value={newNotes}
-                       onChange={(e) => setNewNotes(e.target.value)}
-                       className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F] resize-none" 
-                       placeholder="Nhập thông số kỹ thuật, số serial hoặc thông tin bổ sung..."
-                     />
-                  </div>
-               </div>
-               <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
-                  <button type="button" onClick={() => setShowAddAsset(false)} className="px-5 py-2.5 text-[#666666] font-medium hover:bg-gray-200 rounded-lg text-sm transition-colors">Hủy</button>
-                  <button type="submit" className="px-5 py-2.5 bg-[#B7705F] text-white font-medium rounded-lg text-sm shadow-sm hover:bg-[#a06050] transition-colors">Thêm</button>
-               </div>
-            </form>
-         </div>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+              <button onClick={() => handleOpenEdit(selectedRecord)}
+                className="px-3.5 py-2 text-[#666] hover:bg-gray-100 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5">
+                <PenSquare className="w-3.5 h-3.5" /> Chỉnh sửa
+              </button>
+              <button onClick={closeModal}
+                className="px-4 py-2 bg-[#FAF5F3] hover:bg-[#EAD3CC]/50 text-[#8C4A3A] rounded-lg text-xs font-semibold border border-[#EAD3CC] transition-colors">
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Modal Update Asset & Deletion Request Flow */}
-      {selectedAsset && (
-         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-               <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
-                  <div>
-                      <h2 className="text-xl font-bold text-[#8C4A3A]">Cập nhật thông tin tài sản</h2>
-                      <p className="text-xs text-[#666666] mt-0.5">{selectedAsset.item} • Mã: {selectedAsset.id}</p>
-                  </div>
-                  <button onClick={() => setSelectedAsset(null)} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
-               </div>
-               
-               <div className="p-6 overflow-y-auto space-y-6">
-                  {/* General details read-only */}
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <label className="block text-xs font-bold text-[#666666] mb-1.5 uppercase tracking-wider">Tên tài sản</label>
-                        <input type="text" className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-900 font-semibold" value={selectedAsset.item} readOnly />
-                     </div>
-                     <div>
-                        <label className="block text-xs font-bold text-[#666666] mb-1.5 uppercase tracking-wider">Mã tài sản</label>
-                        <input type="text" className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm font-mono font-bold text-gray-500" value={selectedAsset.id} readOnly />
-                     </div>
-                  </div>
-
-                  {/* Room & Condition editable */}
-                  <div className="grid grid-cols-2 gap-4">
-                     <div>
-                        <label className="block text-xs font-bold text-[#666666] mb-1.5 uppercase tracking-wider">Vị trí (Phòng)</label>
-                        <select 
-                          value={editRoom}
-                          onChange={(e) => setEditRoom(e.target.value)}
-                          className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]"
-                        >
-                           <option value="P.101">P.101</option>
-                           <option value="P.102">P.102</option>
-                           <option value="P.201">P.201</option>
-                           <option value="P.202">P.202</option>
-                           <option value="P.301">P.301</option>
-                           <option value="P.302">P.302</option>
-                        </select>
-                     </div>
-                     <div>
-                        <label className="block text-xs font-bold text-[#666666] mb-1.5 uppercase tracking-wider">Tình trạng tài sản</label>
-                        <select 
-                          value={editCondition}
-                          onChange={(e) => setEditCondition(e.target.value)}
-                          className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]"
-                        >
-                           <option value="Tốt">Tốt</option>
-                           <option value="Hư hỏng nhẹ">Hư hỏng nhẹ</option>
-                           <option value="Cần thay thế">Cần thay thế</option>
-                           <option value="Đã thanh lý">Đã thanh lý</option>
-                        </select>
-                     </div>
-                  </div>
-
-                  {/* Notes / Maintenance History */}
-                  <div>
-                     <label className="block text-xs font-bold text-[#666666] mb-1.5 uppercase tracking-wider">Mô tả tình trạng / Ghi chú sửa chữa</label>
-                     <textarea 
-                       rows={3} 
-                       value={editNotes}
-                       onChange={(e) => setEditNotes(e.target.value)}
-                       className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F] resize-none" 
-                       placeholder="Nhập chi tiết về tình trạng bảo trì, hỏng hóc hoặc lý do điều chỉnh..."
-                     />
-                  </div>
-
-                  {/* Pending delete request details if any */}
-                  {selectedAsset.isPendingDeletion && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">
-                       <p className="font-bold flex items-center">
-                          <Clock className="w-4 h-4 mr-1.5 animate-pulse text-red-600" />
-                          Tài sản đang trong danh sách chờ duyệt xóa của Admin
-                       </p>
-                       <p className="mt-1 text-xs">Lý do gửi yêu cầu: <strong className="text-red-900">{selectedAsset.deletionReason}</strong></p>
-                    </div>
-                  )}
-
-                  {/* Special Asset Deletion Flow for Manager (Not Admin) */}
-                  {!showDeleteRequestForm && !selectedAsset.isPendingDeletion ? (
-                    <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                       <div>
-                          <p className="text-xs font-bold text-gray-700">Xóa dữ liệu sai lệch / Nhập sai thông tin?</p>
-                          <p className="text-[11px] text-[#666666]">Nếu tài sản này được tạo nhầm, bạn có thể gửi yêu cầu phê duyệt xóa vĩnh viễn đến Admin.</p>
-                       </div>
-                       <button 
-                         type="button" 
-                         onClick={() => setShowDeleteRequestForm(true)}
-                         className="px-3 py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-lg text-xs font-bold transition-all flex items-center shrink-0"
-                       >
-                          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Yêu cầu xóa vĩnh viễn
-                       </button>
-                    </div>
-                  ) : showDeleteRequestForm ? (
-                    <div className="bg-red-50/40 border-2 border-dashed border-red-200 rounded-xl p-5 space-y-4">
-                       <div className="flex items-start space-x-3">
-                          <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                          <div>
-                             <h4 className="text-xs font-bold text-red-800 uppercase tracking-wider">Xác nhận yêu cầu xóa lên Ban quản trị (Admin)</h4>
-                             <p className="text-[11px] text-red-700 mt-0.5">Manager không có thẩm quyền tự động xóa vĩnh viễn thiết bị khỏi cơ sở dữ liệu. Vui lòng nhập lý do rõ ràng để Admin phê duyệt xóa vĩnh viễn.</p>
-                          </div>
-                       </div>
-                       <div>
-                          <label className="block text-xs font-bold text-red-800 mb-1">Lý do yêu cầu xóa (Bắt buộc)</label>
-                          <input 
-                            type="text" 
-                            required
-                            placeholder="Ví dụ: Nhập nhầm mã phòng, tài sản này thực tế không tồn tại..."
-                            value={deleteReason}
-                            onChange={(e) => setDeleteReason(e.target.value)}
-                            className="w-full bg-white border border-red-200 rounded-lg p-3 text-sm focus:outline-none focus:border-red-500 text-gray-800"
-                          />
-                       </div>
-                       <div className="flex justify-end space-x-2">
-                          <button 
-                            type="button" 
-                            onClick={() => setShowDeleteRequestForm(false)} 
-                            className="px-3 py-1.5 text-gray-500 hover:bg-gray-100 rounded-lg text-xs font-medium"
-                          >
-                             Hủy bỏ yêu cầu
-                          </button>
-                          <button 
-                            type="button" 
-                            onClick={handleSubmitDeleteRequest}
-                            className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center"
-                          >
-                             <Send className="w-3.5 h-3.5 mr-1.5" /> Gửi yêu cầu xóa
-                          </button>
-                       </div>
-                    </div>
-                  ) : null}
-               </div>
-
-               <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center mt-auto">
-                  <div className="flex space-x-2">
-                     <button 
-                       type="button" 
-                       onClick={() => handleMarkStatus('Đã thanh lý')} 
-                       className="px-3 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-bold transition-colors"
-                     >
-                        Thanh lý
-                     </button>
-                  </div>
-                  <div className="flex space-x-2">
-                     <button type="button" onClick={() => setSelectedAsset(null)} className="px-5 py-2.5 text-[#666666] font-medium hover:bg-gray-200 rounded-lg text-sm transition-colors">Đóng</button>
-                     <button 
-                       type="button" 
-                       onClick={handleSaveEdit} 
-                       className="px-5 py-2.5 bg-[#B7705F] text-white font-medium rounded-lg text-sm shadow-sm hover:bg-[#a06050] transition-colors flex items-center"
-                     >
-                        <Save className="w-4 h-4 mr-2" />
-                        Lưu thay đổi
-                     </button>
-                  </div>
-               </div>
+      {/* ── Modal: Edit ─────────────────────────────────────────────────── */}
+      {modalMode === 'edit' && selectedRecord && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-[#8C4A3A]">
+                  {(selectedRecord as any).isVirtual ? 'Phân bổ tài sản vào phòng' : 'Cập nhật tài sản'}
+                </h2>
+                <p className="text-xs text-[#666] mt-0.5">{selectedRecord.tenTaiSan} · {selectedRecord.maTaiSan}</p>
+              </div>
+              <button onClick={closeModal} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
             </div>
-         </div>
+
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              {/* Thông tin read-only */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#666] mb-1">Mã tài sản</label>
+                  <input value={selectedRecord.maTaiSan} readOnly
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-mono text-gray-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#666] mb-1">Phòng</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsRoomDropdownOpen(!isRoomDropdownOpen)}
+                      className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm flex justify-between items-center focus:outline-none focus:border-[#B7705F]"
+                    >
+                      <span className="text-gray-800 font-medium">{editRoom || 'Chọn phòng...'}</span>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    </button>
+
+                    {isRoomDropdownOpen && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                        <div className="p-2 border-b border-gray-100 bg-gray-50">
+                          <input
+                            type="text"
+                            placeholder="Tìm kiếm phòng..."
+                            value={roomSearchQuery}
+                            onChange={e => setRoomSearchQuery(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            className="w-full bg-white border border-gray-200 rounded-md p-2 text-sm focus:outline-none focus:border-[#B7705F]"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto bg-white">
+                          {roomOptions
+                            .filter(r => r !== 'Tất cả' && r !== 'Chưa phân bổ')
+                            .filter(r => r.toLowerCase().includes(roomSearchQuery.toLowerCase()))
+                            .map(r => (
+                              <button
+                                key={r}
+                                type="button"
+                                onClick={() => { setEditRoom(r); setIsRoomDropdownOpen(false); setRoomSearchQuery(''); }}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${editRoom === r ? 'bg-[#FAF5F3] text-[#8C4A3A] font-medium' : 'text-gray-700'}`}
+                              >
+                                {r}
+                              </button>
+                            ))
+                          }
+                          {roomSearchQuery && !roomOptions.includes(roomSearchQuery) && (
+                            <button
+                               type="button"
+                               onClick={() => { setEditRoom(roomSearchQuery); setIsRoomDropdownOpen(false); setRoomSearchQuery(''); }}
+                               className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-[#B7705F] font-medium"
+                             >
+                               + Thêm phòng mới "{roomSearchQuery}"
+                             </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Số lượng */}
+              {(() => {
+                const admin = adminTotals[selectedRecord.maTaiSan] || 0;
+                const manager = managerTotals[selectedRecord.maTaiSan] || 0;
+                const unallocated = admin - manager;
+                const maxAllowed = (selectedRecord as any).isVirtual ? unallocated : unallocated + selectedRecord.soLuong;
+                return (
+                  <div>
+                    <label className="block text-xs font-bold text-[#666] mb-1.5">
+                      Số lượng phân bổ <span className="ml-1 text-[#8C4A3A] font-normal">(Số lượng tồn: {unallocated})</span>
+                    </label>
+                    <input type="number" min="0" max={maxAllowed} value={editSoLuong} onChange={e => setEditSoLuong(e.target.value ? parseInt(e.target.value) : '')}
+                      className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]" />
+                  </div>
+                );
+              })()}
+
+              {/* Tình trạng */}
+              <div>
+                <label className="block text-xs font-bold text-[#666] mb-1.5">Tình trạng tài sản</label>
+                <select value={editCondition} onChange={e => setEditCondition(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]">
+                  <option>Tốt</option>
+                  <option>Hư hỏng nhẹ</option>
+                  <option>Cần thay thế</option>
+                  <option>Đã thanh lý</option>
+                </select>
+              </div>
+
+              {/* Ghi chú */}
+              <div>
+                <label className="block text-xs font-bold text-[#666] mb-1.5">Ghi chú bảo trì</label>
+                <textarea rows={3} value={editNotes} onChange={e => setEditNotes(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F] resize-none"
+                  placeholder="Nhập tình trạng bảo trì, hỏng hóc hoặc lý do thay đổi..." />
+              </div>
+
+              {/* Yêu cầu xóa */}
+              {selectedRecord.isPendingDeletion ? (
+                <div className="bg-[#FAF5F3] border border-[#EAD3CC] rounded-xl p-4 flex items-start gap-2">
+                  <Clock className="w-4 h-4 text-[#B7705F] shrink-0 mt-0.5 animate-pulse" />
+                  <div>
+                    <p className="text-xs font-bold text-[#8C4A3A]">Đang chờ Admin phê duyệt xóa</p>
+                    <p className="text-xs text-[#666] mt-0.5">Lý do: <strong className="text-[#8C4A3A]">{selectedRecord.deletionReason}</strong></p>
+                  </div>
+                </div>
+              ) : !showDeleteForm ? (
+                <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-gray-700">Tài sản nhập sai / không tồn tại?</p>
+                    <p className="text-[11px] text-[#666] mt-0.5">Gửi yêu cầu xóa vĩnh viễn đến Admin để phê duyệt.</p>
+                  </div>
+                  <button type="button" onClick={() => setShowDeleteForm(true)}
+                    className="px-3 py-1.5 border border-[#EAD3CC] hover:bg-[#FAF5F3] text-[#8C4A3A] rounded-lg text-xs font-semibold transition-all flex items-center shrink-0 gap-1.5">
+                    <Trash2 className="w-3.5 h-3.5" /> Yêu cầu xóa
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-[#FAF5F3]/60 border border-[#EAD3CC] rounded-xl p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-[#B7705F] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-[#8C4A3A]">Gửi yêu cầu xóa lên Admin</h4>
+                      <p className="text-[11px] text-[#666] mt-0.5">Manager không có quyền xóa vĩnh viễn. Admin sẽ xem xét và phê duyệt.</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#8C4A3A] mb-1">Lý do yêu cầu xóa *</label>
+                    <input type="text" value={deleteReason} onChange={e => setDeleteReason(e.target.value)}
+                      placeholder="Ví dụ: Nhập nhầm mã phòng, tài sản không tồn tại..."
+                      className="w-full bg-white border border-[#EAD3CC] rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#B7705F]" />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setShowDeleteForm(false)}
+                      className="px-3 py-1.5 text-gray-500 hover:bg-gray-100 rounded-lg text-xs font-medium">Hủy</button>
+                    <button type="button" onClick={handleSendDeleteRequest}
+                      className="px-3 py-1.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-lg text-xs font-bold flex items-center gap-1.5">
+                      <Send className="w-3.5 h-3.5" /> Gửi yêu cầu
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end items-center gap-2 mt-auto">
+              <button type="button" onClick={closeModal}
+                className="px-5 py-2.5 text-[#666] font-medium hover:bg-gray-200 rounded-lg text-sm transition-colors">Đóng</button>
+              <button type="button" onClick={handleSaveEdit}
+                className="px-5 py-2.5 bg-[#B7705F] text-white font-medium rounded-lg text-sm hover:bg-[#a06050] transition-colors flex items-center gap-2">
+                <Save className="w-4 h-4" /> Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

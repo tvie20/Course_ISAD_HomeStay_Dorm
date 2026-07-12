@@ -1,14 +1,91 @@
-import React, { useState } from 'react';
-import { Search, Filter, Plus, Shield, ShieldCheck, UserCog, User, Edit2, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Shield, ShieldCheck, User, Edit2, Eye, EyeOff, CheckCircle, PenSquare } from 'lucide-react';
+
+interface UserRecord {
+  id: string;
+  name: string;
+  role: string;
+  branch: string;
+  status: string;
+  email: string;
+  phone: string;
+}
+
+interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  hotline: string;
+  email: string;
+  trangThai: string;
+  manager: string;
+  managerId: string;
+  avatar: string;
+  rooms: number;
+}
+
+const DEFAULT_USERS: UserRecord[] = [
+  { id: 'NV001', name: 'Nguyễn Văn Admin', role: 'Quản trị viên', branch: 'Toàn hệ thống', status: 'Hoạt động', email: 'admin@homestay.com', phone: '0901234567' },
+  { id: 'NV002', name: 'Trần Thị Trưởng', role: 'Quản lý', branch: 'CN001', status: 'Hoạt động', email: 'truong.tt@homestay.com', phone: '0901234568' },
+  { id: 'NV003', name: 'Lê Kế Toán', role: 'Nhân viên kế toán', branch: 'CN001, CN002', status: 'Đang nghỉ phép', email: 'toan.lk@homestay.com', phone: '0901234569' },
+  { id: 'NV004', name: 'Phạm Kinh Doanh', role: 'Nhân viên kinh doanh', branch: 'Toàn hệ thống', status: 'Hoạt động', email: 'doanh.pk@homestay.com', phone: '0901234570' },
+  { id: 'KH001', name: 'Vũ Đức Khách', role: 'Khách hàng', branch: 'CN001', status: 'Hoạt động', email: 'khachhang.vd@gmail.com', phone: '0909999999' },
+];
+
+function getInitials(name: string) {
+  if (!name) return '--';
+  const parts = name.trim().split(' ');
+  return parts.map(p => p[0]).join('').toUpperCase().substring(Math.max(0, parts.length - 2));
+}
+
+// Khi user role "Quản lý" được thêm/sửa → cập nhật branch's manager trong localStorage
+function syncManagerToBranch(user: UserRecord, allUsers: UserRecord[]) {
+  const branchRaw = localStorage.getItem('branch_list_v2');
+  if (!branchRaw) return;
+  try {
+    const branches: Branch[] = JSON.parse(branchRaw);
+    const updatedBranches = branches.map(b => {
+      // Nếu user này là manager của branch này
+      if (b.managerId === user.id) {
+        return { ...b, manager: user.name, avatar: getInitials(user.name) };
+      }
+      // Nếu user được gán chi nhánh này và là Quản lý → gán là manager
+      if (user.role === 'Quản lý' && user.branch === b.id && !b.managerId) {
+        return { ...b, manager: user.name, managerId: user.id, avatar: getInitials(user.name) };
+      }
+      return b;
+    });
+    localStorage.setItem('branch_list_v2', JSON.stringify(updatedBranches));
+  } catch {}
+}
 
 export default function UserManagement() {
-  const [users, setUsers] = useState([
-    { id: 'NV001', name: 'Nguyễn Văn Admin', role: 'Quản trị viên', branch: 'Toàn hệ thống', status: 'Hoạt động', email: 'admin@homestay.com', phone: '0901234567' },
-    { id: 'NV002', name: 'Trần Thị Trưởng', role: 'Quản lý', branch: 'CN001', status: 'Hoạt động', email: 'truong.tt@homestay.com', phone: '0901234568' },
-    { id: 'NV003', name: 'Lê Kế Toán', role: 'Nhân viên kế toán', branch: 'CN001, CN002', status: 'Đang nghỉ phép', email: 'toan.lk@homestay.com', phone: '0901234569' },
-    { id: 'NV004', name: 'Phạm Kinh Doanh', role: 'Nhân viên kinh doanh', branch: 'Toàn hệ thống', status: 'Hoạt động', email: 'doanh.pk@homestay.com', phone: '0901234570' },
-    { id: 'KH001', name: 'Vũ Đức Khách', role: 'Khách hàng', branch: 'CN001', status: 'Hoạt động', email: 'khachhang.vd@gmail.com', phone: '0909999999' },
-  ]);
+  const [users, setUsers] = useState<UserRecord[]>(() => {
+    const s = localStorage.getItem('user_list_v2');
+    if (s) try { return JSON.parse(s); } catch {}
+    return DEFAULT_USERS;
+  });
+
+  // Danh sách chi nhánh để hiển thị tên đẹp hơn trong dropdown
+  const [branches, setBranches] = useState<Branch[]>(() => {
+    const s = localStorage.getItem('branch_list_v2');
+    if (s) try { return JSON.parse(s); } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    const sync = () => {
+      const s = localStorage.getItem('branch_list_v2');
+      if (s) try { setBranches(JSON.parse(s)); } catch {}
+    };
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, []);
+
+  const persistUsers = (updated: UserRecord[]) => {
+    setUsers(updated);
+    localStorage.setItem('user_list_v2', JSON.stringify(updated));
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -17,127 +94,79 @@ export default function UserManagement() {
   const [successMsg, setSuccessMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    email: '', 
-    phone: '', 
-    role: 'Khách hàng', 
-    password: '', 
-    branch: 'CN001',
-    status: 'Hoạt động'
+  const [formData, setFormData] = useState({
+    name: '', email: '', phone: '', role: 'Khách hàng',
+    password: '', branch: 'CN001', status: 'Hoạt động'
   });
 
   const handleOpenAdd = () => {
-    setFormData({ 
-      name: '', 
-      email: '', 
-      phone: '', 
-      role: 'Khách hàng', 
-      password: '', 
-      branch: 'CN001',
-      status: 'Hoạt động'
-    });
-    setErrorMsg('');
-    setSuccessMsg('');
-    setShowAdd(true);
+    setFormData({ name: '', email: '', phone: '', role: 'Khách hàng', password: '', branch: 'CN001', status: 'Hoạt động' });
+    setErrorMsg(''); setSuccessMsg(''); setShowAdd(true);
   };
 
   const handleCreate = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg('');
-
     if (!formData.name || !formData.email || !formData.phone || !formData.password) {
-      setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.');
-      return;
+      setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.'); return;
     }
-
-    // Ràng buộc số điện thoại chỉ được điền số
     if (!/^\d+$/.test(formData.phone)) {
-      setErrorMsg('Số điện thoại không hợp lệ. Chỉ được phép điền ký tự số (0-9).');
-      return;
+      setErrorMsg('Số điện thoại không hợp lệ. Chỉ được phép điền ký tự số (0-9).'); return;
     }
-
-    // Không được tạo khách hàng mà không thuộc về chi nhánh nào
-    if (formData.role === 'Khách hàng') {
-      if (!formData.branch || formData.branch === 'Toàn hệ thống') {
-        setErrorMsg('Bắt buộc phải gán Khách hàng vào một chi nhánh cụ thể (không thể chọn Toàn hệ thống).');
-        return;
-      }
+    if (formData.role === 'Khách hàng' && (!formData.branch || formData.branch === 'Toàn hệ thống')) {
+      setErrorMsg('Khách hàng bắt buộc phải thuộc về một chi nhánh cụ thể.'); return;
     }
-
     if (users.some(u => u.email === formData.email || u.phone === formData.phone)) {
-      setErrorMsg('Email hoặc số điện thoại đã tồn tại trong hệ thống.');
-      return;
+      setErrorMsg('Email hoặc số điện thoại đã tồn tại trong hệ thống.'); return;
     }
 
-    const newUser = {
+    const newUser: UserRecord = {
       id: formData.role === 'Khách hàng' ? `KH0${users.length + 1}` : `NV0${users.length + 1}`,
-      name: formData.name,
-      role: formData.role,
-      branch: formData.branch,
-      status: formData.status,
-      email: formData.email,
-      phone: formData.phone
+      name: formData.name, role: formData.role, branch: formData.branch,
+      status: formData.status, email: formData.email, phone: formData.phone
     };
 
-    setUsers([newUser, ...users]);
+    const newList = [newUser, ...users];
+    persistUsers(newList);
+    // Đồng bộ sang BranchManagement nếu là Quản lý
+    if (newUser.role === 'Quản lý') syncManagerToBranch(newUser, newList);
+
     setSuccessMsg(`Đã tạo thành công tài khoản cho: ${formData.name}`);
     setShowAdd(false);
     setTimeout(() => setSuccessMsg(''), 5000);
   };
 
   const handleOpenEdit = (user: any) => {
-    setFormData({ 
-      name: user.name, 
-      email: user.email, 
-      phone: user.phone || '', 
-      role: user.role, 
-      password: '', 
-      branch: user.branch || 'CN001',
-      status: user.status || 'Hoạt động'
-    });
-    setErrorMsg('');
-    setSuccessMsg('');
-    setShowEdit(user);
+    setFormData({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, password: '', branch: user.branch || 'CN001', status: user.status || 'Hoạt động' });
+    setErrorMsg(''); setSuccessMsg(''); setShowEdit(user);
   };
 
   const handleUpdate = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg('');
-
     if (!formData.name || !formData.email || !formData.phone) {
-      setErrorMsg('Vui lòng điền đầy đủ thông tin bắt buộc.');
-      return;
+      setErrorMsg('Vui lòng điền đầy đủ thông tin bắt buộc.'); return;
     }
-
-    // Ràng buộc số điện thoại chỉ được điền số
     if (!/^\d+$/.test(formData.phone)) {
-      setErrorMsg('Số điện thoại không hợp lệ. Chỉ được phép điền ký tự số (0-9).');
-      return;
+      setErrorMsg('Số điện thoại không hợp lệ.'); return;
     }
-
-    // Không được gán khách hàng mà không thuộc về chi nhánh nào
-    if (formData.role === 'Khách hàng') {
-      if (!formData.branch || formData.branch === 'Toàn hệ thống') {
-        setErrorMsg('Khách hàng bắt buộc phải thuộc về một chi nhánh cụ thể.');
-        return;
-      }
+    if (formData.role === 'Khách hàng' && (!formData.branch || formData.branch === 'Toàn hệ thống')) {
+      setErrorMsg('Khách hàng bắt buộc phải thuộc về một chi nhánh cụ thể.'); return;
     }
-
     if (users.some(u => (u.email === formData.email || u.phone === formData.phone) && u.id !== showEdit.id)) {
-      setErrorMsg('Email hoặc số điện thoại đã tồn tại ở tài khoản khác.');
-      return;
+      setErrorMsg('Email hoặc số điện thoại đã tồn tại ở tài khoản khác.'); return;
     }
 
-    setUsers(users.map(u => u.id === showEdit.id ? { 
-      ...u, 
-      name: formData.name, 
-      email: formData.email, 
-      phone: formData.phone, 
-      role: formData.role, 
-      branch: formData.branch,
-      status: formData.status // Chỉnh sửa được trạng thái tài khoản thành công
-    } : u));
+    const updatedUser: UserRecord = {
+      ...showEdit,
+      name: formData.name, email: formData.email, phone: formData.phone,
+      role: formData.role, branch: formData.branch, status: formData.status
+    };
+
+    const newList = users.map(u => u.id === showEdit.id ? updatedUser : u);
+    persistUsers(newList);
+    // Đồng bộ sang BranchManagement nếu là Quản lý
+    if (updatedUser.role === 'Quản lý') syncManagerToBranch(updatedUser, newList);
 
     setSuccessMsg(`Đã cập nhật tài khoản: ${formData.name}`);
     setShowEdit(null);
@@ -149,8 +178,7 @@ export default function UserManagement() {
 
   const handleToggleStatusClick = (user: any) => {
     if (user.role === 'Quản trị viên') {
-      setActionError('Không thể vô hiệu hóa Quản trị viên của hệ thống.');
-      return;
+      setActionError('Không thể vô hiệu hóa Quản trị viên của hệ thống.'); return;
     }
     setShowConfirmAction(user);
   };
@@ -159,33 +187,45 @@ export default function UserManagement() {
     if (showConfirmAction) {
       const isLocked = showConfirmAction.status === 'Vô hiệu hóa' || showConfirmAction.status === 'Khóa';
       const newStatus = isLocked ? 'Hoạt động' : 'Vô hiệu hóa';
-      setUsers(users.map(u => u.id === showConfirmAction.id ? { ...u, status: newStatus } : u));
+      const newList = users.map(u => u.id === showConfirmAction.id ? { ...u, status: newStatus } : u);
+      persistUsers(newList);
       setSuccessMsg(`Đã thay đổi trạng thái tài khoản ${showConfirmAction.name} thành ${newStatus}`);
       setShowConfirmAction(null);
       setTimeout(() => setSuccessMsg(''), 5000);
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Branch options cho dropdown
+  const branchSelectOptions = branches.length > 0
+    ? branches.map(b => ({ value: b.id, label: `${b.id} - ${b.name}` }))
+    : [
+      { value: 'CN001', label: 'CN001 - Homestay Central Park' },
+      { value: 'CN002', label: 'CN002 - Sunrise Riverside' },
+      { value: 'CN003', label: 'CN003 - The Landmark View' },
+    ];
+
+  const inputCls = "w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]";
+  const labelCls = "block text-xs font-bold text-gray-500 mb-2";
+
   return (
     <div className="p-8 h-full max-w-7xl mx-auto bg-[#FAF5F3]">
-      {/* Page Header matching uniform styling with #222222 title and #666666 subtitle */}
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex justify-between items-end mb-8">
         <div>
-           <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Quản lý người dùng &amp; phân quyền</h1>
-           <p className="text-sm text-[#666666]">Kiểm soát quyền truy cập, vai trò và chi nhánh trực thuộc của tài khoản trên hệ thống.</p>
+          <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Quản lý người dùng & phân quyền</h1>
+          <p className="text-sm text-[#666666]">Kiểm soát quyền truy cập, vai trò và chi nhánh trực thuộc của tài khoản trên hệ thống.</p>
         </div>
-        <button 
-          onClick={handleOpenAdd} 
-          className="px-5 py-2.5 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center"
-        >
-           <Plus className="w-4 h-4 mr-2" /> Thêm Người dùng
+        <button onClick={handleOpenAdd}
+          className="px-5 py-2.5 bg-[#B7705F] text-white rounded-xl text-sm font-semibold shadow-sm hover:bg-[#a06050] transition-colors flex items-center gap-2">
+          <Plus className="w-4 h-4" /> Thêm người dùng
         </button>
       </div>
 
@@ -196,368 +236,273 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* Filter / Search bar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-[#EAD3CC]/50 mb-6 flex flex-wrap gap-4 items-center">
-         <div className="flex-1 min-w-[300px] relative">
-           <Search className="w-5 h-5 absolute left-3 top-3 text-gray-400" />
-           <input 
-             type="text" 
-             value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
-             placeholder="Tìm kiếm tài khoản theo tên, email, vai trò, số điện thoại..." 
-             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#B7705F]"
-           />
-         </div>
+      {/* ── Search ─────────────────────────────────────────────────────── */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-[#EAD3CC]/50 mb-6">
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+          <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Tìm kiếm tài khoản theo tên, email, vai trò, số điện thoại..."
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#B7705F]" />
+        </div>
       </div>
 
-      {/* Add User Modal */}
+      {/* ── Add Modal ──────────────────────────────────────────────────── */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-           <form onSubmit={handleCreate} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-fade-in">
-              <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
-                 <h2 className="text-xl font-bold text-[#222222]">Thêm người dùng mới</h2>
-                 <button type="button" onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
+          <form onSubmit={handleCreate} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
+            <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-[#222222]">Thêm người dùng mới</h2>
+              <button type="button" onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-6">
+              {errorMsg && <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm">{errorMsg}</div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Họ và tên *</label>
+                  <input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className={inputCls} placeholder="Nhập họ và tên..." />
+                </div>
+                <div>
+                  <label className={labelCls}>Email *</label>
+                  <input type="email" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className={inputCls} placeholder="Nhập email..." />
+                </div>
+                <div>
+                  <label className={labelCls}>Số điện thoại * (chỉ nhận số)</label>
+                  <input type="text" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className={inputCls} placeholder="Ví dụ: 0901234567" />
+                </div>
+                <div>
+                  <label className={labelCls}>Mật khẩu *</label>
+                  <div className="relative">
+                    <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className={`${inputCls} pr-10`} placeholder="Khởi tạo mật khẩu..." />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Vai trò *</label>
+                  <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value, branch: e.target.value === 'Khách hàng' ? 'CN001' : 'Toàn hệ thống' })} className={`${inputCls} bg-white`}>
+                    <option value="Khách hàng">Khách hàng</option>
+                    <option value="Quản trị viên">Quản trị viên</option>
+                    <option value="Quản lý">Quản lý</option>
+                    <option value="Nhân viên kế toán">Nhân viên kế toán</option>
+                    <option value="Nhân viên kinh doanh">Nhân viên kinh doanh</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Chi nhánh *</label>
+                  <select value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value })} className={`${inputCls} bg-white`}>
+                    {formData.role !== 'Khách hàng' && <option value="Toàn hệ thống">Toàn hệ thống</option>}
+                    {branchSelectOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="p-6">
-                 {errorMsg && <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-medium">{errorMsg}</div>}
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Họ và tên *</label>
-                       <input 
-                         type="text" 
-                         required
-                         value={formData.name} 
-                         onChange={e => setFormData({...formData, name: e.target.value})} 
-                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]" 
-                         placeholder="Nhập họ và tên..." 
-                       />
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email *</label>
-                       <input 
-                         type="email" 
-                         required
-                         value={formData.email} 
-                         onChange={e => setFormData({...formData, email: e.target.value})} 
-                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]" 
-                         placeholder="Nhập email..." 
-                       />
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Số điện thoại * (Chỉ nhận số)</label>
-                       <input 
-                         type="text" 
-                         required
-                         value={formData.phone} 
-                         onChange={e => setFormData({...formData, phone: e.target.value})} 
-                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]" 
-                         placeholder="Ví dụ: 0901234567" 
-                       />
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Mật khẩu *</label>
-                       <div className="relative">
-                         <input 
-                           type={showPassword ? "text" : "password"} 
-                           required
-                           value={formData.password} 
-                           onChange={e => setFormData({...formData, password: e.target.value})} 
-                           className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]" 
-                           placeholder="Khởi tạo mật khẩu..." 
-                         />
-                         {/* Nút Hiện Mật Khẩu */}
-                         <button 
-                           type="button" 
-                           onClick={() => setShowPassword(!showPassword)}
-                           className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                         >
-                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                         </button>
-                       </div>
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Vai trò *</label>
-                       <select 
-                         value={formData.role} 
-                         onChange={e => setFormData({...formData, role: e.target.value, branch: e.target.value === 'Khách hàng' ? 'CN001' : 'Toàn hệ thống'})} 
-                         className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]"
-                       >
-                          <option value="Khách hàng">Khách hàng (Bắt buộc thuộc chi nhánh)</option>
-                          <option value="Quản trị viên">Quản trị viên</option>
-                          <option value="Quản lý">Quản lý</option>
-                          <option value="Nhân viên kế toán">Nhân viên kế toán</option>
-                          <option value="Nhân viên kinh doanh">Nhân viên kinh doanh</option>
-                       </select>
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Chi nhánh *</label>
-                       <select 
-                         value={formData.branch} 
-                         onChange={e => setFormData({...formData, branch: e.target.value})} 
-                         className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]"
-                       >
-                          {formData.role !== 'Khách hàng' && <option value="Toàn hệ thống">Toàn hệ thống</option>}
-                          <option value="CN001">CN001 - Homestay Central Park</option>
-                          <option value="CN002">CN002 - Sunrise Riverside</option>
-                          <option value="CN003">CN003 - The Landmark View</option>
-                       </select>
-                    </div>
-                 </div>
-              </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
-                 <button type="button" onClick={() => setShowAdd(false)} className="px-5 py-2.5 text-[#666666] text-sm font-medium hover:bg-gray-200 rounded-xl transition-colors">Hủy</button>
-                 <button type="submit" className="px-5 py-2.5 bg-[#B7705F] text-white text-sm font-bold rounded-xl shadow-sm hover:bg-[#a06050] transition-colors">Lưu thông tin</button>
-              </div>
-           </form>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
+              <button type="button" onClick={() => setShowAdd(false)} className="px-5 py-2.5 text-[#666] text-sm font-medium hover:bg-gray-200 rounded-xl transition-colors">Hủy</button>
+              <button type="submit" className="px-5 py-2.5 bg-[#B7705F] text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-[#a06050] transition-colors">Lưu thông tin</button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* Edit User Modal with Status Adjustment */}
+      {/* ── Edit Modal ─────────────────────────────────────────────────── */}
       {showEdit && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-           <form onSubmit={handleUpdate} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-fade-in">
-              <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
-                 <h2 className="text-xl font-bold text-[#222222]">Chỉnh sửa người dùng</h2>
-                 <button type="button" onClick={() => setShowEdit(null)} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
+          <form onSubmit={handleUpdate} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
+            <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-[#222222]">Chỉnh sửa người dùng</h2>
+              <button type="button" onClick={() => setShowEdit(null)} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-6">
+              {errorMsg && <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm">{errorMsg}</div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Họ và tên *</label>
+                  <input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Email *</label>
+                  <input type="email" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Số điện thoại *</label>
+                  <input type="text" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Mật khẩu mới (tùy chọn)</label>
+                  <input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className={inputCls} placeholder="Bỏ trống nếu không đổi..." />
+                </div>
+                <div>
+                  <label className={labelCls}>Vai trò *</label>
+                  <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value, branch: e.target.value === 'Khách hàng' ? 'CN001' : formData.branch })} className={`${inputCls} bg-white`}>
+                    <option value="Khách hàng">Khách hàng</option>
+                    <option value="Quản trị viên">Quản trị viên</option>
+                    <option value="Quản lý">Quản lý</option>
+                    <option value="Nhân viên kế toán">Nhân viên kế toán</option>
+                    <option value="Nhân viên kinh doanh">Nhân viên kinh doanh</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Chi nhánh *</label>
+                  <select value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value })} className={`${inputCls} bg-white`}>
+                    {formData.role !== 'Khách hàng' && <option value="Toàn hệ thống">Toàn hệ thống</option>}
+                    {branchSelectOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div className="md:col-span-2 border-t border-gray-100 pt-3">
+                  <label className={labelCls}>Trạng thái tài khoản *</label>
+                  <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className={`${inputCls} bg-white`}>
+                    <option value="Hoạt động">Hoạt động</option>
+                    <option value="Đang nghỉ phép">Đang nghỉ phép / Tạm ngưng</option>
+                    <option value="Vô hiệu hóa">Vô hiệu hóa / Khóa tài khoản</option>
+                  </select>
+                </div>
               </div>
-              <div className="p-6">
-                 {errorMsg && <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-medium">{errorMsg}</div>}
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Họ và tên *</label>
-                       <input 
-                         type="text" 
-                         required
-                         value={formData.name} 
-                         onChange={e => setFormData({...formData, name: e.target.value})} 
-                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]" 
-                         placeholder="Nhập họ tên..." 
-                       />
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email *</label>
-                       <input 
-                         type="email" 
-                         required
-                         value={formData.email} 
-                         onChange={e => setFormData({...formData, email: e.target.value})} 
-                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]" 
-                         placeholder="Nhập email..." 
-                       />
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Số điện thoại * (Chỉ nhận số)</label>
-                       <input 
-                         type="text" 
-                         required
-                         value={formData.phone} 
-                         onChange={e => setFormData({...formData, phone: e.target.value})} 
-                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]" 
-                         placeholder="Nhập số điện thoại..." 
-                       />
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Mật khẩu mới (Tùy chọn)</label>
-                       <input 
-                         type="password" 
-                         value={formData.password} 
-                         onChange={e => setFormData({...formData, password: e.target.value})} 
-                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]" 
-                         placeholder="Bỏ trống nếu không đổi..." 
-                       />
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Vai trò *</label>
-                       <select 
-                         value={formData.role} 
-                         onChange={e => setFormData({...formData, role: e.target.value, branch: e.target.value === 'Khách hàng' ? 'CN001' : formData.branch})} 
-                         className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]"
-                       >
-                          <option value="Khách hàng">Khách hàng (Bắt buộc thuộc chi nhánh)</option>
-                          <option value="Quản trị viên">Quản trị viên</option>
-                          <option value="Quản lý">Quản lý</option>
-                          <option value="Nhân viên kế toán">Nhân viên kế toán</option>
-                          <option value="Nhân viên kinh doanh">Nhân viên kinh doanh</option>
-                       </select>
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Chi nhánh *</label>
-                       <select 
-                         value={formData.branch} 
-                         onChange={e => setFormData({...formData, branch: e.target.value})} 
-                         className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]"
-                       >
-                          {formData.role !== 'Khách hàng' && <option value="Toàn hệ thống">Toàn hệ thống</option>}
-                          <option value="CN001">CN001 - Homestay Central Park</option>
-                          <option value="CN002">CN002 - Sunrise Riverside</option>
-                          <option value="CN003">CN003 - The Landmark View</option>
-                       </select>
-                    </div>
-                    {/* KHẢ NĂNG CHỈNH SỬA TRẠNG THÁI TÀI KHOẢN */}
-                    <div className="md:col-span-2 border-t border-gray-100 pt-3">
-                       <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Trạng thái tài khoản *</label>
-                       <select 
-                         value={formData.status} 
-                         onChange={e => setFormData({...formData, status: e.target.value})} 
-                         className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#B7705F]"
-                       >
-                          <option value="Hoạt động">Hoạt động</option>
-                          <option value="Đang nghỉ phép">Đang nghỉ phép / Tạm ngưng</option>
-                          <option value="Vô hiệu hóa">Vô hiệu hóa / Khóa tài khoản</option>
-                       </select>
-                    </div>
-                 </div>
-              </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
-                 <button type="button" onClick={() => setShowEdit(null)} className="px-5 py-2.5 text-[#666666] text-sm font-medium hover:bg-gray-200 rounded-xl transition-colors">Hủy</button>
-                 <button type="submit" className="px-5 py-2.5 bg-[#B7705F] text-white text-sm font-bold rounded-xl shadow-sm hover:bg-[#a06050] transition-colors">Lưu cập nhật</button>
-              </div>
-           </form>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
+              <button type="button" onClick={() => setShowEdit(null)} className="px-5 py-2.5 text-[#666] text-sm font-medium hover:bg-gray-200 rounded-xl transition-colors">Hủy</button>
+              <button type="submit" className="px-5 py-2.5 bg-[#B7705F] text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-[#a06050] transition-colors">Lưu cập nhật</button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* Overview Cards */}
+      {/* ── Overview cards ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         <div className="bg-white p-5 rounded-2xl border border-[#EAD3CC]/50 shadow-sm flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-[#FAF5F3] border border-[#EAD3CC]/30 flex items-center justify-center text-[#B7705F] shrink-0">
-               <User className="w-5 h-5" />
-            </div>
-            <div>
-               <p className="text-xs font-semibold text-gray-500 uppercase">Tổng số tài khoản</p>
-               <h3 className="text-2xl font-bold text-gray-900">{users.length}</h3>
-            </div>
-         </div>
-         <div className="bg-white p-5 rounded-2xl border border-[#EAD3CC]/50 shadow-sm flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-green-50 border border-green-100 flex items-center justify-center text-green-600 shrink-0">
-               <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-               <p className="text-xs font-semibold text-gray-500 uppercase">Hoạt động bình thường</p>
-               <h3 className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'Hoạt động').length}</h3>
-            </div>
-         </div>
-         <div className="bg-white p-5 rounded-2xl border border-[#EAD3CC]/50 shadow-sm flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shrink-0">
-               <Shield className="w-5 h-5" />
-            </div>
-            <div>
-               <p className="text-xs font-semibold text-gray-500 uppercase">Bị vô hiệu hóa / khóa</p>
-               <h3 className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'Khóa' || u.status === 'Vô hiệu hóa').length}</h3>
-            </div>
-         </div>
+        <div className="bg-white p-5 rounded-2xl border border-[#EAD3CC]/50 shadow-sm flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-full bg-[#FAF5F3] border border-[#EAD3CC]/30 flex items-center justify-center text-[#B7705F] shrink-0">
+            <User className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500">Tổng số tài khoản</p>
+            <h3 className="text-2xl font-bold text-gray-900">{users.length}</h3>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-[#EAD3CC]/50 shadow-sm flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-full bg-green-50 border border-green-100 flex items-center justify-center text-green-600 shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500">Hoạt động bình thường</p>
+            <h3 className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'Hoạt động').length}</h3>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-[#EAD3CC]/50 shadow-sm flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shrink-0">
+            <Shield className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500">Bị vô hiệu hóa / khóa</p>
+            <h3 className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'Khóa' || u.status === 'Vô hiệu hóa').length}</h3>
+          </div>
+        </div>
       </div>
 
-      {/* Main Table */}
+      {/* ── Main table ─────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-[#EAD3CC]/80 shadow-sm overflow-hidden">
-         <div className="p-5 border-b border-[#EAD3CC]/50 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#222222]">Danh sách các tài khoản nội bộ và khách hàng</h2>
-         </div>
-         
-         <table className="w-full text-left border-collapse">
-            <thead>
-               <tr className="bg-[#FAF5F3] text-xs uppercase tracking-wider text-[#666666] border-b border-[#EAD3CC]/50">
-                  <th className="py-4 px-6 font-semibold">Tài khoản &amp; Định danh</th>
-                  <th className="py-4 px-6 font-semibold">Vai trò</th>
-                  <th className="py-4 px-6 font-semibold">Chi nhánh trực thuộc</th>
-                  <th className="py-4 px-6 font-semibold">Trạng thái</th>
-                  <th className="py-4 px-6 font-semibold text-right">Thao tác</th>
-               </tr>
-            </thead>
-            <tbody className="text-sm">
-               {filteredUsers.length === 0 ? (
-                 <tr>
-                    <td colSpan={5} className="py-8 px-6 text-center text-gray-400 font-medium">
-                      Không tìm thấy tài khoản nào khớp với bộ lọc tìm kiếm.
-                    </td>
-                 </tr>
-               ) : (
-                 filteredUsers.map((user, idx) => (
-                   <tr key={idx} className="border-b border-gray-50 hover:bg-[#FAF5F3]/30 transition-colors">
-                      <td className="py-4 px-6">
-                         <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full bg-[#FAF5F3] text-[#B7705F] border border-[#EAD3CC] flex items-center justify-center font-bold shadow-sm shrink-0">
-                               {user.name.split(' ').map((n: string) => n[0]).join('').substring(Math.max(0, user.name.split(' ').map((n: string) => n[0]).join('').length - 2))}
-                            </div>
-                            <div>
-                               <p className="font-semibold text-[#222222]">{user.name}</p>
-                               <p className="text-xs text-[#666666]">{user.email}</p>
-                               <p className="text-xs font-mono text-[#B7705F]">{user.phone}</p>
-                            </div>
-                         </div>
-                      </td>
-                      <td className="py-4 px-6">
-                          <span className="px-2.5 py-1 text-xs font-semibold rounded-lg border text-gray-700 bg-gray-50 border-gray-200">
-                             {user.role}
-                          </span>
-                      </td>
-                      <td className="py-4 px-6 text-gray-700 font-medium">
-                        {user.branch ? user.branch : <span className="text-red-500 italic">Chưa phân chi nhánh</span>}
-                      </td>
-                      <td className="py-4 px-6">
-                         <div className="flex items-center text-[#222222]">
-                            <span className={`w-2 h-2 rounded-full mr-2 ${user.status === 'Hoạt động' ? 'bg-green-500' : (user.status === 'Khóa' || user.status === 'Vô hiệu hóa') ? 'bg-red-500' : 'bg-orange-400'}`}></span>
-                            <span className="font-medium">{user.status}</span>
-                         </div>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                         <button onClick={() => handleOpenEdit(user)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors rounded-lg mr-2" title="Chỉnh sửa">
-                            <Edit2 className="w-4.5 h-4.5" />
-                         </button>
-                         <button 
-                           onClick={() => handleToggleStatusClick(user)} 
-                           className="px-3 py-1 bg-gray-50 hover:bg-red-50 hover:text-red-600 border border-gray-200 rounded-lg text-xs font-semibold text-gray-500 transition-colors"
-                         >
-                            {(user.status === 'Vô hiệu hóa' || user.status === 'Khóa') ? 'Mở' : 'Khóa'}
-                         </button>
-                      </td>
-                   </tr>
-                 ))
-               )}
-            </tbody>
-         </table>
-         
-         {/* ĐÃ SỬA LỖI HIỂN THỊ: dòng hiển thị "Hiển thị X trên Y tài khoản" cập nhật động chuẩn 100% */}
-         <div className="p-4 bg-[#FAF5F3]/50 border-t border-[#EAD3CC]/50 text-center text-xs text-[#666666] font-medium">
-            Hiển thị {filteredUsers.length} trên tổng số {users.length} tài khoản trong hệ thống
-         </div>
+        <div className="p-5 border-b border-[#EAD3CC]/50">
+          <h2 className="text-lg font-bold text-[#222222]">Danh sách các tài khoản nội bộ và khách hàng</h2>
+        </div>
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-[#FAF5F3] text-xs font-semibold text-[#666666] border-b border-[#EAD3CC]/50">
+              <th className="py-4 px-6">Tài khoản & định danh</th>
+              <th className="py-4 px-6">Vai trò</th>
+              <th className="py-4 px-6">Chi nhánh trực thuộc</th>
+              <th className="py-4 px-6">Trạng thái</th>
+              <th className="py-4 px-6 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm">
+            {filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-8 px-6 text-center text-gray-400 font-medium">
+                  Không tìm thấy tài khoản nào khớp với bộ lọc tìm kiếm.
+                </td>
+              </tr>
+            ) : filteredUsers.map((user, idx) => (
+              <tr key={idx} className="border-b border-gray-50 hover:bg-[#FAF5F3]/30 transition-colors">
+                <td className="py-4 px-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full bg-[#FAF5F3] text-[#B7705F] border border-[#EAD3CC] flex items-center justify-center font-bold shadow-sm shrink-0">
+                      {user.name.split(' ').map((n: string) => n[0]).join('').substring(Math.max(0, user.name.split(' ').map((n: string) => n[0]).join('').length - 2))}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[#222222]">{user.name}</p>
+                      <p className="text-xs text-[#666666]">{user.email}</p>
+                      <p className="text-xs font-mono text-[#B7705F]">{user.phone}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-4 px-6">
+                  <span className="px-2.5 py-1 text-xs font-semibold rounded-lg border text-gray-700 bg-gray-50 border-gray-200">{user.role}</span>
+                </td>
+                <td className="py-4 px-6 text-gray-700 font-medium text-sm">
+                  {user.branch || <span className="text-red-500 italic">Chưa phân chi nhánh</span>}
+                </td>
+                <td className="py-4 px-6">
+                  <div className="flex items-center text-[#222222]">
+                    <span className={`w-2 h-2 rounded-full mr-2 ${user.status === 'Hoạt động' ? 'bg-green-500' : (user.status === 'Khóa' || user.status === 'Vô hiệu hóa') ? 'bg-red-500' : 'bg-orange-400'}`}></span>
+                    <span className="font-medium text-sm">{user.status}</span>
+                  </div>
+                </td>
+                <td className="py-4 px-6 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => handleOpenEdit(user)} title="Chỉnh sửa"
+                      className="p-1.5 text-[#555] hover:bg-gray-100 rounded-lg transition-colors">
+                      <PenSquare className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleToggleStatusClick(user)}
+                      className="px-3 py-1 bg-gray-50 hover:bg-[#FAF5F3] border border-gray-200 rounded-lg text-xs font-semibold text-gray-500 transition-colors">
+                      {(user.status === 'Vô hiệu hóa' || user.status === 'Khóa') ? 'Mở khóa' : 'Khóa'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="p-4 bg-[#FAF5F3]/50 border-t border-[#EAD3CC]/50 text-center text-xs text-[#666666] font-medium">
+          Hiển thị {filteredUsers.length} trên tổng số {users.length} tài khoản trong hệ thống
+        </div>
       </div>
 
-      {/* Confirmation lock modal */}
+      {/* ── Confirm lock ──────────────────────────────────────────────── */}
       {showConfirmAction && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
-              <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50">
-                 <h2 className="text-xl font-bold text-[#222222]">Xác nhận thao tác</h2>
-              </div>
-              <div className="p-6">
-                 <p className="text-sm text-[#666666]">
-                    Bạn có chắc chắn muốn <strong className="text-[#222222]">{(showConfirmAction.status === 'Vô hiệu hóa' || showConfirmAction.status === 'Khóa') ? 'KÍCH HOẠT LẠI' : 'KHÓA / VÔ HIỆU HÓA'}</strong> tài khoản của khách hàng/nhân viên <strong className="text-[#222222]">{showConfirmAction.name}</strong> không?
-                 </p>
-              </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
-                 <button onClick={() => setShowConfirmAction(null)} className="px-5 py-2.5 text-[#666666] text-sm font-medium hover:bg-gray-200 rounded-xl transition-colors">Hủy</button>
-                 <button onClick={executeToggleStatus} className={`px-5 py-2.5 text-white text-sm font-bold rounded-xl shadow-sm transition-colors ${(showConfirmAction.status === 'Vô hiệu hóa' || showConfirmAction.status === 'Khóa') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
-                    Xác nhận
-                 </button>
-              </div>
-           </div>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50">
+              <h2 className="text-xl font-bold text-[#222222]">Xác nhận thao tác</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-[#666666]">
+                Bạn có chắc chắn muốn <strong className="text-[#222222]">{(showConfirmAction.status === 'Vô hiệu hóa' || showConfirmAction.status === 'Khóa') ? 'kích hoạt lại' : 'khóa / vô hiệu hóa'}</strong> tài khoản của <strong className="text-[#222222]">{showConfirmAction.name}</strong> không?
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
+              <button onClick={() => setShowConfirmAction(null)} className="px-5 py-2.5 text-[#666] text-sm font-medium hover:bg-gray-200 rounded-xl">Hủy</button>
+              <button onClick={executeToggleStatus} className={`px-5 py-2.5 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors ${(showConfirmAction.status === 'Vô hiệu hóa' || showConfirmAction.status === 'Khóa') ? 'bg-green-600 hover:bg-green-700' : 'bg-[#B7705F] hover:bg-[#a06050]'}`}>
+                Xác nhận
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Warning popup */}
+      {/* ── Action error ──────────────────────────────────────────────── */}
       {actionError && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
-              <div className="bg-red-50 px-6 py-4 border-b border-red-100">
-                 <h2 className="text-lg font-bold text-red-700">Thao tác bị chặn</h2>
-              </div>
-              <div className="p-6">
-                 <p className="text-sm text-[#666666] leading-relaxed">{actionError}</p>
-              </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
-                 <button onClick={() => setActionError('')} className="px-5 py-2.5 bg-[#B7705F] text-white text-sm font-bold rounded-xl shadow-sm hover:bg-[#a06050] transition-colors">Đồng ý</button>
-              </div>
-           </div>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="bg-red-50 px-6 py-4 border-b border-red-100">
+              <h2 className="text-lg font-bold text-red-700">Thao tác bị chặn</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-[#666] leading-relaxed">{actionError}</p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button onClick={() => setActionError('')} className="px-5 py-2.5 bg-[#B7705F] text-white text-sm font-semibold rounded-xl shadow-sm hover:bg-[#a06050] transition-colors">Đồng ý</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

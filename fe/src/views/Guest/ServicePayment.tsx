@@ -409,7 +409,7 @@ export default function ServicePayment({ onNavigate }: { onNavigate?: (id: strin
                           <td className="px-6 py-4 font-normal text-gray-700">{inv.month} ({inv.room})</td>
                           <td className="px-6 py-4 font-bold text-[#8C4A3A]">{inv.total.toLocaleString()} ₫</td>
                           <td className="px-6 py-4">
-                            <span className={`px-2.5 py-1 rounded text-xs font-bold ${
+                            <span className={`px-2.5 py-1 rounded text-xs font-bold whitespace-nowrap ${
                               inv.status === 'Đã thanh toán' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                             }`}>
                                {inv.status}

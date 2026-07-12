@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, MessageSquare, Plus, Edit2, Trash2, ArrowLeft } from 'lucide-react';
+import { Search, Bell, MessageSquare, Plus, Edit2, Trash2, ArrowLeft, Eye } from 'lucide-react';
 
 const INITIAL_ROOMS = [
   { id: 'RM-101', name: 'Phòng Harmony A1', type: 'Phòng 4 người', floor: '1', currentCount: 2, maxCount: 4, status: 'ĐANG Ở', branch: 'Homestay Central Park' },
@@ -521,10 +521,16 @@ export default function RoomManagement() {
                        </span>
                     </td>
                     <td className="px-6 py-5 text-right">
-                       <div className="flex justify-end space-x-3 text-[#8C4A3A]">
-                          <button onClick={() => setSelectedRoom(r)} className="hover:text-[#6a3629] px-2 py-1 font-medium text-sm">Chi tiết</button>
-                          <button onClick={() => handleOpenEdit(r)} className="hover:text-[#6a3629] p-1"><Edit2 className="w-5 h-5" /></button>
-                          <button onClick={() => handleDeleteClick(r)} className="text-red-500 hover:text-red-700 p-1"><Trash2 className="w-5 h-5" /></button>
+                       <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => setSelectedRoom(r)} title="Chi tiết" className="p-1.5 text-[#8C4A3A] hover:bg-[#EAD3CC]/40 rounded-lg transition-colors">
+                             <Eye className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleOpenEdit(r)} title="Chỉnh sửa" className="p-1.5 text-[#8C4A3A] hover:bg-[#EAD3CC]/40 rounded-lg transition-colors">
+                             <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDeleteClick(r)} title="Xóa" className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                             <Trash2 className="w-5 h-5" />
+                          </button>
                        </div>
                     </td>
                  </tr>

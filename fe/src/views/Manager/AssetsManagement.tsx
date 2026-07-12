@@ -13,8 +13,6 @@ interface AssetRecord {
   condition: string;
   lastUpdated: string;
   notes?: string;
-  isPendingDeletion?: boolean;
-  deletionReason?: string;
   isVirtual?: boolean;
 }
 
@@ -31,8 +29,7 @@ const DEFAULT_RECORDS: AssetRecord[] = [
 
 type ModalMode = 'view' | 'edit' | null;
 
-const conditionCls = (cond: string, isPending?: boolean) => {
-  if (isPending) return 'bg-[#FAF5F3] text-[#8C4A3A] border border-[#EAD3CC]';
+const conditionCls = (cond: string) => {
   switch (cond) {
     case 'Tốt': return 'bg-green-50 text-green-700 border border-green-200';
     case 'Hư hỏng nhẹ': return 'bg-orange-50 text-orange-700 border border-orange-200';
@@ -71,8 +68,6 @@ export default function AssetsManagement() {
   const [editSoLuong, setEditSoLuong] = useState<number | ''>('');
   const [editCondition, setEditCondition] = useState('');
   const [editNotes, setEditNotes] = useState('');
-  const [showDeleteForm, setShowDeleteForm] = useState(false);
-  const [deleteReason, setDeleteReason] = useState('');
 
   // ── Persistence ───────────────────────────────────────────────────────────
   const saveRecords = (updated: AssetRecord[]) => {
@@ -152,8 +147,6 @@ export default function AssetsManagement() {
     setEditSoLuong(r.soLuong);
     setEditCondition(r.condition);
     setEditNotes(r.notes || '');
-    setShowDeleteForm(false);
-    setDeleteReason('');
     setIsRoomDropdownOpen(false);
     setRoomSearchQuery('');
     setModalMode('edit');
@@ -211,17 +204,6 @@ export default function AssetsManagement() {
        ));
     }
     closeModal();
-  };
-
-  const handleSendDeleteRequest = () => {
-    if (!selectedRecord) return;
-    if (!deleteReason.trim()) { alert('Vui lòng nhập lý do yêu cầu xóa!'); return; }
-    saveRecords(records.map(r => r.id === selectedRecord.id
-      ? { ...r, isPendingDeletion: true, deletionReason: deleteReason, condition: 'Chờ duyệt xóa', lastUpdated: new Date().toLocaleDateString('vi-VN') }
-      : r
-    ));
-    closeModal();
-    alert(`Đã gửi yêu cầu xóa tài sản ${selectedRecord.maTaiSan} lên Admin phê duyệt!`);
   };
 
   return (
@@ -286,17 +268,12 @@ export default function AssetsManagement() {
                 <td className="px-5 py-3 font-mono text-xs font-bold text-[#B7705F]">{item.maTaiSan}</td>
                 <td className="px-5 py-3">
                   <p className="font-semibold text-gray-900 text-sm">{item.tenTaiSan}</p>
-                  {item.isPendingDeletion && (
-                    <span className="mt-0.5 inline-flex items-center px-1.5 py-0.5 bg-[#FAF5F3] text-[#8C4A3A] text-[10px] font-semibold rounded border border-[#EAD3CC]">
-                      Chờ Admin xóa
-                    </span>
-                  )}
                 </td>
                 <td className="px-5 py-3 text-sm text-[#555] font-medium">{item.room}</td>
                 <td className="px-5 py-3 text-sm text-gray-900 font-bold text-center">{item.soLuong}</td>
                 <td className="px-5 py-3">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${conditionCls(item.condition, item.isPendingDeletion)}`}>
-                    {item.isPendingDeletion ? 'Chờ duyệt xóa' : item.condition}
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${conditionCls(item.condition)}`}>
+                    {item.condition}
                   </span>
                 </td>
                 <td className="px-5 py-3">
@@ -357,23 +334,14 @@ export default function AssetsManagement() {
               </div>
               <div>
                 <span className="block text-xs font-bold text-[#666] mb-1">Tình trạng</span>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${conditionCls(selectedRecord.condition, selectedRecord.isPendingDeletion)}`}>
-                  {selectedRecord.isPendingDeletion ? 'Chờ duyệt xóa' : selectedRecord.condition}
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${conditionCls(selectedRecord.condition)}`}>
+                  {selectedRecord.condition}
                 </span>
               </div>
               {selectedRecord.notes && (
                 <div>
                   <span className="block text-xs font-bold text-[#666] mb-1">Ghi chú</span>
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs text-gray-700 leading-relaxed">{selectedRecord.notes}</div>
-                </div>
-              )}
-              {selectedRecord.isPendingDeletion && (
-                <div className="bg-[#FAF5F3] border border-[#EAD3CC] p-3 rounded-lg flex items-start gap-2">
-                  <Clock className="w-4 h-4 text-[#B7705F] shrink-0 mt-0.5 animate-pulse" />
-                  <div>
-                    <p className="text-xs font-bold text-[#8C4A3A]">Đang chờ Admin phê duyệt xóa</p>
-                    <p className="text-xs text-[#666] mt-0.5">Lý do: {selectedRecord.deletionReason}</p>
-                  </div>
                 </div>
               )}
             </div>
@@ -505,52 +473,6 @@ export default function AssetsManagement() {
                   className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F] resize-none"
                   placeholder="Nhập tình trạng bảo trì, hỏng hóc hoặc lý do thay đổi..." />
               </div>
-
-              {/* Yêu cầu xóa */}
-              {selectedRecord.isPendingDeletion ? (
-                <div className="bg-[#FAF5F3] border border-[#EAD3CC] rounded-xl p-4 flex items-start gap-2">
-                  <Clock className="w-4 h-4 text-[#B7705F] shrink-0 mt-0.5 animate-pulse" />
-                  <div>
-                    <p className="text-xs font-bold text-[#8C4A3A]">Đang chờ Admin phê duyệt xóa</p>
-                    <p className="text-xs text-[#666] mt-0.5">Lý do: <strong className="text-[#8C4A3A]">{selectedRecord.deletionReason}</strong></p>
-                  </div>
-                </div>
-              ) : !showDeleteForm ? (
-                <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                  <div>
-                    <p className="text-xs font-bold text-gray-700">Tài sản nhập sai / không tồn tại?</p>
-                    <p className="text-[11px] text-[#666] mt-0.5">Gửi yêu cầu xóa vĩnh viễn đến Admin để phê duyệt.</p>
-                  </div>
-                  <button type="button" onClick={() => setShowDeleteForm(true)}
-                    className="px-3 py-1.5 border border-[#EAD3CC] hover:bg-[#FAF5F3] text-[#8C4A3A] rounded-lg text-xs font-semibold transition-all flex items-center shrink-0 gap-1.5">
-                    <Trash2 className="w-3.5 h-3.5" /> Yêu cầu xóa
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-[#FAF5F3]/60 border border-[#EAD3CC] rounded-xl p-4 space-y-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-[#B7705F] shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-xs font-bold text-[#8C4A3A]">Gửi yêu cầu xóa lên Admin</h4>
-                      <p className="text-[11px] text-[#666] mt-0.5">Manager không có quyền xóa vĩnh viễn. Admin sẽ xem xét và phê duyệt.</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-[#8C4A3A] mb-1">Lý do yêu cầu xóa *</label>
-                    <input type="text" value={deleteReason} onChange={e => setDeleteReason(e.target.value)}
-                      placeholder="Ví dụ: Nhập nhầm mã phòng, tài sản không tồn tại..."
-                      className="w-full bg-white border border-[#EAD3CC] rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#B7705F]" />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <button type="button" onClick={() => setShowDeleteForm(false)}
-                      className="px-3 py-1.5 text-gray-500 hover:bg-gray-100 rounded-lg text-xs font-medium">Hủy</button>
-                    <button type="button" onClick={handleSendDeleteRequest}
-                      className="px-3 py-1.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-lg text-xs font-bold flex items-center gap-1.5">
-                      <Send className="w-3.5 h-3.5" /> Gửi yêu cầu
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end items-center gap-2 mt-auto">

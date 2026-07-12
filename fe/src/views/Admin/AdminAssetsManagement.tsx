@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, Trash2, XCircle, CheckCircle2, AlertTriangle,
-  Filter, Info, Eye, Plus, Save, PenSquare
+  Filter, Info, Eye, Plus, Save, PenSquare, ChevronDown
 } from 'lucide-react';
 
 // ── Danh mục tài sản (DANHSACHTAISAN) ────────────────────────────────────────
@@ -45,7 +45,7 @@ const DEFAULT_RECORDS: AssetRecord[] = [
   { id: 'AR-005', maTaiSan: 'TS-004', tenTaiSan: 'Bình nóng lạnh Ariston 20L', branch: 'Chi nhánh 3', soLuong: 3, condition: 'Tốt', lastUpdated: '05/11/2023' },
 ];
 
-type ModalMode = 'view' | 'edit' | 'add' | null;
+type ModalMode = 'view' | 'edit' | 'add' | 'allocate' | null;
 type AddMode = 'existing' | 'new';
 
 const conditionCls = (cond: string, isPending?: boolean) => {
@@ -63,13 +63,13 @@ export default function AdminAssetsManagement() {
   // ── State: data ──────────────────────────────────────────────────────────
   const [catalog, setCatalog] = useState<AssetCatalog[]>(() => {
     const s = localStorage.getItem('asset_catalog_v2');
-    if (s) try { return JSON.parse(s); } catch {}
+    if (s) try { return JSON.parse(s); } catch { }
     return DEFAULT_CATALOG;
   });
 
   const [records, setRecords] = useState<AssetRecord[]>(() => {
     const s = localStorage.getItem('asset_records_admin_v2');
-    if (s) try { return JSON.parse(s); } catch {}
+    if (s) try { return JSON.parse(s); } catch { }
     return DEFAULT_RECORDS;
   });
 
@@ -83,11 +83,14 @@ export default function AdminAssetsManagement() {
   const [confirmAction, setConfirmAction] = useState<{ id: string; type: 'approve' | 'reject' | 'delete'; itemName: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
+  const [assetSearchQuery, setAssetSearchQuery] = useState('');
+
   // ── State: form ──────────────────────────────────────────────────────────
   const [formMaTaiSan, setFormMaTaiSan] = useState('');
   const [formTenTaiSan, setFormTenTaiSan] = useState('');
   const [formSoLuongTon, setFormSoLuongTon] = useState(1);
-  const [formMoTa, setFormMoTa] = useState('');
+  const [formThemTonKho, setFormThemTonKho] = useState(0);
   const [formBranch, setFormBranch] = useState(BRANCHES[0]);
   const [formSoLuong, setFormSoLuong] = useState(1);
   const [formCondition, setFormCondition] = useState('Tốt');
@@ -111,9 +114,9 @@ export default function AdminAssetsManagement() {
   useEffect(() => {
     const sync = () => {
       const r = localStorage.getItem('asset_records_admin_v2');
-      if (r) try { setRecords(JSON.parse(r)); } catch {}
+      if (r) try { setRecords(JSON.parse(r)); } catch { }
       const c = localStorage.getItem('asset_catalog_v2');
-      if (c) try { setCatalog(JSON.parse(c)); } catch {}
+      if (c) try { setCatalog(JSON.parse(c)); } catch { }
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
@@ -121,12 +124,27 @@ export default function AdminAssetsManagement() {
 
   const resetForm = (branch = BRANCHES[0]) => {
     setFormMaTaiSan(catalog[0]?.maTaiSan || '');
-    setFormTenTaiSan(''); setFormSoLuongTon(1); setFormMoTa('');
+    setFormTenTaiSan(''); setFormSoLuongTon(1); setFormThemTonKho(0);
     setFormBranch(branch); setFormSoLuong(1); setFormCondition('Tốt'); setFormNotes('');
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleOpenAdd = () => { setAddMode('existing'); resetForm(); setSelectedRecord(null); setModalMode('add'); };
+  const handleOpenAdd = () => {
+    setAddMode('existing');
+    resetForm();
+    setSelectedRecord(null);
+    setIsAssetDropdownOpen(false);
+    setAssetSearchQuery('');
+    setModalMode('add');
+  };
+
+  const handleOpenAllocate = () => {
+    resetForm();
+    setSelectedRecord(null);
+    setIsAssetDropdownOpen(false);
+    setAssetSearchQuery('');
+    setModalMode('allocate');
+  };
 
   const handleOpenEdit = (r: AssetRecord) => {
     setSelectedRecord(r);
@@ -141,38 +159,61 @@ export default function AdminAssetsManagement() {
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    const today = new Date().toLocaleDateString('vi-VN');
-
     if (addMode === 'existing') {
       const cat = catalog.find(c => c.maTaiSan === formMaTaiSan);
       if (!cat) { showToast('Vui lòng chọn tài sản!', 'error'); return; }
-      const newRec: AssetRecord = {
-        id: `AR-${Date.now()}`, maTaiSan: cat.maTaiSan, tenTaiSan: cat.tenTaiSan,
-        branch: formBranch, soLuong: formSoLuong, condition: formCondition,
-        lastUpdated: today, notes: formNotes.trim(),
-      };
-      persist([newRec, ...records]);
-      showToast(`Đã phân bổ ${cat.tenTaiSan} → ${formBranch}`, 'success');
+
+      if (formThemTonKho <= 0) {
+        showToast('Vui lòng nhập số lượng lớn hơn 0!', 'error'); return;
+      }
+
+      const updatedCatalog = catalog.map(c => c.maTaiSan === formMaTaiSan ? { ...c, soLuongTon: c.soLuongTon + formThemTonKho } : c);
+      persist(records, updatedCatalog);
+      showToast(`Đã cập nhật thêm ${formThemTonKho} vào kho cho ${cat.tenTaiSan}`, 'success');
     } else {
       if (!formTenTaiSan.trim()) { showToast('Vui lòng nhập tên tài sản!', 'error'); return; }
+      if (formSoLuongTon <= 0) { showToast('Vui lòng nhập số lượng tồn lớn hơn 0!', 'error'); return; }
       const nextNum = String(catalog.length + 1).padStart(3, '0');
       const newMa = `TS-${nextNum}`;
-      const newCat: AssetCatalog = { maTaiSan: newMa, tenTaiSan: formTenTaiSan.trim(), soLuongTon: formSoLuongTon, moTa: formMoTa.trim() };
-      const newRec: AssetRecord = {
-        id: `AR-${Date.now()}`, maTaiSan: newMa, tenTaiSan: formTenTaiSan.trim(),
-        branch: formBranch, soLuong: formSoLuong, condition: formCondition,
-        lastUpdated: today, notes: formNotes.trim(),
-      };
-      persist([newRec, ...records], [...catalog, newCat]);
-      showToast(`Đã thêm tài sản mới "${formTenTaiSan.trim()}" (${newMa}) và phân bổ đến ${formBranch}`, 'success');
+      const newCat: AssetCatalog = { maTaiSan: newMa, tenTaiSan: formTenTaiSan.trim(), soLuongTon: formSoLuongTon };
+      persist(records, [...catalog, newCat]);
+      showToast(`Đã thêm tài sản mới "${formTenTaiSan.trim()}" (${newMa}) vào danh mục`, 'success');
     }
+    closeModal();
+  };
+
+  const handleAllocate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const today = new Date().toLocaleDateString('vi-VN');
+
+    const cat = catalog.find(c => c.maTaiSan === formMaTaiSan);
+    if (!cat) { showToast('Vui lòng chọn tài sản!', 'error'); return; }
+
+    const allocated = records.filter(r => r.maTaiSan === formMaTaiSan).reduce((s, r) => s + r.soLuong, 0);
+    const avail = cat.soLuongTon - allocated;
+
+    if (formSoLuong > avail) {
+      showToast(`Số lượng phân bổ không được lớn hơn số lượng khả dụng!`, 'error');
+      return;
+    }
+    if (formSoLuong <= 0) {
+      showToast('Vui lòng nhập số lượng phân bổ lớn hơn 0!', 'error'); return;
+    }
+
+    const newRec: AssetRecord = {
+      id: `AR-${Date.now()}`, maTaiSan: cat.maTaiSan, tenTaiSan: cat.tenTaiSan,
+      branch: formBranch, soLuong: formSoLuong, condition: formCondition,
+      lastUpdated: today, notes: formNotes.trim(),
+    };
+    persist([newRec, ...records]);
+    showToast(`Đã phân bổ ${cat.tenTaiSan} → ${formBranch}`, 'success');
     closeModal();
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRecord) return;
-    
+
     if (selectedRecord.id.startsWith('UNALLOC_')) {
       if (formBranch === 'Chưa phân bổ' || !formBranch) {
         showToast('Vui lòng chọn chi nhánh hợp lệ để phân bổ!', 'error');
@@ -191,6 +232,16 @@ export default function AdminAssetsManagement() {
       closeModal();
       showToast(`Đã phân bổ ${selectedRecord.tenTaiSan} → ${formBranch}`, 'success');
       return;
+    }
+
+    const cat = catalog.find(c => c.maTaiSan === selectedRecord.maTaiSan);
+    if (cat) {
+      const allocated = records.filter(r => r.maTaiSan === selectedRecord.maTaiSan && r.id !== selectedRecord.id).reduce((s, r) => s + r.soLuong, 0);
+      const avail = cat.soLuongTon - allocated;
+      if (formSoLuong > avail) {
+        showToast(`Số lượng phân bổ (${formSoLuong}) không được lớn hơn tổng số lượng có thể phân bổ (${avail})!`, 'error');
+        return;
+      }
     }
 
     const updated = records.map(r => r.id === selectedRecord.id
@@ -270,10 +321,16 @@ export default function AdminAssetsManagement() {
           <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Quản lý tài sản</h1>
           <p className="text-sm text-[#666666]">Quản lý danh mục tài sản và phân bổ theo chi nhánh. Phê duyệt yêu cầu xóa từ Manager.</p>
         </div>
-        <button onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-[#B7705F] text-white rounded-xl text-sm font-semibold hover:bg-[#a06050] transition-colors flex items-center gap-2 shadow-sm">
-          <Plus className="w-4 h-4" /> Thêm tài sản
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleOpenAllocate}
+            className="px-4 py-2.5 bg-white border border-[#EAD3CC] text-[#8C4A3A] rounded-xl text-sm font-semibold hover:bg-[#FAF5F3] transition-colors flex items-center gap-2 shadow-sm">
+            <Filter className="w-4 h-4" /> Phân bổ tài sản
+          </button>
+          <button onClick={handleOpenAdd}
+            className="px-4 py-2.5 bg-[#B7705F] text-white rounded-xl text-sm font-semibold hover:bg-[#a06050] transition-colors flex items-center gap-2 shadow-sm">
+            <Plus className="w-4 h-4" /> Thêm tài sản
+          </button>
+        </div>
       </div>
 
       {/* ── Summary cards ──────────────────────────────────────────────── */}
@@ -435,7 +492,7 @@ export default function AdminAssetsManagement() {
               </button>
               <button type="button" onClick={() => setAddMode('new')}
                 className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-all ${addMode === 'new' ? 'bg-[#B7705F] text-white border-[#B7705F]' : 'border-[#EAD3CC] text-[#666] hover:bg-[#FAF5F3]'}`}>
-                Tài sản mới hoàn toàn
+                Tài sản mới
               </button>
             </div>
 
@@ -443,16 +500,59 @@ export default function AdminAssetsManagement() {
               {addMode === 'existing' ? (
                 <div>
                   <label className="block text-sm font-semibold text-[#666] mb-2">
-                    Chọn từ danh mục tài sản <span className="text-[#B7705F]">*</span>
+                    Tên tài sản <span className="text-[#B7705F]">*</span>
                   </label>
-                  <select value={formMaTaiSan} onChange={e => setFormMaTaiSan(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]">
-                    {catalog.map(c => (
-                      <option key={c.maTaiSan} value={c.maTaiSan}>
-                        {c.maTaiSan} — {c.tenTaiSan}  (Tổng tồn: {c.soLuongTon})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsAssetDropdownOpen(!isAssetDropdownOpen)}
+                      className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm flex justify-between items-center focus:outline-none focus:border-[#B7705F]"
+                    >
+                      <span className="text-gray-800 font-medium">
+                        {formMaTaiSan ? `${formMaTaiSan} — ${catalog.find(c => c.maTaiSan === formMaTaiSan)?.tenTaiSan || ''}` : 'Chọn tài sản...'}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    </button>
+
+                    {isAssetDropdownOpen && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                        <div className="p-2 border-b border-gray-100 bg-gray-50">
+                          <input
+                            type="text"
+                            placeholder="Tìm kiếm mã hoặc tên tài sản..."
+                            value={assetSearchQuery}
+                            onChange={e => setAssetSearchQuery(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            className="w-full bg-white border border-gray-200 rounded-md p-2 text-sm focus:outline-none focus:border-[#B7705F]"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto bg-white">
+                          {catalog
+                            .filter(c =>
+                              c.maTaiSan.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
+                              c.tenTaiSan.toLowerCase().includes(assetSearchQuery.toLowerCase())
+                            )
+                            .map(c => (
+                              <button
+                                key={c.maTaiSan}
+                                type="button"
+                                onClick={() => { setFormMaTaiSan(c.maTaiSan); setIsAssetDropdownOpen(false); setAssetSearchQuery(''); }}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${formMaTaiSan === c.maTaiSan ? 'bg-[#FAF5F3] text-[#8C4A3A] font-medium' : 'text-gray-700'}`}
+                              >
+                                {c.maTaiSan} — {c.tenTaiSan} <span className="text-gray-500 text-xs ml-1">(Tổng tồn: {c.soLuongTon})</span>
+                              </button>
+                            ))
+                          }
+                          {catalog.filter(c => c.maTaiSan.toLowerCase().includes(assetSearchQuery.toLowerCase()) || c.tenTaiSan.toLowerCase().includes(assetSearchQuery.toLowerCase())).length === 0 && (
+                            <div className="px-3 py-3 text-sm text-center text-gray-500">
+                              Không tìm thấy tài sản phù hợp
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {formMaTaiSan && (() => {
                     const cat = catalog.find(c => c.maTaiSan === formMaTaiSan);
                     const allocated = records.filter(r => r.maTaiSan === formMaTaiSan).reduce((s, r) => s + r.soLuong, 0);
@@ -463,6 +563,14 @@ export default function AdminAssetsManagement() {
                       </p>
                     ) : null;
                   })()}
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-[#666] mb-2">Nhập số lượng thêm</label>
+                      <input type="number" min={0} value={formThemTonKho} onChange={e => setFormThemTonKho(+e.target.value)}
+                        className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]"
+                        placeholder="Ví dụ: 5" />
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -474,19 +582,101 @@ export default function AdminAssetsManagement() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-semibold text-[#666] mb-2">Số lượng tồn (tổng)</label>
+                      <label className="block text-sm font-semibold text-[#666] mb-2">Nhập số lượng thêm</label>
                       <input type="number" min={1} value={formSoLuongTon} onChange={e => setFormSoLuongTon(+e.target.value)}
                         className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-[#666] mb-2">Mô tả danh mục</label>
-                      <input type="text" value={formMoTa} onChange={e => setFormMoTa(e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]"
-                        placeholder="Thông số kỹ thuật..." />
                     </div>
                   </div>
                 </>
               )}
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+              <button type="button" onClick={closeModal} className="px-5 py-2.5 text-[#666] font-medium hover:bg-gray-200 rounded-lg text-sm transition-colors">Hủy</button>
+              <button type="submit" className="px-5 py-2.5 bg-[#B7705F] text-white font-semibold rounded-lg text-sm hover:bg-[#a06050] transition-colors flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Lưu thông tin
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Modal: Allocate ──────────────────────────────────────────────── */}
+      {modalMode === 'allocate' && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleAllocate} className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-[#8C4A3A]">Phân bổ tài sản</h2>
+              <button type="button" onClick={closeModal} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div>
+                <label className="block text-sm font-semibold text-[#666] mb-2">
+                  Tên tài sản <span className="text-[#B7705F]">*</span>
+                </label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsAssetDropdownOpen(!isAssetDropdownOpen)}
+                    className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm flex justify-between items-center focus:outline-none focus:border-[#B7705F]"
+                  >
+                    <span className="text-gray-800 font-medium">
+                      {formMaTaiSan ? `${formMaTaiSan} — ${catalog.find(c => c.maTaiSan === formMaTaiSan)?.tenTaiSan || ''}` : 'Chọn tài sản...'}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </button>
+
+                  {isAssetDropdownOpen && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                      <div className="p-2 border-b border-gray-100 bg-gray-50">
+                        <input
+                          type="text"
+                          placeholder="Tìm kiếm mã hoặc tên tài sản..."
+                          value={assetSearchQuery}
+                          onChange={e => setAssetSearchQuery(e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                          className="w-full bg-white border border-gray-200 rounded-md p-2 text-sm focus:outline-none focus:border-[#B7705F]"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-48 overflow-y-auto bg-white">
+                        {catalog
+                          .filter(c =>
+                            c.maTaiSan.toLowerCase().includes(assetSearchQuery.toLowerCase()) ||
+                            c.tenTaiSan.toLowerCase().includes(assetSearchQuery.toLowerCase())
+                          )
+                          .map(c => (
+                            <button
+                              key={c.maTaiSan}
+                              type="button"
+                              onClick={() => { setFormMaTaiSan(c.maTaiSan); setIsAssetDropdownOpen(false); setAssetSearchQuery(''); }}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${formMaTaiSan === c.maTaiSan ? 'bg-[#FAF5F3] text-[#8C4A3A] font-medium' : 'text-gray-700'}`}
+                            >
+                              {c.maTaiSan} — {c.tenTaiSan} <span className="text-gray-500 text-xs ml-1">(Tổng tồn: {c.soLuongTon})</span>
+                            </button>
+                          ))
+                        }
+                        {catalog.filter(c => c.maTaiSan.toLowerCase().includes(assetSearchQuery.toLowerCase()) || c.tenTaiSan.toLowerCase().includes(assetSearchQuery.toLowerCase())).length === 0 && (
+                          <div className="px-3 py-3 text-sm text-center text-gray-500">
+                            Không tìm thấy tài sản phù hợp
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {formMaTaiSan && (() => {
+                  const cat = catalog.find(c => c.maTaiSan === formMaTaiSan);
+                  const allocated = records.filter(r => r.maTaiSan === formMaTaiSan).reduce((s, r) => s + r.soLuong, 0);
+                  const avail = cat ? cat.soLuongTon - allocated : 0;
+                  return cat ? (
+                    <p className="text-xs text-[#666] mt-1.5 bg-[#FAF5F3] border border-[#EAD3CC]/50 rounded-lg px-3 py-2">
+                      Đã phân bổ: <strong>{allocated}</strong> / Tổng tồn: <strong>{cat.soLuongTon}</strong> — Còn khả dụng: <strong className={avail <= 0 ? 'text-red-600' : 'text-green-700'}>{avail}</strong>
+                    </p>
+                  ) : null;
+                })()}
+              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-[#666] mb-2">Chi nhánh <span className="text-[#B7705F]">*</span></label>
@@ -523,7 +713,7 @@ export default function AdminAssetsManagement() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
               <button type="button" onClick={closeModal} className="px-5 py-2.5 text-[#666] font-medium hover:bg-gray-200 rounded-lg text-sm transition-colors">Hủy</button>
               <button type="submit" className="px-5 py-2.5 bg-[#B7705F] text-white font-semibold rounded-lg text-sm hover:bg-[#a06050] transition-colors flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Thêm tài sản
+                <Save className="w-4 h-4" /> Lưu
               </button>
             </div>
           </form>
@@ -536,7 +726,7 @@ export default function AdminAssetsManagement() {
           <form onSubmit={handleSaveEdit} className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
             <div className="bg-[#FAF5F3] px-6 py-4 border-b border-[#EAD3CC]/50 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold text-[#8C4A3A]">Chỉnh sửa tài sản</h2>
+                <h2 className="text-xl font-bold text-[#8C4A3A]">Chỉnh sửa phân bổ</h2>
                 <p className="text-xs text-[#666] mt-0.5">{selectedRecord.maTaiSan} — {selectedRecord.tenTaiSan}</p>
               </div>
               <button type="button" onClick={closeModal} className="text-gray-400 hover:text-[#B7705F] text-2xl leading-none">&times;</button>
@@ -693,14 +883,13 @@ export default function AdminAssetsManagement() {
       {/* ── Toast ──────────────────────────────────────────────────────── */}
       {toast && (
         <div className="fixed top-5 right-5 z-[110]">
-          <div className={`flex items-center gap-3 p-4 rounded-xl shadow-lg border ${
-            toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+          <div className={`flex items-center gap-3 p-4 rounded-xl shadow-lg border ${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
             toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
-            'bg-[#FAF5F3] border-[#EAD3CC] text-gray-800'
-          }`}>
+              'bg-[#FAF5F3] border-[#EAD3CC] text-gray-800'
+            }`}>
             {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" /> :
-             toast.type === 'error' ? <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" /> :
-             <Info className="w-5 h-5 text-[#B7705F] shrink-0" />}
+              toast.type === 'error' ? <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" /> :
+                <Info className="w-5 h-5 text-[#B7705F] shrink-0" />}
             <span className="text-sm font-semibold">{toast.message}</span>
             <button onClick={() => setToast(null)} className="text-gray-400 hover:text-gray-600 text-lg font-bold leading-none pl-2">&times;</button>
           </div>

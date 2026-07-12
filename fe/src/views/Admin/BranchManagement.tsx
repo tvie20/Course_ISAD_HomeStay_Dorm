@@ -55,13 +55,13 @@ export default function BranchManagement() {
   // ── Data: từ localStorage, đồng bộ với UserManagement ──────────────────
   const loadBranches = (): Branch[] => {
     const s = localStorage.getItem('branch_list_v2');
-    if (s) try { return JSON.parse(s); } catch {}
+    if (s) try { return JSON.parse(s); } catch { }
     return DEFAULT_BRANCHES;
   };
 
   const loadUsers = (): UserRecord[] => {
     const s = localStorage.getItem('user_list_v2');
-    if (s) try { return JSON.parse(s); } catch {}
+    if (s) try { return JSON.parse(s); } catch { }
     return DEFAULT_USERS;
   };
 
@@ -96,7 +96,7 @@ export default function BranchManagement() {
           localStorage.setItem('branch_list_v2', JSON.stringify(updated));
           return updated;
         });
-      } catch {}
+      } catch { }
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
@@ -585,7 +585,7 @@ export default function BranchManagement() {
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
               <button onClick={() => setShowDeleteConfirm(null)} className="px-5 py-2.5 text-[#666] text-sm font-medium hover:bg-gray-200 rounded-xl">Hủy</button>
-              <button onClick={handleConfirmDelete} className="px-5 py-2.5 bg-[#B7705F] hover:bg-[#a06050] text-white text-sm font-semibold rounded-xl shadow-sm">Xác nhận xóa</button>
+              <button onClick={handleConfirmDelete} className="px-5 py-2.5 bg-red-600 text-white font-medium rounded-lg shadow-sm hover:bg-red-700 transition-colors">Xác nhận</button>
             </div>
           </div>
         </div>

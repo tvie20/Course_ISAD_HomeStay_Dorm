@@ -3,8 +3,9 @@ import { Search, UserCheck, CreditCard, Users, ShieldAlert, CheckCircle, ArrowRi
 import CreateLease from '../Sale/CreateLease';
 
 const MOCK_DEPOSITS = [
-   { id: 'DC-2023-088', room: 'P.102', customer: 'Nguyễn Văn A', phone: '0901234567', amount: '4,000,000 đ' },
-   { id: 'DC-2023-089', room: 'P.201', customer: 'Lê Thị C', phone: '0987654321', amount: '8,000,000 đ' },
+   { id: 'DC-2023-088', room: 'P.101', customer: 'Nguyễn Văn A', phone: '0901234567', amount: '4,000,000 đ', beds: ['Giường 01'], isFullRoom: false, maxCount: 4 },
+   { id: 'DC-2023-089', room: 'P.102', customer: 'Trần Văn B', phone: '0907654321', amount: '12,000,000 đ', beds: ['Giường 01', 'Giường 02', 'Giường 03'], isFullRoom: false, maxCount: 4 },
+   { id: 'DC-2023-090', room: 'P.201', customer: 'Lê Thị C', phone: '0987654321', amount: '8,000,000 đ', beds: [], isFullRoom: true, maxCount: 2 },
 ];
 
 export default function LeaseContract() {
@@ -32,6 +33,12 @@ export default function LeaseContract() {
       setIsChecking(true);
       setOcrSuccess(false);
       setUploadedFiles([]);
+
+      const calculatedNumRoommates = deposit.isFullRoom
+         ? (deposit.maxCount - 1)
+         : (deposit.beds && deposit.beds.length > 0 ? deposit.beds.length - 1 : 0);
+      setNumRoommates(calculatedNumRoommates);
+      setRoommates(Array.from({ length: Math.max(0, calculatedNumRoommates) }).map(() => ({ name: '', phone: '', cccd: '' })));
    };
 
    const handleOcrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,44 +97,7 @@ export default function LeaseContract() {
                         <h2 className="font-bold text-[#222222] flex items-center"><UserCheck className="w-5 h-5 mr-2 text-[#B7705F]" /> Hồ sơ định danh khách hàng</h2>
                      </div>
                      <div className="p-6">
-                        <div className="mb-4">
-                           <label className="block text-sm font-semibold text-[#666666] mb-2">Chụp/Tải lên CCCD/Passport</label>
-                           <input
-                              type="file"
-                              id="ocr-upload"
-                              className="hidden"
-                              multiple
-                              accept="image/*,application/pdf"
-                              onChange={handleOcrUpload}
-                           />
-                           <div
-                              onClick={() => document.getElementById('ocr-upload')?.click()}
-                              className="border border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer relative overflow-hidden min-h-[110px]"
-                           >
-                              {isOcrScanning ? (
-                                 <div className="flex flex-col items-center space-y-2 py-2">
-                                    <div className="w-8 h-8 border-4 border-[#B7705F] border-t-transparent rounded-full animate-spin"></div>
-                                    <span className="text-xs text-[#B7705F] font-semibold">Đang nhận diện OCR... Vui lòng đợi</span>
-                                 </div>
-                              ) : ocrSuccess ? (
-                                 <div className="flex flex-col items-center space-y-1 text-center">
-                                    <CheckCircle className="w-8 h-8 text-green-500 animate-bounce" />
-                                    <span className="text-xs text-green-600 font-bold">Nhận diện OCR thành công!</span>
-                                    <span className="text-[10px] text-gray-400">Đã điền tự động CCCD: 079198765432</span>
-                                    {uploadedFiles.length > 0 && (
-                                       <span className="text-[10px] font-mono text-gray-500 underline mt-1">
-                                          {uploadedFiles.join(', ')}
-                                       </span>
-                                    )}
-                                 </div>
-                              ) : (
-                                 <>
-                                    <span className="text-sm text-[#B7705F] font-bold">+ Tải lên mặt trước & mặt sau</span>
-                                    <span className="text-xs text-gray-400 mt-1">Hỗ trợ nhận diện OCR tự động điền</span>
-                                 </>
-                              )}
-                           </div>
-                        </div>
+                        {/* OCR Upload removed */}
                         <div className="space-y-4">
                            <div>
                               <label className="block text-xs font-semibold text-[#666666] mb-1">Họ và tên</label>
@@ -168,17 +138,8 @@ export default function LeaseContract() {
                      </div>
                      <div className="p-6">
                         <div className="flex items-center justify-between mb-4">
-                           <span className="text-sm font-semibold text-[#222222]">Khai báo số người ở cùng</span>
-                           <select
-                              className="border border-gray-200 rounded text-sm px-2 py-1 bg-white focus:outline-none"
-                              value={numRoommates}
-                              onChange={(e) => setNumRoommates(Number(e.target.value))}
-                           >
-                              <option value={0}>0 người</option>
-                              <option value={1}>1 người</option>
-                              <option value={2}>2 người</option>
-                              <option value={3}>3 người</option>
-                           </select>
+                           <span className="text-sm font-semibold text-[#222222]">Thông tin người ở cùng</span>
+                           <span className="text-sm font-bold text-[#B7705F]">{numRoommates} người</span>
                         </div>
                         {numRoommates > 0 && (
                            <div className="mb-4 space-y-4">
@@ -272,7 +233,7 @@ export default function LeaseContract() {
                         <label className="flex items-start space-x-3 cursor-pointer">
                            <input type="checkbox" className="mt-1 w-4 h-4 text-[#B7705F] border-gray-300 rounded focus:ring-[#B7705F]" />
                            <span className="text-sm text-[#222222] block leading-relaxed">
-                              Khách hàng đã đọc, hiểu và đồng ý với các Nội quy Ký túc xá/Căn hộ (giờ giấc, vệ sinh, khách đến thăm).
+                              Khách hàng đã đọc, hiểu và đồng ý với các Nội quy Ký túc xá.
                            </span>
                         </label>
                      </div>

@@ -25,11 +25,11 @@ interface Branch {
 }
 
 const DEFAULT_USERS: UserRecord[] = [
-  { id: 'NV001', name: 'Nguyễn Văn Admin', role: 'Quản trị viên', branch: 'Toàn hệ thống', status: 'Hoạt động', email: 'admin@homestay.com', phone: '0901234567' },
-  { id: 'NV002', name: 'Trần Thị Trưởng', role: 'Quản lý', branch: 'CN001', status: 'Hoạt động', email: 'truong.tt@homestay.com', phone: '0901234568' },
+  { id: 'NV001', name: 'Nguyễn Văn Admin', role: 'Quản trị viên', branch: 'Toàn hệ thống', status: 'Đang hoạt động', email: 'admin@homestay.com', phone: '0901234567' },
+  { id: 'NV002', name: 'Trần Thị Trưởng', role: 'Quản lý', branch: 'CN001', status: 'Đang hoạt động', email: 'truong.tt@homestay.com', phone: '0901234568' },
   { id: 'NV003', name: 'Lê Kế Toán', role: 'Nhân viên kế toán', branch: 'CN001, CN002', status: 'Đang nghỉ phép', email: 'toan.lk@homestay.com', phone: '0901234569' },
-  { id: 'NV004', name: 'Phạm Kinh Doanh', role: 'Nhân viên kinh doanh', branch: 'Toàn hệ thống', status: 'Hoạt động', email: 'doanh.pk@homestay.com', phone: '0901234570' },
-  { id: 'KH001', name: 'Vũ Đức Khách', role: 'Khách hàng', branch: 'CN001', status: 'Hoạt động', email: 'khachhang.vd@gmail.com', phone: '0909999999' },
+  { id: 'NV004', name: 'Phạm Kinh Doanh', role: 'Nhân viên kinh doanh', branch: 'Toàn hệ thống', status: 'Đang hoạt động', email: 'doanh.pk@homestay.com', phone: '0901234570' },
+  { id: 'KH001', name: 'Vũ Đức Khách', role: 'Khách hàng', branch: 'CN001', status: 'Đang hoạt động', email: 'khachhang.vd@gmail.com', phone: '0909999999' },
 ];
 
 function getInitials(name: string) {
@@ -62,7 +62,15 @@ function syncManagerToBranch(user: UserRecord, allUsers: UserRecord[]) {
 export default function UserManagement() {
   const [users, setUsers] = useState<UserRecord[]>(() => {
     const s = localStorage.getItem('user_list_v2');
-    if (s) try { return JSON.parse(s); } catch {}
+    if (s) {
+      try { 
+        const parsed = JSON.parse(s);
+        return parsed.map((u: UserRecord) => ({
+          ...u,
+          status: u.status === 'Hoạt động' ? 'Đang hoạt động' : u.status
+        }));
+      } catch {}
+    }
     return DEFAULT_USERS;
   });
 
@@ -96,11 +104,11 @@ export default function UserManagement() {
 
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', role: 'Khách hàng',
-    password: '', branch: 'CN001', status: 'Hoạt động'
+    password: '', branch: 'CN001', status: 'Đang hoạt động'
   });
 
   const handleOpenAdd = () => {
-    setFormData({ name: '', email: '', phone: '', role: 'Khách hàng', password: '', branch: 'CN001', status: 'Hoạt động' });
+    setFormData({ name: '', email: '', phone: '', role: 'Khách hàng', password: '', branch: 'CN001', status: 'Đang hoạt động' });
     setErrorMsg(''); setSuccessMsg(''); setShowAdd(true);
   };
 
@@ -137,7 +145,7 @@ export default function UserManagement() {
   };
 
   const handleOpenEdit = (user: any) => {
-    setFormData({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, password: '', branch: user.branch || 'CN001', status: user.status || 'Hoạt động' });
+    setFormData({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, password: '', branch: user.branch || 'CN001', status: user.status || 'Đang hoạt động' });
     setErrorMsg(''); setSuccessMsg(''); setShowEdit(user);
   };
 
@@ -185,8 +193,8 @@ export default function UserManagement() {
 
   const executeToggleStatus = () => {
     if (showConfirmAction) {
-      const isLocked = showConfirmAction.status === 'Vô hiệu hóa' || showConfirmAction.status === 'Khóa';
-      const newStatus = isLocked ? 'Hoạt động' : 'Vô hiệu hóa';
+      const isLocked = showConfirmAction.status === 'Ngưng hoạt động' || showConfirmAction.status === 'Ngưng hoạt động';
+      const newStatus = isLocked ? 'Đang hoạt động' : 'Ngưng hoạt động';
       const newList = users.map(u => u.id === showConfirmAction.id ? { ...u, status: newStatus } : u);
       persistUsers(newList);
       setSuccessMsg(`Đã thay đổi trạng thái tài khoản ${showConfirmAction.name} thành ${newStatus}`);
@@ -352,9 +360,9 @@ export default function UserManagement() {
                 <div className="md:col-span-2 border-t border-gray-100 pt-3">
                   <label className={labelCls}>Trạng thái tài khoản *</label>
                   <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className={`${inputCls} bg-white`}>
-                    <option value="Hoạt động">Hoạt động</option>
+                    <option value="Đang hoạt động">Đang hoạt động</option>
                     <option value="Đang nghỉ phép">Đang nghỉ phép / Tạm ngưng</option>
-                    <option value="Vô hiệu hóa">Vô hiệu hóa / Khóa tài khoản</option>
+                    <option value="Ngưng hoạt động">Ngưng hoạt động / Khóa tài khoản</option>
                   </select>
                 </div>
               </div>
@@ -383,8 +391,8 @@ export default function UserManagement() {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500">Hoạt động bình thường</p>
-            <h3 className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'Hoạt động').length}</h3>
+            <p className="text-xs font-semibold text-gray-500">Đang hoạt động bình thường</p>
+            <h3 className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'Đang hoạt động').length}</h3>
           </div>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-[#EAD3CC]/50 shadow-sm flex items-center space-x-4">
@@ -393,7 +401,7 @@ export default function UserManagement() {
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500">Bị vô hiệu hóa / khóa</p>
-            <h3 className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'Khóa' || u.status === 'Vô hiệu hóa').length}</h3>
+            <h3 className="text-2xl font-bold text-gray-900">{users.filter(u => u.status === 'Khóa' || u.status === 'Ngưng hoạt động').length}</h3>
           </div>
         </div>
       </div>
@@ -442,7 +450,7 @@ export default function UserManagement() {
                 </td>
                 <td className="py-4 px-6">
                   <div className="flex items-center text-[#222222]">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${user.status === 'Hoạt động' ? 'bg-green-500' : (user.status === 'Khóa' || user.status === 'Vô hiệu hóa') ? 'bg-red-500' : 'bg-orange-400'}`}></span>
+                    <span className={`w-2 h-2 rounded-full mr-2 ${user.status === 'Đang hoạt động' ? 'bg-green-500' : (user.status === 'Khóa' || user.status === 'Ngưng hoạt động') ? 'bg-red-500' : 'bg-orange-400'}`}></span>
                     <span className="font-medium text-sm">{user.status}</span>
                   </div>
                 </td>
@@ -454,7 +462,7 @@ export default function UserManagement() {
                     </button>
                     <button onClick={() => handleToggleStatusClick(user)}
                       className="px-3 py-1 bg-gray-50 hover:bg-[#FAF5F3] border border-gray-200 rounded-lg text-xs font-semibold text-gray-500 transition-colors">
-                      {(user.status === 'Vô hiệu hóa' || user.status === 'Khóa') ? 'Mở khóa' : 'Khóa'}
+                      {(user.status === 'Ngưng hoạt động' || user.status === 'Khóa') ? 'Mở khóa' : 'Khóa'}
                     </button>
                   </div>
                 </td>
@@ -476,12 +484,12 @@ export default function UserManagement() {
             </div>
             <div className="p-6">
               <p className="text-sm text-[#666666]">
-                Bạn có chắc chắn muốn <strong className="text-[#222222]">{(showConfirmAction.status === 'Vô hiệu hóa' || showConfirmAction.status === 'Khóa') ? 'kích hoạt lại' : 'khóa / vô hiệu hóa'}</strong> tài khoản của <strong className="text-[#222222]">{showConfirmAction.name}</strong> không?
+                Bạn có chắc chắn muốn <strong className="text-[#222222]">{(showConfirmAction.status === 'Ngưng hoạt động' || showConfirmAction.status === 'Khóa') ? 'kích hoạt lại' : 'khóa / vô hiệu hóa'}</strong> tài khoản của <strong className="text-[#222222]">{showConfirmAction.name}</strong> không?
               </p>
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
               <button onClick={() => setShowConfirmAction(null)} className="px-5 py-2.5 text-[#666] text-sm font-medium hover:bg-gray-200 rounded-xl">Hủy</button>
-              <button onClick={executeToggleStatus} className={`px-5 py-2.5 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors ${(showConfirmAction.status === 'Vô hiệu hóa' || showConfirmAction.status === 'Khóa') ? 'bg-green-600 hover:bg-green-700' : 'bg-[#B7705F] hover:bg-[#a06050]'}`}>
+              <button onClick={executeToggleStatus} className={`px-5 py-2.5 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors ${(showConfirmAction.status === 'Ngưng hoạt động' || showConfirmAction.status === 'Khóa') ? 'bg-green-600 hover:bg-green-700' : 'bg-[#B7705F] hover:bg-[#a06050]'}`}>
                 Xác nhận
               </button>
             </div>

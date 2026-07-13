@@ -439,7 +439,7 @@ export default function AssetsManagement() {
                                     <div className="max-h-48 overflow-y-auto bg-white">
                                        {roomOptions
                                           .filter(r => r !== 'Tất cả' && r !== 'Chưa phân bổ')
-                                          .filter(r => r.toLowerCase().includes(roomSearchQuery.toLowerCase()))
+                                          .filter((r: any) => r.toLowerCase().includes(roomSearchQuery.toLowerCase()))
                                           .map(r => (
                                              <button
                                                 key={r}

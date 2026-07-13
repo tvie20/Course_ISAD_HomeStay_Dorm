@@ -75,6 +75,7 @@ export default function RoomInspection() {
   const [inspectionList, setInspectionList] = useState<any[]>(MOCK_LIST);
   const [inspectionItems, setInspectionItems] = useState<InspectionItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [inspectionType, setInspectionType] = useState<'regular' | 'checkout'>('regular');
 
   // Load checkout flow request
@@ -265,9 +266,13 @@ export default function RoomInspection() {
 
   const filteredList = inspectionList.filter(item => {
     const q = searchTerm.toLowerCase();
-    return item.room.toLowerCase().includes(q)
+    const matchSearch = q === '' || (
+      item.room.toLowerCase().includes(q)
       || (item.customer && item.customer.toLowerCase().includes(q))
-      || (item.bed && item.bed.toLowerCase().includes(q));
+      || (item.bed && item.bed.toLowerCase().includes(q))
+    );
+    const matchStatus = statusFilter === '' || item.status === statusFilter;
+    return matchSearch && matchStatus;
   });
 
   // ── LIST VIEW ──────────────────────────────────────────────────────────
@@ -291,6 +296,19 @@ export default function RoomInspection() {
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
               />
+           </div>
+           
+           <div className="flex items-center space-x-2">
+             <span className="text-xs font-semibold text-gray-500 uppercase">Trạng thái:</span>
+             <select 
+               value={statusFilter}
+               onChange={(e) => setStatusFilter(e.target.value)}
+               className="border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#B7705F]"
+             >
+               <option value="">Tất cả trạng thái</option>
+               <option value="Bình thường">Bình thường</option>
+               <option value="Yêu cầu trả phòng">Yêu cầu trả phòng</option>
+             </select>
            </div>
         </div>
 

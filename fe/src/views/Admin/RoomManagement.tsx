@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Search, Bell, MessageSquare, Plus, Edit2, Trash2, ArrowLeft, Eye } from 'lucide-react';
 
 const INITIAL_ROOMS = [
-   { id: 'P.101', name: 'Phòng 101', type: 'Phòng 2 người', floor: '1', currentCount: 2, maxCount: 2, status: 'ĐANG Ở', branch: 'Chi nhánh 1' },
-   { id: 'P.102', name: 'Phòng 102', type: 'Phòng 4 người', floor: '1', currentCount: 2, maxCount: 4, status: 'ĐANG Ở', branch: 'Chi nhánh 1' },
-   { id: 'P.103', name: 'Phòng 103', type: 'Phòng 2 người', floor: '1', currentCount: 1, maxCount: 2, status: 'ĐANG Ở', branch: 'Chi nhánh 1' },
-   { id: 'P.301', name: 'Phòng 301', type: 'Phòng 4 người', floor: '3', currentCount: 4, maxCount: 4, status: 'ĐANG Ở', branch: 'Chi nhánh 1' },
-   { id: 'P.302', name: 'Phòng 302', type: 'Phòng 2 người', floor: '3', currentCount: 0, maxCount: 2, status: 'TRỐNG', branch: 'Chi nhánh 1' },
+   { id: 'P.101', name: 'Phòng 101', type: 'Phòng 2 người', floor: '1', currentCount: 2, maxCount: 2, status: 'Đã thuê', branch: 'Chi nhánh 1' },
+   { id: 'P.102', name: 'Phòng 102', type: 'Phòng 4 người', floor: '1', currentCount: 2, maxCount: 4, status: 'Đã thuê', branch: 'Chi nhánh 1' },
+   { id: 'P.103', name: 'Phòng 103', type: 'Phòng 2 người', floor: '1', currentCount: 1, maxCount: 2, status: 'Đã thuê', branch: 'Chi nhánh 1' },
+   { id: 'P.301', name: 'Phòng 301', type: 'Phòng 4 người', floor: '3', currentCount: 4, maxCount: 4, status: 'Đã thuê', branch: 'Chi nhánh 1' },
+   { id: 'P.302', name: 'Phòng 302', type: 'Phòng 2 người', floor: '3', currentCount: 0, maxCount: 2, status: 'Trống', branch: 'Chi nhánh 1' },
 ];
 
 export default function RoomManagement() {
@@ -529,8 +529,8 @@ export default function RoomManagement() {
                         </td>
                         <td className="px-6 py-5 text-xs font-bold">
                            <span className={`px-3 py-1 rounded-full whitespace-nowrap 
-                          ${r.status === 'ĐANG Ở' ? 'bg-[#F2D7D0] text-[#8C4A3A]' :
-                                 r.status === 'TRỐNG' ? 'bg-[#E5D7D3] text-[#665D59]' :
+                          ${r.status === 'Đã thuê' ? 'bg-[#F2D7D0] text-[#8C4A3A]' :
+                                 r.status === 'Trống' ? 'bg-[#E5D7D3] text-[#665D59]' :
                                     'bg-[#FCEAE8] text-[#D84C4C]'}`}>
                               {r.status}
                            </span>

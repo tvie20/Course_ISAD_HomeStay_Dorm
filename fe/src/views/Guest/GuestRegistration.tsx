@@ -46,7 +46,7 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Ngày sinh <span className="text-[#B7705F]">*</span></label>
-               <input type="text" placeholder="dd/mm/yyyy" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="date" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Số CCCD / Hộ chiếu <span className="text-[#B7705F]">*</span></label>
@@ -88,19 +88,27 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
             <div className="md:col-span-2">
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Khu vực / Chi nhánh mong muốn <span className="text-[#B7705F]">*</span></label>
                <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
-                  <option>Chọn chi nhánh</option>
+                  <option value="">Chọn chi nhánh</option>
+                  <option value="CN Quận 1">Homestay Central Park (Q.Bình Thạnh)</option>
+                  <option value="CN Quận 3">Sunrise Riverside (Nhà Bè)</option>
                </select>
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Loại phòng <span className="text-[#B7705F]">*</span></label>
                <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
-                  <option>Chọn loại phòng</option>
+                  <option value="">Chọn loại phòng</option>
+                  <option value="2">Phòng 2 người</option>
+                  <option value="4">Phòng 4 người</option>
+                  <option value="6">Phòng 6 người</option>
                </select>
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Mức giá dự kiến (VNĐ/tháng)</label>
                <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
-                  <option>Chọn mức giá</option>
+                  <option value="">Chọn mức giá</option>
+                  <option value="1tr-1.5tr">1.000.000 - 1.500.000 đ</option>
+                  <option value="1.5tr-2tr">1.500.000 - 2.000.000 đ</option>
+                  <option value=">2tr">Trên 2.000.000 đ</option>
                </select>
             </div>
             <div>
@@ -109,12 +117,15 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Ngày dự kiến chuyển vào <span className="text-[#B7705F]">*</span></label>
-               <input type="text" placeholder="dd/mm/yyyy" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="date" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Thời gian thuê dự kiến <span className="text-[#B7705F]">*</span></label>
                <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
-                  <option>Chọn thời gian</option>
+                  <option value="">Chọn thời gian</option>
+                  <option value="3">3 tháng</option>
+                  <option value="6">6 tháng</option>
+                  <option value="12">1 năm</option>
                </select>
             </div>
           </div>

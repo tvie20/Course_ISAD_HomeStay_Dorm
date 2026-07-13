@@ -17,7 +17,7 @@ interface Room {
   capacity: number; // e.g. 4
   branch: string; // e.g. CN Quận 1
   fullBranchName: string; // e.g. Homestay Central Park
-  status: 'ĐANG Ở' | 'TRỐNG' | 'BẢO TRÌ';
+  status: 'Đã thuê' | 'Trống' | 'BẢO TRÌ';
   beds: Bed[];
 }
 
@@ -32,7 +32,7 @@ const INITIAL_ROOMS_DATA: Room[] = [
     capacity: 4,
     branch: 'CN Quận 1',
     fullBranchName: 'Homestay Central Park',
-    status: 'ĐANG Ở',
+    status: 'Đã thuê',
     beds: [
       { bedId: 'Giường 1', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
       { bedId: 'Giường 2', price: 1500000, status: 'Đã thuê', note: 'Giường trên' },
@@ -49,7 +49,7 @@ const INITIAL_ROOMS_DATA: Room[] = [
     capacity: 4,
     branch: 'CN Quận 1',
     fullBranchName: 'Homestay Central Park',
-    status: 'ĐANG Ở',
+    status: 'Đã thuê',
     beds: [
       { bedId: 'Giường 1', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
       { bedId: 'Giường 2', price: 1500000, status: 'Trống', note: 'Giường trên' },
@@ -66,7 +66,7 @@ const INITIAL_ROOMS_DATA: Room[] = [
     capacity: 6,
     branch: 'CN Quận 3',
     fullBranchName: 'Sunrise Riverside',
-    status: 'TRỐNG',
+    status: 'Trống',
     beds: [
       { bedId: 'Giường 1', price: 1200000, status: 'Trống', note: 'Giường dưới' },
       { bedId: 'Giường 2', price: 1200000, status: 'Trống', note: 'Giường trên' },
@@ -85,7 +85,7 @@ const INITIAL_ROOMS_DATA: Room[] = [
     capacity: 4,
     branch: 'CN Quận 3',
     fullBranchName: 'Sunrise Riverside',
-    status: 'ĐANG Ở',
+    status: 'Đã thuê',
     beds: [
       { bedId: 'Giường 1', price: 1600000, status: 'Đã thuê', note: 'Giường dưới' },
       { bedId: 'Giường 2', price: 1600000, status: 'Đã thuê', note: 'Giường trên' },

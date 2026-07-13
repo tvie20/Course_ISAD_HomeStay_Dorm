@@ -9,7 +9,7 @@ interface Branch {
   address: string;     // DiaChi
   hotline: string;     // SDT
   email: string;       // Email
-  trangThai: string;   // TrangThai: 'Đang hoạt động' | 'Đã đóng cửa'
+  trangThai: string;   // TrangThai: 'Đang hoạt động' | 'Không hoạt động'
   manager: string;     // Tên quản lý (có thể rỗng)
   managerId: string;   // ID user quản lý (có thể rỗng)
   avatar: string;
@@ -27,12 +27,12 @@ interface UserRecord {
   phone: string;
 }
 
-const TRANG_THAI_OPTIONS = ['Đang hoạt động', 'Đã đóng cửa'];
+const TRANG_THAI_OPTIONS = ['Đang hoạt động', 'Không hoạt động'];
 
 const DEFAULT_BRANCHES: Branch[] = [
   { id: 'CN001', name: 'Homestay Central Park', trangThai: 'Đang hoạt động', address: '208 Nguyễn Hữu Cảnh, P.22, Bình Thạnh', hotline: '0901 234 567', email: 'centralpark@homestay.com', manager: 'Nguyễn Lam', managerId: '', avatar: 'NL', rooms: 120 },
   { id: 'CN002', name: 'Sunrise Riverside', trangThai: 'Đang hoạt động', address: 'Đường Nguyễn Hữu Thọ, Phước Kiển, Nhà Bè', hotline: '0902 345 678', email: 'sunrise@homestay.com', manager: 'Trần Huy', managerId: '', avatar: 'TH', rooms: 85 },
-  { id: 'CN003', name: 'The Landmark View', trangThai: 'Đã đóng cửa', address: '720A Điện Biên Phủ, Phường 22, Bình Thạnh', hotline: '0903 456 789', email: 'landmark@homestay.com', manager: '', managerId: '', avatar: '--', rooms: 0 },
+  { id: 'CN003', name: 'The Landmark View', trangThai: 'Không hoạt động', address: '720A Điện Biên Phủ, Phường 22, Bình Thạnh', hotline: '0903 456 789', email: 'landmark@homestay.com', manager: '', managerId: '', avatar: '--', rooms: 0 },
 ];
 
 const DEFAULT_USERS: UserRecord[] = [
@@ -368,8 +368,8 @@ export default function BranchManagement() {
           </div>
         </div>
         <div className="bg-white border border-[#EAD3CC]/50 rounded-2xl p-5 shadow-sm">
-          <p className="text-xs font-semibold text-[#666]">Đã đóng cửa</p>
-          <p className="text-3xl font-bold text-gray-400 mt-1">{branches.filter(b => b.trangThai === 'Đã đóng cửa').length}</p>
+          <p className="text-xs font-semibold text-[#666]">Không hoạt động</p>
+          <p className="text-3xl font-bold text-gray-400 mt-1">{branches.filter(b => b.trangThai === 'Không hoạt động').length}</p>
           <p className="text-xs text-[#666] mt-0.5">chi nhánh tạm ngưng</p>
         </div>
       </div>

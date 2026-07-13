@@ -2,12 +2,17 @@ import React, { useState } from 'react';
 import { X, Printer, Zap, Droplets, Wifi, ParkingCircle, CheckCircle } from 'lucide-react';
 
 export default function CreateLease({ onCancel, initialData }: { onCancel: () => void, initialData?: any }) {
-   const [selectedBed, setSelectedBed] = useState('Giường 01');
+   const availableBeds = initialData?.isFullRoom 
+      ? Array.from({ length: initialData?.maxCount || 4 }).map((_, i) => `Giường 0${i + 1}`) 
+      : (initialData?.beds && initialData.beds.length > 0 ? initialData.beds : ['Giường 01']);
+   const [selectedBed, setSelectedBed] = useState(availableBeds[0]);
    const [customerName, setCustomerName] = useState(initialData?.customer || "Trần Thị Sinh Viên");
    const [customerPhone, setCustomerPhone] = useState((initialData?.phone || "0987654321").replace(/\D/g, ''));
    const [customerCccd, setCustomerCccd] = useState(initialData?.cccd || "079123456789");
    const [leaseDuration, setLeaseDuration] = useState('12');
    const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+   const roommates = initialData?.roommates || [];
+   const [roommateBeds, setRoommateBeds] = useState<string[]>(roommates.map(() => ''));
 
    const handleSaveContract = () => {
       setShowSaveSuccess(true);
@@ -128,16 +133,15 @@ export default function CreateLease({ onCancel, initialData }: { onCancel: () =>
                               </div>
                            </div>
                            <div>
-                              <label className="block text-xs text-[#666666] font-medium mb-1">Giường số</label>
+                              <label className="block text-xs text-[#666666] font-medium mb-1">Giường đại diện</label>
                               <select
                                  value={selectedBed}
                                  onChange={(e) => setSelectedBed(e.target.value)}
                                  className="w-full bg-white border border-[#EAD3CC] rounded-xl text-sm px-3 py-2.5 font-bold text-[#B7705F] outline-none focus:border-[#B7705F]"
                               >
-                                 <option value="Giường 01">Giường 01</option>
-                                 <option value="Giường 02">Giường 02</option>
-                                 <option value="Giường 03">Giường 03</option>
-                                 <option value="Giường 04">Giường 04</option>
+                                 {availableBeds.map((b: string) => (
+                                    <option key={b} value={b}>{b}</option>
+                                 ))}
                               </select>
                            </div>
                         </div>
@@ -164,6 +168,33 @@ export default function CreateLease({ onCancel, initialData }: { onCancel: () =>
                               <input type="text" className="w-full bg-[#FAF5F3] border border-[#EAD3CC]/50 rounded-xl text-sm px-3 py-2.5 font-bold text-[#B7705F]" defaultValue="3,500,000" readOnly />
                            </div>
                         </div>
+
+                        {roommates.length > 0 && (
+                           <div className="pt-2">
+                              <label className="block text-xs text-[#666666] font-medium mb-2">Khách đăng ký ở cùng (Lấy từ phiếu ĐK)</label>
+                              <div className="space-y-2">
+                                 {roommates.map((rm: any, idx: number) => (
+                                    <div key={idx} className="flex items-center justify-between p-2 bg-[#F3E1DC]/30 border border-[#EAD3CC] rounded-lg">
+                                       <span className="text-sm font-semibold text-[#8C4A3A]">{rm.name || `Người ${idx+1}`}</span>
+                                       <select 
+                                          value={roommateBeds[idx]}
+                                          onChange={(e) => {
+                                             const newBeds = [...roommateBeds];
+                                             newBeds[idx] = e.target.value;
+                                             setRoommateBeds(newBeds);
+                                          }}
+                                          className="text-xs font-bold text-[#B7705F] bg-white border border-[#EAD3CC] rounded px-2 py-1 focus:outline-none"
+                                       >
+                                          <option value="">-- Chọn giường --</option>
+                                          {availableBeds.map((b: string) => (
+                                             <option key={b} value={b}>{b}</option>
+                                          ))}
+                                       </select>
+                                    </div>
+                                 ))}
+                              </div>
+                           </div>
+                        )}
                      </div>
 
                      <div className="bg-[#FAF5F3] rounded-xl border border-[#EAD3CC]/30 p-4">
@@ -225,14 +256,26 @@ export default function CreateLease({ onCancel, initialData }: { onCancel: () =>
 
                      <div className="mb-6">
                         <p className="font-bold mb-1">BÊN THUÊ (BÊN B):</p>
-                        <p>Ông/Bà: <strong>{customerName}</strong></p>
+                        <p>Đại diện: <strong>{customerName}</strong></p>
                         <p>Số CCCD: {customerCccd}</p>
                         <p>Điện thoại: {customerPhone}</p>
+                        {roommates.length > 0 && (
+                           <div className="mt-4">
+                              <p className="font-semibold italic mb-1">Thành viên ở cùng:</p>
+                              {roommates.map((rm: any, idx: number) => (
+                                 <div key={idx} className="ml-4 mb-2">
+                                    <p>Ông/Bà: <strong>{rm.name || `Người ${idx+1}`}</strong></p>
+                                    <p>Số CCCD: {rm.cccd || "Chưa cung cấp"}</p>
+                                    <p>Điện thoại: {rm.phone || "Chưa cung cấp"}</p>
+                                 </div>
+                              ))}
+                           </div>
+                        )}
                      </div>
 
                      <p className="font-bold mb-2">ĐIỀU 1: ĐỐI TƯỢNG VÀ NỘI DUNG THUÊ</p>
                      <p className="mb-2">
-                        Bên A đồng ý cho Bên B thuê chỗ ở tại <strong>Phòng {initialData?.room || '302'} - {selectedBed}</strong> của hệ thống ký túc xá dịch vụ Homestay Dorm.
+                        Bên A đồng ý cho Bên B thuê chỗ ở tại <strong>Phòng {initialData?.room || '302'}{initialData?.isFullRoom ? "" : ` - ${Array.from(new Set([selectedBed, ...roommateBeds.filter(Boolean)])).sort().join(', ')}`}</strong> của hệ thống ký túc xá dịch vụ Homestay Dorm.
                      </p>
                      <p className="mb-2">Giá thuê chỗ ở/giường: <strong>3,500,000 VNĐ / tháng</strong>.</p>
                      <p className="mb-2">Tiền cọc bảo đảm: <strong>3,500,000 VNĐ</strong> (Đã thanh toán trước và lưu trữ vào hồ sơ).</p>
@@ -256,7 +299,6 @@ export default function CreateLease({ onCancel, initialData }: { onCancel: () =>
                            <p className="font-bold mb-1">ĐẠI DIỆN BÊN B</p>
                            <p className="italic text-gray-500 mb-6">(Ký &amp; Ghi rõ họ tên)</p>
                            <div className="mt-8 border-b border-dashed border-gray-300 w-32 mx-auto"></div>
-                           <p className="mt-2 font-bold text-gray-800">{customerName}</p>
                         </div>
                      </div>
                   </div>

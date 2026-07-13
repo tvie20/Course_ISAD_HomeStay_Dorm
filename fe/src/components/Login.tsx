@@ -9,11 +9,17 @@ interface LoginProps {
 export default function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [userType, setUserType] = useState<'guest' | 'staff'>('staff');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (username.trim()) {
-      onLogin(username.trim());
+      let finalUsername = username.trim();
+      // Prefix with 'guest' if customer is selected and doesn't already have a valid prefix to satisfy App.tsx logic for mockup
+      if (userType === 'guest' && !finalUsername.toLowerCase().startsWith('guest')) {
+        finalUsername = 'guest_' + finalUsername;
+      }
+      onLogin(finalUsername);
     }
   };
 
@@ -38,7 +44,7 @@ export default function Login({ onLogin }: LoginProps) {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1.5 text-gray-900">
-                Email / Tên đăng nhập
+                {userType === 'staff' ? 'Tên đăng nhập' : 'Email / SĐT Khách hàng'}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -50,7 +56,7 @@ export default function Login({ onLogin }: LoginProps) {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Nhập email hoặc tên đăng nhập"
+                  placeholder={userType === 'staff' ? "Nhập tên đăng nhập" : "Nhập email hoặc SĐT"}
                   className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm transition-colors"
                 />
               </div>
@@ -77,6 +83,17 @@ export default function Login({ onLogin }: LoginProps) {
                   <Eye className="w-4 h-4" />
                 </div>
               </div>
+            </div>
+
+            <div className="flex items-center justify-center space-x-6 pt-2 pb-1">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input type="radio" checked={userType === 'staff'} onChange={() => setUserType('staff')} className="text-[#B7705F] focus:ring-[#B7705F]" />
+                <span className="text-sm font-medium text-gray-700">Nhân viên</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input type="radio" checked={userType === 'guest'} onChange={() => setUserType('guest')} className="text-[#B7705F] focus:ring-[#B7705F]" />
+                <span className="text-sm font-medium text-gray-700">Khách hàng</span>
+              </label>
             </div>
 
             <div className="flex items-center justify-between pt-1">

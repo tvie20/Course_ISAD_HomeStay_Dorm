@@ -262,11 +262,11 @@ export default function AdminAssetsManagement() {
       showToast('Đã xóa tài sản thành công.', 'success');
     } else {
       persist(records.map(r => r.id === id
-        ? { ...r, isPendingDeletion: false, deletionReason: undefined, condition: 'Cần thay thế', lastUpdated: new Date().toLocaleDateString('vi-VN') }
+        ? { ...r, isPendingDeletion: false, deletionReason: undefined, lastUpdated: new Date().toLocaleDateString('vi-VN') }
         : r
       ));
       closeModal();
-      showToast('Đã từ chối yêu cầu xóa. Trạng thái chuyển về "Cần thay thế".', 'info');
+      showToast('Đã từ chối yêu cầu xóa.', 'info');
     }
     setConfirmAction(null);
   };
@@ -334,7 +334,7 @@ export default function AdminAssetsManagement() {
       </div>
 
       {/* ── Summary cards ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-[#EAD3CC]/50 shadow-sm p-5">
           <p className="text-xs text-[#666666] font-medium">Tổng loại tài sản</p>
           <p className="text-3xl font-bold text-[#8C4A3A] mt-1">{catalog.length}</p>
@@ -344,11 +344,6 @@ export default function AdminAssetsManagement() {
           <p className="text-xs text-[#666666] font-medium">Tổng số lượng</p>
           <p className="text-3xl font-bold text-[#8C4A3A] mt-1">{totalAllocated}</p>
           <p className="text-[11px] text-[#666666] mt-0.5">đơn vị đã phân bổ</p>
-        </div>
-        <div className="bg-white rounded-xl border border-[#EAD3CC]/50 shadow-sm p-5">
-          <p className="text-xs text-[#666666] font-medium">Tình trạng tốt</p>
-          <p className="text-3xl font-bold text-green-700 mt-1">{records.filter(r => r.condition === 'Tốt' && !r.isPendingDeletion).length}</p>
-          <p className="text-[11px] text-[#666666] mt-0.5">/ {records.length} bản ghi · {records.filter(r => r.condition !== 'Tốt' && !r.isPendingDeletion).length} cần chú ý</p>
         </div>
       </div>
 
@@ -403,15 +398,6 @@ export default function AdminAssetsManagement() {
             <option value="Tất cả">Tất cả chi nhánh</option>
             {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-          <select value={filterCondition} onChange={e => setFilterCondition(e.target.value)}
-            className="border border-gray-200 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:border-[#B7705F]">
-            <option value="Tất cả">Tất cả trạng thái</option>
-            <option value="Chờ duyệt xóa">Chờ duyệt xóa</option>
-            <option value="Tốt">Tốt</option>
-            <option value="Hư hỏng nhẹ">Hư hỏng nhẹ</option>
-            <option value="Cần thay thế">Cần thay thế</option>
-            <option value="Đã thanh lý">Đã thanh lý</option>
-          </select>
         </div>
       </div>
 
@@ -424,7 +410,6 @@ export default function AdminAssetsManagement() {
               <th className="px-5 py-3.5 font-semibold text-xs">Tên tài sản</th>
               <th className="px-5 py-3.5 font-semibold text-xs">Chi nhánh</th>
               <th className="px-5 py-3.5 font-semibold text-xs text-center">Số lượng</th>
-              <th className="px-5 py-3.5 font-semibold text-xs">Tình trạng</th>
               <th className="px-5 py-3.5 font-semibold text-xs text-right">Thao tác</th>
             </tr>
           </thead>
@@ -447,11 +432,6 @@ export default function AdminAssetsManagement() {
                 </td>
                 <td className="px-5 py-3 text-center">
                   <span className="text-sm font-bold text-gray-800">{item.soLuong}</span>
-                </td>
-                <td className="px-5 py-3">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${conditionCls(item.condition, item.isPendingDeletion)}`}>
-                    {item.isPendingDeletion ? 'Chờ duyệt xóa' : item.condition}
-                  </span>
                 </td>
                 <td className="px-5 py-3">
                   <div className="flex items-center justify-end gap-0.5">
@@ -755,16 +735,6 @@ export default function AdminAssetsManagement() {
                   <input type="number" min={1} value={formSoLuong} onChange={e => setFormSoLuong(+e.target.value)}
                     className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]" />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#666] mb-1.5">Tình trạng</label>
-                  <select value={formCondition} onChange={e => setFormCondition(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]">
-                    <option>Tốt</option>
-                    <option>Hư hỏng nhẹ</option>
-                    <option>Cần thay thế</option>
-                    <option>Đã thanh lý</option>
-                  </select>
-                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-[#666] mb-1.5">Ghi chú</label>
@@ -809,12 +779,6 @@ export default function AdminAssetsManagement() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="block text-xs font-bold text-[#666] mb-1">Tình trạng</span>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${conditionCls(selectedRecord.condition, selectedRecord.isPendingDeletion)}`}>
-                    {selectedRecord.isPendingDeletion ? 'Chờ duyệt xóa' : selectedRecord.condition}
-                  </span>
-                </div>
                 <div>
                   <span className="block text-xs font-bold text-[#666] mb-1">Cập nhật lần cuối</span>
                   <p className="text-sm font-semibold text-gray-800">{selectedRecord.lastUpdated}</p>

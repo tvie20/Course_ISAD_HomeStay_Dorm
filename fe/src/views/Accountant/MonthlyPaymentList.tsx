@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Search } from 'lucide-react';
 
 const MOCK_LIST = [
-  { id: 'M-001', room: 'P.101', customer: 'Trần Văn A', amount: '4,500,000 đ', status: 'Chưa thanh toán' },
+  { id: 'M-001', room: 'P.101', customer: 'Trần Văn A', amount: '4,500,000 đ', status: 'Chờ thanh toán' },
   { id: 'M-002', room: 'P.102', customer: 'Nguyễn Thị B', amount: '3,200,000 đ', status: 'Đã thanh toán' },
 ];
 

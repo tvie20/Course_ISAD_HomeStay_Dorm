@@ -1,199 +1,470 @@
 import React, { useState } from 'react';
-import { Receipt, CreditCard, Banknote, CheckCircle, Search, Clock, ShieldCheck, Calculator, ArrowLeft } from 'lucide-react';
+import { Receipt, CreditCard, Banknote, CheckCircle, Search, Clock, ShieldCheck, Calculator, ArrowLeft, Plus, BedDouble } from 'lucide-react';
+
+const MOCK_REGISTRATIONS = [
+   { id: 'DK-2023-01', customer: 'Lê Văn Khách', phone: '0901234567', cccd: '079123456789', email: 'khach@example.com', address: 'Quận 1, TP.HCM', status: 'Đồng ý đặt cọc', expectedPrice: '2000000' },
+   { id: 'DK-2023-02', customer: 'Nguyễn Thị B', phone: '0987654321', cccd: '079987654321', email: 'nguyenb@example.com', address: 'Quận 2, TP.HCM', status: 'Đã xử lý', expectedPrice: '1500000' },
+   { id: 'DK-2023-03', customer: 'Phạm C', phone: '0912345678', cccd: '079111222333', email: 'phamc@example.com', address: 'Quận 3, TP.HCM', status: 'Đồng ý đặt cọc', expectedPrice: '1500000' },
+];
+
+const MOCK_ROOMS = [
+   { id: 'P.101', maxCount: 2, price: 2000000, beds: [{ id: '01', status: 'Trống' }, { id: '02', status: 'Trống' }] },
+   { id: 'P.102', maxCount: 4, price: 1500000, beds: [{ id: '01', status: 'Trống' }, { id: '02', status: 'Trống' }, { id: '03', status: 'Trống' }, { id: '04', status: 'Trống' }] },
+];
 
 const MOCK_LIST = [
-  { id: '1', room: 'P.102', customer: 'Trần Văn B', status: 'Chờ thanh toán', amount: '4,000,000 đ', expiredAt: '14:00 - 21/10/2023' },
-  { id: '2', room: 'P.201', customer: 'Lê Thị C', status: 'Chờ Quản lý xác nhận', amount: '16,000,000 đ' },
-  { id: '3', room: 'P.305', customer: 'Nguyễn Văn A', status: 'Đã chốt cọc', amount: '8,000,000 đ' },
+   { id: 'DC-001', room: 'P.102', beds: ['01'], customer: 'Trần Văn B', phone: '0901234567', cccd: '079123456789', email: 'khachhang@example.com', address: '123 Đường ABC, Q.Y, TP.HCM', status: 'Chờ thanh toán', amount: '4,000,000 đ', expiredAt: '14:00 - 21/10/2023', rentPrice: '2000000', isFullRoom: false },
+   { id: 'DC-002', room: 'P.201', beds: ['03'], customer: 'Lê Thị C', phone: '0987654321', cccd: '079987654321', email: 'lethic@example.com', address: '456 XYZ', status: 'Đã thanh toán', amount: '16,000,000 đ', rentPrice: '2000000', isFullRoom: true },
 ];
 
 export default function InitialPayment() {
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [rentPrice, setRentPrice] = useState('2000000');
-  const [beds, setBeds] = useState('1');
-  const [isFullRoom, setIsFullRoom] = useState(false);
-  const [maxCapacity, setMaxCapacity] = useState('4');
+   const [list, setList] = useState(MOCK_LIST);
+   const [viewMode, setViewMode] = useState<'list' | 'detail' | 'create'>('list');
+   const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  const calculatedBeds = isFullRoom ? parseInt(maxCapacity) || 0 : parseInt(beds) || 0;
-  const rentNumber = parseInt(rentPrice) || 0;
-  const totalDeposit = rentNumber * 2 * calculatedBeds;
+   // Create state
+   const [searchCCCD, setSearchCCCD] = useState('');
+   const [registration, setRegistration] = useState<any>(null);
+   const [selectedRoomId, setSelectedRoomId] = useState('');
+   const [selectedBeds, setSelectedBeds] = useState<string[]>([]);
+   const [rentPrice, setRentPrice] = useState('0');
+   const [isFullRoom, setIsFullRoom] = useState(false);
+   const [searchTerm, setSearchTerm] = useState('');
 
-  if (!selectedItem) {
-    return (
-      <div className="p-8 h-full max-w-7xl mx-auto">
-        <div className="flex justify-between items-end mb-8">
-           <div>
-              <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Tiếp nhận cọc</h1>
-              <p className="text-sm text-[#666666]">Tiếp nhận yêu cầu, tính tiền cọc và theo dõi xác nhận thanh toán.</p>
-           </div>
-        </div>
+   const [isRoomDropdownOpen, setIsRoomDropdownOpen] = useState(false);
+   const [roomSearchQuery, setRoomSearchQuery] = useState('');
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-[#EAD3CC]/50 mb-6 flex flex-wrap gap-4 items-center">
-           <div className="flex-1 min-w-[300px] relative">
-             <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-             <input 
-               type="text" 
-               placeholder="Tìm theo Tên khách hàng/CCCD/..." 
-               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
-             />
-           </div>
-        </div>
+   const availableRooms = MOCK_ROOMS.filter(r => r.beds.some(b => b.status === 'Trống'));
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#EAD3CC]/50 overflow-hidden">
-           <table className="w-full text-left text-sm">
-              <thead className="bg-[#FAF5F3] text-[#666666]">
-                 <tr>
-                    <th className="px-6 py-4 font-medium">Phòng/Giường</th>
-                    <th className="px-6 py-4 font-medium">Khách Hàng</th>
-                    <th className="px-6 py-4 font-medium">Số tiền</th>
-                    <th className="px-6 py-4 font-medium">Trạng thái</th>
-                    <th className="px-6 py-4 font-medium text-right">Thao Tác</th>
-                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                 {MOCK_LIST.map((item, idx) => (
-                   <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-[#222222]">{item.room}</td>
-                      <td className="px-6 py-4 text-[#666666]">{item.customer}</td>
-                      <td className="px-6 py-4 text-[#B7705F] font-bold">{item.amount}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded text-xs font-semibold ${item.status === 'Đã chốt cọc' ? 'bg-green-50 text-green-600' : item.status === 'Chờ Quản lý xác nhận' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                         <button onClick={() => setSelectedItem(item)} className="px-3 py-1.5 text-sm font-medium text-[#B7705F] bg-orange-50 hover:bg-[#F3E1DC] rounded-lg transition-colors inline-block">
-                            Chi tiết
-                         </button>
-                      </td>
-                   </tr>
-                 ))}
-              </tbody>
-           </table>
-        </div>
-      </div>
-    );
-  }
+   const handleSearchCCCD = () => {
+      if (!searchCCCD.trim()) return;
+      const lowerSearch = searchCCCD.toLowerCase().trim();
+      const found = MOCK_REGISTRATIONS.find(r =>
+         r.status === 'Đồng ý đặt cọc' &&
+         (r.cccd.toLowerCase().includes(lowerSearch) ||
+            r.phone.toLowerCase().includes(lowerSearch) ||
+            r.customer.toLowerCase().includes(lowerSearch))
+      );
+      if (found) {
+         setRegistration(found);
+      } else {
+         alert("Không tìm thấy Phiếu đăng ký nào ở trạng thái 'Đồng ý đặt cọc' khớp với thông tin này.");
+         setRegistration(null);
+      }
+   };
 
-  return (
-    <div className="p-8 h-full max-w-7xl mx-auto">
-      <div className="text-sm text-gray-500 mb-4 flex items-center">
-          <span>Phòng (Rooms)</span>
-          <span className="mx-2">&gt;</span>
-          <span>{selectedItem.room}</span>
-          <span className="mx-2">&gt;</span>
-          <span className="text-gray-900 font-medium">Tiếp nhận cọc</span>
-      </div>
-      <div className="flex justify-between items-end mb-8">
-         <div>
-            <div className="flex items-center space-x-3 mb-2">
-               <button onClick={() => setSelectedItem(null)} className="text-[#666666] hover:text-[#B7705F] flex items-center text-sm font-medium">
-                  <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+   const selectedRoom = MOCK_ROOMS.find(r => r.id === selectedRoomId);
+   const calculatedBeds = isFullRoom && selectedRoom ? selectedRoom.maxCount : selectedBeds.length;
+   const rentNumber = parseInt(rentPrice) || 0;
+   const totalDeposit = rentNumber * 2 * calculatedBeds;
+
+   const handleCreateDeposit = () => {
+      if (!registration) return;
+      if (!selectedRoom) return alert('Vui lòng chọn phòng');
+      if (!isFullRoom && selectedBeds.length === 0) return alert('Vui lòng chọn giường');
+
+      const newDeposit = {
+         id: `DC-00${list.length + 1}`,
+         room: selectedRoomId,
+         beds: isFullRoom ? selectedRoom.beds.map(b => b.id) : selectedBeds,
+         customer: registration.customer,
+         phone: registration.phone,
+         cccd: registration.cccd,
+         email: registration.email,
+         address: registration.address,
+         status: 'Chờ thanh toán',
+         amount: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalDeposit),
+         expiredAt: '24 giờ tới',
+         rentPrice: rentPrice,
+         isFullRoom: isFullRoom
+      };
+
+      setList([newDeposit, ...list]);
+      setViewMode('list');
+      alert("Gửi yêu cầu thanh toán thành công!");
+   };
+
+   if (viewMode === 'list') {
+      return (
+         <div className="p-8 h-full max-w-7xl mx-auto">
+            <div className="flex justify-between items-end mb-8">
+               <div>
+                  <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Tiếp nhận cọc</h1>
+                  <p className="text-sm text-[#666666]">Tiếp nhận yêu cầu, tính tiền cọc và theo dõi xác nhận thanh toán.</p>
+               </div>
+               <button onClick={() => setViewMode('create')} className="px-4 py-2.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-lg text-sm font-bold flex items-center transition-colors shadow-sm">
+                  <Plus className="w-4 h-4 mr-2" /> Lập phiếu cọc mới
                </button>
             </div>
-            <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Chi tiết thanh toán - {selectedItem.room}</h1>
-            <p className="text-sm text-[#666666]">Tiếp nhận yêu cầu, tính tiền cọc và theo dõi xác nhận thanh toán.</p>
-         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-         {/* Calculator / Create Request */}
-         <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#EAD3CC]">
-            <div className="flex items-center mb-6 border-b border-[#EAD3CC]/50 pb-3">
-               <Calculator className="w-5 h-5 text-[#B7705F] mr-2" />
-               <h2 className="text-lg font-bold text-[#222222]">Tính tiền cọc & gửi yêu cầu</h2>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-[#EAD3CC]/50 mb-6 flex flex-wrap gap-4 items-center">
+               <div className="flex-1 min-w-[300px] relative">
+                  <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
+                  <input
+                     type="text"
+                     placeholder="Tìm theo Tên khách hàng/Mã phiếu..."
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
+                  />
+               </div>
             </div>
-            
-            <div className="space-y-5">
-               <div>
-                  <label className="block text-sm font-semibold text-[#666666] mb-2">Tiền thuê 1 giường (VND/tháng)</label>
-                  <input 
-                     type="number" 
-                     value={rentPrice} 
-                     onChange={(e) => setRentPrice(e.target.value)} 
-                     className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 font-medium text-[#222222] focus:outline-none focus:border-[#B7705F]" 
-                  />
-               </div>
-               
-               <div className="flex items-center mb-2 mt-4 space-x-2">
-                  <input 
-                    type="checkbox" 
-                    id="fullRoom" 
-                    checked={isFullRoom} 
-                    onChange={(e) => setIsFullRoom(e.target.checked)}
-                    className="w-4 h-4 text-[#B7705F] border-gray-300 rounded focus:ring-[#B7705F]"
-                  />
-                  <label htmlFor="fullRoom" className="text-sm font-semibold text-[#222222]">Khách thuê nguyên phòng</label>
-               </div>
 
-               {isFullRoom ? (
-                 <div>
-                    <label className="block text-sm font-semibold text-[#666666] mb-2">Sức chứa tối đa của phòng</label>
-                    <input 
-                       type="number" 
-                       value={maxCapacity} 
-                       onChange={(e) => setMaxCapacity(e.target.value)} 
-                       className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 font-medium text-[#222222]" 
-                    />
-                 </div>
+            <div className="bg-white rounded-xl shadow-sm border border-[#EAD3CC]/50 overflow-hidden">
+               <table className="w-full text-left text-sm">
+                  <thead className="bg-[#FAF5F3] text-[#666666]">
+                     <tr>
+                        <th className="px-6 py-4 font-medium">Mã Phiếu</th>
+                        <th className="px-6 py-4 font-medium">Khách Hàng</th>
+                        <th className="px-6 py-4 font-medium">CCCD</th>
+                        <th className="px-6 py-4 font-medium">Phòng - Giường</th>
+                        <th className="px-6 py-4 font-medium">Số tiền cọc</th>
+                        <th className="px-6 py-4 font-medium">Trạng thái</th>
+                        <th className="px-6 py-4 font-medium text-right">Thao Tác</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                     {list.filter(item => !searchTerm || item.customer.toLowerCase().includes(searchTerm.toLowerCase()) || item.id.toLowerCase().includes(searchTerm.toLowerCase())).map((item, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                           <td className="px-6 py-4 font-bold text-[#B7705F]">{item.id}</td>
+                           <td className="px-6 py-4 font-medium text-[#222222]">{item.customer}</td>
+                           <td className="px-6 py-4 text-[#666666]">{item.cccd}</td>
+                           <td className="px-6 py-4 text-[#666666]">{item.room} - {item.beds.join(', ')}</td>
+                           <td className="px-6 py-4 text-[#B7705F] font-bold">{item.amount}</td>
+                           <td className="px-6 py-4">
+                              <span className={`px-2.5 py-1 rounded text-xs font-semibold ${item.status === 'Đã thanh toán' ? 'bg-green-50 text-green-600' : item.status === 'Chờ thanh toán' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
+                                 {item.status}
+                              </span>
+                           </td>
+                           <td className="px-6 py-4 text-right">
+                              <button onClick={() => {
+                                 setSelectedItem(item);
+                                 setViewMode('detail');
+                              }} className="px-3 py-1.5 text-sm font-medium text-[#B7705F] bg-orange-50 hover:bg-[#F3E1DC] rounded-lg transition-colors inline-block">
+                                 Chi tiết
+                              </button>
+                           </td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+            </div>
+         </div>
+      );
+   }
+
+   if (viewMode === 'create') {
+      return (
+         <div className="p-8 h-full max-w-7xl mx-auto">
+            <div className="flex justify-between items-end mb-8">
+               <div>
+                  <div className="flex items-center space-x-3 mb-2">
+                     <button onClick={() => setViewMode('list')} className="text-[#666666] hover:text-[#B7705F] flex items-center text-sm font-medium">
+                        <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại danh sách
+                     </button>
+                  </div>
+                  <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Lập phiếu đặt cọc mới</h1>
+               </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#EAD3CC] mb-6">
+               {!registration ? (
+                  <>
+                     <h2 className="text-lg font-bold text-[#222222] mb-4">Tra cứu</h2>
+                     <div className="flex space-x-4">
+                        <div className="flex-1 relative">
+                           <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
+                           <input
+                              type="text"
+                              placeholder="Nhập Tên/CCCD/SĐT của khách hàng để tra cứu..."
+                              value={searchCCCD}
+                              onChange={(e) => setSearchCCCD(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-[#B7705F]"
+                           />
+                        </div>
+                        <button onClick={handleSearchCCCD} className="px-6 py-2.5 bg-[#B7705F] text-white rounded-lg font-bold shadow-sm hover:bg-[#a06050]">Tìm kiếm</button>
+                     </div>
+
+                     <div className="mt-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-[#EAD3CC]/50 overflow-hidden">
+                           <table className="w-full text-left text-sm">
+                              <thead className="bg-[#FAF5F3] text-[#666666]">
+                                 <tr>
+                                    <th className="px-4 py-3 font-medium">Mã Phiếu ĐK</th>
+                                    <th className="px-4 py-3 font-medium">Khách Hàng</th>
+                                    <th className="px-4 py-3 font-medium">CCCD</th>
+                                    <th className="px-4 py-3 font-medium">SĐT</th>
+                                    <th className="px-4 py-3 font-medium text-right">Thao Tác</th>
+                                 </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                 {MOCK_REGISTRATIONS.filter(r => {
+                                    const term = searchCCCD.toLowerCase().trim();
+                                    return r.status === 'Đồng ý đặt cọc' && (!term || r.cccd.toLowerCase().includes(term) || r.phone.toLowerCase().includes(term) || r.customer.toLowerCase().includes(term));
+                                 }).map((reg, idx) => (
+                                    <tr key={idx} className="hover:bg-gray-50">
+                                       <td className="px-4 py-3 font-medium text-[#B7705F]">{reg.id}</td>
+                                       <td className="px-4 py-3 text-[#222222] font-semibold">{reg.customer}</td>
+                                       <td className="px-4 py-3 text-[#666666]">{reg.cccd}</td>
+                                       <td className="px-4 py-3 text-[#666666]">{reg.phone}</td>
+                                       <td className="px-4 py-3 text-right">
+                                          <button onClick={() => {
+                                             setSearchCCCD(reg.cccd);
+                                             setRegistration(reg);
+                                          }} className="px-3 py-1.5 text-sm font-medium text-white bg-[#B7705F] hover:bg-[#a06050] rounded-lg transition-colors shadow-sm">
+                                             Chọn
+                                          </button>
+                                       </td>
+                                    </tr>
+                                 ))}
+                              </tbody>
+                           </table>
+                        </div>
+                     </div>
+                  </>
                ) : (
-                 <div>
-                    <label className="block text-sm font-semibold text-[#666666] mb-2">Số giường thuê</label>
-                    <input 
-                       type="number" 
-                       value={beds} 
-                       onChange={(e) => setBeds(e.target.value)} 
-                       className="w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 font-medium text-[#222222]" 
-                    />
-                 </div>
-               )}
-               
-               <div className="pt-4 border-t border-dashed border-gray-200">
                   <div className="p-4 bg-[#FAF5F3] rounded-xl border border-[#EAD3CC]">
-                     <p className="text-xs text-[#666666] mb-1">Công thức: (Tiền Thuê 2 tháng) x Số Giường = {rentNumber} x 2 x {calculatedBeds}</p>
-                     <div className="flex justify-between items-center mt-2">
-                        <span className="font-bold text-[#222222]">Tổng tiền cọc yêu cầu:</span>
-                        <span className="text-2xl font-bold text-[#B7705F]">
-                           {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalDeposit)}
-                        </span>
+                     <div className="flex justify-between items-center mb-3 border-b border-[#EAD3CC]/50 pb-2">
+                        <h3 className="font-bold text-[#B7705F]">Thông tin Khách Hàng</h3>
+                        <button onClick={() => setRegistration(null)} className="text-xs text-[#666666] hover:text-[#B7705F] font-semibold underline">
+                           Chọn khách hàng khác
+                        </button>
+                     </div>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div><span className="block text-xs text-gray-500 uppercase">Họ và tên</span><span className="font-semibold text-gray-900">{registration.customer}</span></div>
+                        <div><span className="block text-xs text-gray-500 uppercase">SĐT</span><span className="font-semibold text-gray-900">{registration.phone}</span></div>
+                        <div><span className="block text-xs text-gray-500 uppercase">CCCD</span><span className="font-semibold text-gray-900">{registration.cccd}</span></div>
+                        <div><span className="block text-xs text-gray-500 uppercase">Phiếu ĐK</span><span className="font-semibold text-gray-900">{registration.id}</span></div>
                      </div>
                   </div>
-                  <p className="text-xs text-orange-600 mt-3">* Sau khi gửi, khách có 24 giờ để thanh toán. Nếu quá hạn sẽ tự động huỷ.</p>
+               )}
+            </div>
+
+            {registration && (
+               <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#EAD3CC] mb-6">
+                  <h2 className="text-lg font-bold text-[#222222] mb-4">Lựa chọn Phòng & Giường thuê</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div>
+                        <label className="block text-sm font-semibold text-[#666666] mb-2">Chọn Phòng</label>
+                        <div className="relative">
+                           <button
+                              type="button"
+                              onClick={() => setIsRoomDropdownOpen(!isRoomDropdownOpen)}
+                              className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm flex justify-between items-center focus:outline-none focus:border-[#B7705F]"
+                           >
+                              <span className="text-gray-800 font-medium">
+                                 {selectedRoomId ? `${selectedRoomId} (Tối đa ${MOCK_ROOMS.find(r => r.id === selectedRoomId)?.maxCount} người)` : '-- Chọn phòng --'}
+                              </span>
+                           </button>
+
+                           {isRoomDropdownOpen && (
+                              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col">
+                                 <div className="p-2 border-b border-gray-100 bg-gray-50">
+                                    <input
+                                       type="text"
+                                       placeholder="Tìm kiếm phòng..."
+                                       value={roomSearchQuery}
+                                       onChange={e => setRoomSearchQuery(e.target.value)}
+                                       onClick={e => e.stopPropagation()}
+                                       className="w-full bg-white border border-gray-200 rounded-md p-2 text-sm focus:outline-none focus:border-[#B7705F]"
+                                       autoFocus
+                                    />
+                                 </div>
+                                 <div className="max-h-48 overflow-y-auto bg-white">
+                                    {availableRooms
+                                       .filter(r => r.id.toLowerCase().includes(roomSearchQuery.toLowerCase()))
+                                       .map(r => (
+                                          <button
+                                             key={r.id}
+                                             type="button"
+                                             onClick={() => {
+                                                setSelectedRoomId(r.id);
+                                                setSelectedBeds([]);
+                                                setIsFullRoom(false);
+                                                setIsRoomDropdownOpen(false);
+                                                setRoomSearchQuery('');
+                                                setRentPrice(r.price.toString());
+                                             }}
+                                             className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${selectedRoomId === r.id ? 'bg-[#FAF5F3] text-[#8C4A3A] font-medium' : 'text-gray-700'}`}
+                                          >
+                                             {r.id} <span className="text-gray-500 text-xs ml-1">(Tối đa {r.maxCount} người)</span>
+                                          </button>
+                                       ))
+                                    }
+                                    {availableRooms.filter(r => r.id.toLowerCase().includes(roomSearchQuery.toLowerCase())).length === 0 && (
+                                       <div className="px-3 py-3 text-sm text-center text-gray-500">
+                                          Không tìm thấy phòng phù hợp hoặc phòng đã đầy
+                                       </div>
+                                    )}
+                                 </div>
+                              </div>
+                           )}
+                        </div>
+                     </div>
+                     <div>
+                        <label className="block text-sm font-semibold text-[#666666] mb-2">Tiền thuê 1 giường cố định (VND/tháng)</label>
+                        <input
+                           type="text"
+                           readOnly
+                           value={rentPrice !== '0' ? new Intl.NumberFormat('vi-VN').format(Number(rentPrice)) : ''}
+                           placeholder="Chọn phòng để xem giá..."
+                           className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 font-medium text-[#666666] focus:outline-none"
+                        />
+                     </div>
+                  </div>
+
+                  {selectedRoom && (
+                     <div className="mt-6 border-t border-gray-100 pt-6">
+                        <div className="flex items-center justify-between mb-4">
+                           <label className="text-sm font-semibold text-[#222222]">Chỉ định Giường thuê</label>
+                           <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                 type="checkbox"
+                                 checked={isFullRoom}
+                                 onChange={(e) => setIsFullRoom(e.target.checked)}
+                                 className="w-4 h-4 text-[#B7705F] border-gray-300 rounded focus:ring-[#B7705F]"
+                              />
+                              <span className="text-sm font-semibold text-orange-600">Khách thuê nguyên phòng ({selectedRoom.maxCount} giường)</span>
+                           </label>
+                        </div>
+
+                        {!isFullRoom && (
+                           <div className="grid grid-cols-4 gap-4">
+                              {selectedRoom.beds.map(bed => {
+                                 const isSelected = selectedBeds.includes(bed.id);
+                                 return (
+                                    <div
+                                       key={bed.id}
+                                       onClick={() => {
+                                          if (bed.status !== 'Trống') return;
+                                          if (isSelected) {
+                                             setSelectedBeds(selectedBeds.filter(id => id !== bed.id));
+                                          } else {
+                                             setSelectedBeds([...selectedBeds, bed.id]);
+                                          }
+                                       }}
+                                       className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${bed.status !== 'Trống' ? 'bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed' : isSelected ? 'bg-[#F3E1DC] border-[#B7705F]' : 'bg-white border-gray-200 hover:border-[#EAD3CC]'}`}
+                                    >
+                                       <div className="flex justify-between items-center mb-2">
+                                          <BedDouble className={`w-5 h-5 ${isSelected ? 'text-[#B7705F]' : 'text-gray-400'}`} />
+                                          {isSelected && <CheckCircle className="w-4 h-4 text-[#B7705F]" />}
+                                       </div>
+                                       <div className={`font-bold ${isSelected ? 'text-[#8C4A3A]' : 'text-gray-700'}`}>Giường {bed.id}</div>
+                                       <div className="text-xs text-gray-500 mt-1">{bed.status}</div>
+                                    </div>
+                                 );
+                              })}
+                           </div>
+                        )}
+                     </div>
+                  )}
+
+                  {(isFullRoom || selectedBeds.length > 0) && (
+                     <div className="mt-8 pt-6 border-t border-dashed border-gray-300">
+                        <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 flex items-center justify-between">
+                           <div>
+                              <p className="text-sm font-semibold text-gray-800">TỔNG KẾT TIỀN CỌC</p>
+                              <p className="text-xs text-gray-500 mt-1">Công thức: (Tiền Thuê 2 tháng) x Số Giường = {rentNumber} x 2 x {calculatedBeds}</p>
+                           </div>
+                           <div className="text-right">
+                              <span className="block text-xs text-gray-500 uppercase">Tổng cọc yêu cầu</span>
+                              <span className="text-3xl font-bold text-[#B7705F]">
+                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalDeposit)}
+                              </span>
+                           </div>
+                        </div>
+
+                        <button onClick={handleCreateDeposit} className="w-full mt-6 py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
+                           <Receipt className="w-5 h-5 mr-2" /> Gửi Yêu Cầu Thanh Toán Tiền Cọc
+                        </button>
+                        <p className="text-xs text-center text-gray-500 mt-3">* Khách có 24h để thanh toán, sau 24h phiếu cọc tự động hủy.</p>
+                     </div>
+                  )}
                </div>
-               
-               <button className="w-full py-3 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center mt-4">
-                  <Receipt className="w-4 h-4 mr-2" /> Gửi Yêu Cầu Thanh Toán
-               </button>
+            )}
+         </div>
+      );
+   }
+
+   // Detail View (Read-only representation of Mock)
+   return (
+      <div className="p-8 h-full max-w-6xl mx-auto">
+         <div className="flex justify-between items-end mb-8">
+            <div>
+               <div className="flex items-center space-x-3 mb-2">
+                  <button onClick={() => setViewMode('list')} className="text-[#666666] hover:text-[#B7705F] flex items-center text-sm font-medium">
+                     <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+                  </button>
+               </div>
+               <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Chi tiết Phiếu Cọc - {selectedItem.id}</h1>
             </div>
          </div>
 
-         {/* Customer Information */}
-         <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#EAD3CC] flex flex-col">
-            <h3 className="text-lg font-bold text-[#222222] mb-4">Thông tin cá nhân khách hàng</h3>
-            <div className="space-y-4">
-               <div>
-                  <label className="block text-sm font-semibold text-[#666666] mb-1">Họ và tên</label>
-                  <p className="font-medium text-[#222222]">{selectedItem.customer}</p>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#EAD3CC]">
+               <h3 className="text-lg font-bold text-[#222222] mb-4 flex items-center border-b border-gray-100 pb-3">
+                  <Calculator className="w-5 h-5 mr-2 text-[#B7705F]" /> Tính tiền cọc & gửi yêu cầu
+               </h3>
+               <div className="space-y-4">
+                  <div>
+                     <span className="block text-sm text-gray-500 mb-1">Tiền thuê 1 giường (VND/tháng)</span>
+                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-medium">{selectedItem.rentPrice}</div>
+                  </div>
+                  <div>
+                     <label className="flex items-center space-x-2">
+                        <input type="checkbox" checked={selectedItem.isFullRoom} disabled className="w-4 h-4 text-[#B7705F] border-gray-300 rounded" />
+                        <span className="text-sm font-semibold text-gray-700">Khách thuê nguyên phòng</span>
+                     </label>
+                  </div>
+                  <div>
+                     <span className="block text-sm text-gray-500 mb-1">Số giường thuê</span>
+                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-medium">{selectedItem.beds.length}</div>
+                  </div>
+                  <div className="mt-4 p-4 bg-[#FAF5F3] rounded-xl border border-[#EAD3CC]">
+                     <span className="block text-xs text-gray-500 mb-1">Công thức: (Tiền Thuê 2 tháng) x Số Giường</span>
+                     <div className="flex justify-between items-center mt-2">
+                        <span className="font-semibold text-gray-800">Tổng tiền cọc yêu cầu:</span>
+                        <span className="text-2xl font-bold text-[#B7705F]">{selectedItem.amount}</span>
+                     </div>
+                  </div>
                </div>
-               <div>
-                  <label className="block text-sm font-semibold text-[#666666] mb-1">Số điện thoại</label>
-                  <p className="font-medium text-[#222222]">0901234567</p>
-               </div>
-               <div>
-                  <label className="block text-sm font-semibold text-[#666666] mb-1">CCCD/CMND</label>
-                  <p className="font-medium text-[#222222]">079123456789</p>
-               </div>
-               <div>
-                  <label className="block text-sm font-semibold text-[#666666] mb-1">Email</label>
-                  <p className="font-medium text-[#222222]">khachhang@example.com</p>
-               </div>
-               <div>
-                  <label className="block text-sm font-semibold text-[#666666] mb-1">Địa chỉ thường trú</label>
-                  <p className="font-medium text-[#222222]">123 Đường ABC, Phường X, Quận Y, TP.HCM</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#EAD3CC]">
+               <h3 className="text-lg font-bold text-[#222222] mb-4 border-b border-gray-100 pb-3">Thông tin cá nhân khách hàng</h3>
+               <div className="space-y-4">
+                  <div>
+                     <span className="block text-xs text-gray-500 mb-1">Họ và tên</span>
+                     <div className="font-semibold">{selectedItem.customer}</div>
+                  </div>
+                  <div>
+                     <span className="block text-xs text-gray-500 mb-1">Số điện thoại</span>
+                     <div className="font-semibold">{selectedItem.phone}</div>
+                  </div>
+                  <div>
+                     <span className="block text-xs text-gray-500 mb-1">CCCD/CMND</span>
+                     <div className="font-semibold">{selectedItem.cccd}</div>
+                  </div>
+                  <div>
+                     <span className="block text-xs text-gray-500 mb-1">Email</span>
+                     <div className="font-semibold">{selectedItem.email}</div>
+                  </div>
+                  <div>
+                     <span className="block text-xs text-gray-500 mb-1">Địa chỉ thường trú</span>
+                     <div className="font-semibold">{selectedItem.address}</div>
+                  </div>
                </div>
             </div>
          </div>
+
+         {selectedItem.status === 'Chờ thanh toán' && (
+            <button onClick={() => {
+               setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đã thanh toán' } : i));
+               setSelectedItem({ ...selectedItem, status: 'Đã thanh toán' });
+               alert('Xác nhận đã thanh toán thành công! Sẽ tự động chuyển xếp lịch nhận phòng.');
+            }} className="w-full py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
+               <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận đã thanh toán
+            </button>
+         )}
       </div>
-    </div>
-  );
+   );
 }

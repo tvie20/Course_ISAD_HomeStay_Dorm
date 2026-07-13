@@ -9,6 +9,7 @@ export default function CheckOut() {
    const [selected, setSelected] = useState<any>(null);
    const [isCreatingRecord, setIsCreatingRecord] = useState(false);
    const [searchTerm, setSearchTerm] = useState('');
+   const [statusFilter, setStatusFilter] = useState('');
    const [checkoutList, setCheckoutList] = useState<any[]>(MOCK_LIST);
    const [sentSuccess, setSentSuccess] = useState(false);
    const [reconData, setReconData] = useState<any>(null);
@@ -45,12 +46,13 @@ export default function CheckOut() {
    }, [isCreatingRecord, selected]);
 
    const filteredList = checkoutList.filter(item => {
-      const search = searchTerm.toLowerCase();
-      return (
-         item.room.toLowerCase().includes(search) ||
-         item.customer.toLowerCase().includes(search) ||
-         (item.cccd && item.cccd.includes(search))
+      const matchSearch = searchTerm === '' || (
+         item.room.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         (item.cccd && item.cccd.includes(searchTerm))
       );
+      const matchStatus = statusFilter === '' || item.status === statusFilter;
+      return matchSearch && matchStatus;
    });
 
    const handleSelectItem = (item: any) => {
@@ -335,6 +337,24 @@ export default function CheckOut() {
                      onChange={(e) => setSearchTerm(e.target.value)}
                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
                   />
+               </div>
+               
+               <div className="flex items-center space-x-2">
+                 <span className="text-xs font-semibold text-gray-500 uppercase">Trạng thái:</span>
+                 <select 
+                   value={statusFilter}
+                   onChange={(e) => setStatusFilter(e.target.value)}
+                   className="border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#B7705F]"
+                 >
+                   <option value="">Tất cả trạng thái</option>
+                   <option value="Sắp Trả">Sắp Trả</option>
+                   <option value="Đã đối soát">Đã đối soát</option>
+                   <option value="Gửi khách hàng">Gửi khách hàng</option>
+                   <option value="Đã thanh lý">Đã thanh lý</option>
+                   <option value="Chờ khách xác nhận">Chờ khách xác nhận</option>
+                   <option value="Chờ hoàn cọc">Chờ hoàn cọc</option>
+                   <option value="Chờ thanh toán bổ sung">Chờ thanh toán bổ sung</option>
+                 </select>
                </div>
             </div>
 

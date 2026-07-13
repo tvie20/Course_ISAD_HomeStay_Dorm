@@ -23,9 +23,9 @@ export default function CheckoutRequest() {
   const handleSubmit = () => {
     if (date) {
       const request = {
-        room: "P.302",
+        room: "P.301",
         bed: "Giường 01",
-        customer: "Trần Thị Sinh Viên",
+        customer: "Khách hàng P.301",
         cccd: "079123456789",
         date: date,
         note: note,

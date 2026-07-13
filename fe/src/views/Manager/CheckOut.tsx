@@ -207,51 +207,42 @@ export default function CheckOut() {
                      </div>
                   </div>
 
-                  <div className="w-full mt-6">
+                  <div className="w-full mt-6 flex flex-row gap-4">
                      {selected.status !== 'Gửi khách hàng' && selected.status !== 'Đã thanh lý' && (
                         <button
                            onClick={handleSendToGuest}
                            disabled={sentSuccess}
-                           className="px-6 py-2.5 w-full bg-[#8C4A3A] hover:bg-[#723a2d] text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                           className="flex-1 px-4 py-2.5 bg-[#8C4A3A] hover:bg-[#723a2d] text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer disabled:opacity-50"
                         >
                            <Send className="w-4 h-4 mr-2" />
-                           Xác nhận tạo biên bản &amp; gửi khách hàng
+                           Xác nhận tạo & gửi khách hàng
                         </button>
                      )}
                      {selected.status === 'Gửi khách hàng' && (
-                        <div className="grid grid-cols-2 gap-4">
+                        <>
                            <button
                               disabled={true}
-                              className="px-4 py-2.5 bg-[#FAF5F3] text-[#8C4A3A] border border-[#EAD3CC] rounded-lg text-xs font-bold flex items-center justify-center shadow-xs cursor-not-allowed opacity-80"
+                              className="flex-1 px-4 py-2.5 bg-[#FAF5F3] text-[#8C4A3A] border border-[#EAD3CC] rounded-lg text-sm font-bold flex items-center justify-center shadow-xs cursor-not-allowed opacity-80"
                            >
                               <Clock className="w-4 h-4 mr-1.5 animate-pulse" />
-                              Đang chờ khách xác nhận...
+                              Chờ khách xác nhận...
                            </button>
                            <button
                               onClick={handleFinalizeLiquidation}
-                              className="px-4 py-2.5 bg-[#8C4A3A] hover:bg-[#723a2d] text-white rounded-lg text-xs font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer"
+                              className="flex-1 px-4 py-2.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer"
                            >
                               <CheckCircle className="w-4 h-4 mr-1.5" />
                               Hoàn tất thanh lý hợp đồng
                            </button>
-                        </div>
+                        </>
                      )}
                      {selected.status === 'Đã thanh lý' && (
                         <button
                            disabled={true}
-                           className="px-6 py-2.5 w-full bg-gray-100 text-gray-500 border border-gray-200 rounded-lg text-sm font-bold flex items-center justify-center cursor-not-allowed"
+                           className="w-full px-6 py-2.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-lg text-sm font-bold flex items-center justify-center cursor-not-allowed"
                         >
                            <CheckCircle className="w-4 h-4 mr-2" />
                            Hợp đồng đã thanh lý thành công
-                        </button>
-                     )}
-                     {['Chờ hoàn cọc', 'Chờ thanh toán bổ sung'].includes(selected.status) && (
-                        <button
-                           onClick={handleFinalizeLiquidation}
-                           className="px-6 py-2.5 w-full bg-[#8C4A3A] hover:bg-[#723a2d] text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer"
-                        >
-                           <CheckCircle className="w-4 h-4 mr-2" />
-                           Hoàn tất thanh lý hợp đồng
                         </button>
                      )}
                   </div>

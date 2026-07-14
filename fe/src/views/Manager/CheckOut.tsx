@@ -21,8 +21,8 @@ export default function CheckOut() {
          const data = JSON.parse(saved);
          setReconData(data);
          // Display in CheckOut if the Accountant has finished financial reconciliation
-         // i.e. status is in 'Đã đối soát', 'Gửi khách hàng', 'Đã thanh lý', 'Chờ khách xác nhận', 'Chờ hoàn cọc', 'Chờ thanh toán bổ sung'
-         const isReconciledStatus = ['Đã đối soát', 'Gửi khách hàng', 'Đã thanh lý', 'Chờ khách xác nhận', 'Chờ hoàn cọc', 'Chờ thanh toán bổ sung'].includes(data.status);
+         // i.e. status is in 'Đã đối soát', 'Gửi khách hàng', 'Đã thanh lý', 'Chờ hoàn cọc', 'Chờ thu bổ sung'
+         const isReconciledStatus = ['Đã đối soát', 'Gửi khách hàng', 'Đã thanh lý', 'Chờ hoàn cọc', 'Chờ thu bổ sung'].includes(data.status);
 
          if (isReconciledStatus) {
             const flowItem = {
@@ -351,9 +351,8 @@ export default function CheckOut() {
                    <option value="Đã đối soát">Đã đối soát</option>
                    <option value="Gửi khách hàng">Gửi khách hàng</option>
                    <option value="Đã thanh lý">Đã thanh lý</option>
-                   <option value="Chờ khách xác nhận">Chờ khách xác nhận</option>
                    <option value="Chờ hoàn cọc">Chờ hoàn cọc</option>
-                   <option value="Chờ thanh toán bổ sung">Chờ thanh toán bổ sung</option>
+                   <option value="Chờ thu bổ sung">Chờ thu bổ sung</option>
                  </select>
                </div>
             </div>

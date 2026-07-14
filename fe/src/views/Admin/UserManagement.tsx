@@ -9,6 +9,7 @@ interface UserRecord {
   status: string;
   email: string;
   phone: string;
+  cccd?: string;
 }
 
 interface Branch {
@@ -25,11 +26,11 @@ interface Branch {
 }
 
 const DEFAULT_USERS: UserRecord[] = [
-  { id: 'NV001', name: 'Nguyễn Văn Admin', role: 'Quản trị viên', branch: 'Toàn hệ thống', status: 'Đang hoạt động', email: 'admin@homestay.com', phone: '0901234567' },
-  { id: 'NV002', name: 'Trần Thị Trưởng', role: 'Quản lý', branch: 'CN001', status: 'Đang hoạt động', email: 'truong.tt@homestay.com', phone: '0901234568' },
-  { id: 'NV003', name: 'Lê Kế Toán', role: 'Nhân viên kế toán', branch: 'CN001, CN002', status: 'Đang nghỉ phép', email: 'toan.lk@homestay.com', phone: '0901234569' },
-  { id: 'NV004', name: 'Phạm Kinh Doanh', role: 'Nhân viên kinh doanh', branch: 'Toàn hệ thống', status: 'Đang hoạt động', email: 'doanh.pk@homestay.com', phone: '0901234570' },
-  { id: 'KH001', name: 'Vũ Đức Khách', role: 'Khách hàng', branch: 'CN001', status: 'Đang hoạt động', email: 'khachhang.vd@gmail.com', phone: '0909999999' },
+  { id: 'NV001', name: 'Nguyễn Văn Admin', role: 'Quản trị viên', branch: 'Toàn hệ thống', status: 'Đang hoạt động', email: 'admin@homestay.com', phone: '0901234567', cccd: '079123456789' },
+  { id: 'NV002', name: 'Trần Thị Trưởng', role: 'Quản lý', branch: 'CN001', status: 'Đang hoạt động', email: 'truong.tt@homestay.com', phone: '0901234568', cccd: '079123456788' },
+  { id: 'NV003', name: 'Lê Kế Toán', role: 'Nhân viên kế toán', branch: 'CN001, CN002', status: 'Đang nghỉ phép', email: 'toan.lk@homestay.com', phone: '0901234569', cccd: '079123456787' },
+  { id: 'NV004', name: 'Phạm Kinh Doanh', role: 'Nhân viên kinh doanh', branch: 'Toàn hệ thống', status: 'Đang hoạt động', email: 'doanh.pk@homestay.com', phone: '0901234570', cccd: '079123456786' },
+  { id: 'KH001', name: 'Vũ Đức Khách', role: 'Khách hàng', branch: 'CN001', status: 'Đang hoạt động', email: 'khachhang.vd@gmail.com', phone: '0909999999', cccd: '079123456785' },
 ];
 
 function getInitials(name: string) {
@@ -56,20 +57,20 @@ function syncManagerToBranch(user: UserRecord, allUsers: UserRecord[]) {
       return b;
     });
     localStorage.setItem('branch_list_v2', JSON.stringify(updatedBranches));
-  } catch {}
+  } catch { }
 }
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserRecord[]>(() => {
     const s = localStorage.getItem('user_list_v2');
     if (s) {
-      try { 
+      try {
         const parsed = JSON.parse(s);
         return parsed.map((u: UserRecord) => ({
           ...u,
           status: u.status === 'Hoạt động' ? 'Đang hoạt động' : u.status
         }));
-      } catch {}
+      } catch { }
     }
     return DEFAULT_USERS;
   });
@@ -77,14 +78,14 @@ export default function UserManagement() {
   // Danh sách chi nhánh để hiển thị tên đẹp hơn trong dropdown
   const [branches, setBranches] = useState<Branch[]>(() => {
     const s = localStorage.getItem('branch_list_v2');
-    if (s) try { return JSON.parse(s); } catch {}
+    if (s) try { return JSON.parse(s); } catch { }
     return [];
   });
 
   useEffect(() => {
     const sync = () => {
       const s = localStorage.getItem('branch_list_v2');
-      if (s) try { setBranches(JSON.parse(s)); } catch {}
+      if (s) try { setBranches(JSON.parse(s)); } catch { }
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
@@ -103,19 +104,19 @@ export default function UserManagement() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', role: 'Khách hàng',
+    name: '', email: '', phone: '', cccd: '', role: 'Khách hàng',
     password: '', branch: 'CN001', status: 'Đang hoạt động'
   });
 
   const handleOpenAdd = () => {
-    setFormData({ name: '', email: '', phone: '', role: 'Khách hàng', password: '', branch: 'CN001', status: 'Đang hoạt động' });
+    setFormData({ name: '', email: '', phone: '', cccd: '', role: 'Khách hàng', password: '', branch: 'CN001', status: 'Đang hoạt động' });
     setErrorMsg(''); setSuccessMsg(''); setShowAdd(true);
   };
 
   const handleCreate = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg('');
-    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.cccd) {
       setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.'); return;
     }
     if (!/^\d+$/.test(formData.phone)) {
@@ -131,7 +132,7 @@ export default function UserManagement() {
     const newUser: UserRecord = {
       id: formData.role === 'Khách hàng' ? `KH0${users.length + 1}` : `NV0${users.length + 1}`,
       name: formData.name, role: formData.role, branch: formData.branch,
-      status: formData.status, email: formData.email, phone: formData.phone
+      status: formData.status, email: formData.email, phone: formData.phone, cccd: formData.cccd
     };
 
     const newList = [newUser, ...users];
@@ -145,14 +146,14 @@ export default function UserManagement() {
   };
 
   const handleOpenEdit = (user: any) => {
-    setFormData({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, password: '', branch: user.branch || 'CN001', status: user.status || 'Đang hoạt động' });
+    setFormData({ name: user.name, email: user.email, phone: user.phone || '', cccd: user.cccd || '', role: user.role, password: '', branch: user.branch || 'CN001', status: user.status || 'Đang hoạt động' });
     setErrorMsg(''); setSuccessMsg(''); setShowEdit(user);
   };
 
   const handleUpdate = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg('');
-    if (!formData.name || !formData.email || !formData.phone) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.cccd) {
       setErrorMsg('Vui lòng điền đầy đủ thông tin bắt buộc.'); return;
     }
     if (!/^\d+$/.test(formData.phone)) {
@@ -167,7 +168,7 @@ export default function UserManagement() {
 
     const updatedUser: UserRecord = {
       ...showEdit,
-      name: formData.name, email: formData.email, phone: formData.phone,
+      name: formData.name, email: formData.email, phone: formData.phone, cccd: formData.cccd,
       role: formData.role, branch: formData.branch, status: formData.status
     };
 
@@ -274,8 +275,12 @@ export default function UserManagement() {
                   <input type="email" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className={inputCls} placeholder="Nhập email..." />
                 </div>
                 <div>
-                  <label className={labelCls}>Số điện thoại * (chỉ nhận số)</label>
+                  <label className={labelCls}>Số điện thoại *</label>
                   <input type="text" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className={inputCls} placeholder="Ví dụ: 0901234567" />
+                </div>
+                <div>
+                  <label className={labelCls}>CCCD/CMND *</label>
+                  <input type="text" required value={formData.cccd} onChange={e => setFormData({ ...formData, cccd: e.target.value })} className={inputCls} placeholder="Ví dụ: 079123456789" />
                 </div>
                 <div>
                   <label className={labelCls}>Mật khẩu *</label>
@@ -335,6 +340,10 @@ export default function UserManagement() {
                 <div>
                   <label className={labelCls}>Số điện thoại *</label>
                   <input type="text" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>CCCD/CMND *</label>
+                  <input type="text" required value={formData.cccd} onChange={e => setFormData({ ...formData, cccd: e.target.value })} className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Mật khẩu mới (tùy chọn)</label>
@@ -439,6 +448,7 @@ export default function UserManagement() {
                       <p className="font-semibold text-[#222222]">{user.name}</p>
                       <p className="text-xs text-[#666666]">{user.email}</p>
                       <p className="text-xs font-mono text-[#B7705F]">{user.phone}</p>
+                      {user.cccd && <p className="text-xs font-mono text-gray-500">CCCD: {user.cccd}</p>}
                     </div>
                   </div>
                 </td>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
    FileText, Save, Send, Printer, CheckCircle, ArrowLeft, Eye, FileDigit,
    Info, Calculator, Upload, Search, AlertTriangle, CheckCircle2, DollarSign, HelpCircle, FileCheck
@@ -111,14 +111,19 @@ export default function FinancialReconciliation() {
    };
 
    // Interactive Calculator State
-   const [depositInput, setDepositInput] = useState<number>(0);
-   const [rentLiabilityInput, setRentLiabilityInput] = useState<number>(0);
-   const [damagedAssetInput, setDamagedAssetInput] = useState<number>(0);
-   const [utilityInput, setUtilityInput] = useState<number>(0);
-   const [cleaningInput, setCleaningInput] = useState<number>(150000);
-   const [otherInput, setOtherInput] = useState<number>(0);
+   const [depositInput, setDepositInput] = useState<number | ''>(0);
+   
+   interface ChiTietDoiSoat {
+      id: string;
+      maLoaiKhauTru: string;
+      lyDo: string;
+      soTien: number | '';
+   }
+   const [chiTietList, setChiTietList] = useState<ChiTietDoiSoat[]>([]);
+
    const [notesInput, setNotesInput] = useState<string>('');
    const [attachmentName, setAttachmentName] = useState<string | null>(null);
+   const fileInputRef = useRef<HTMLInputElement>(null);
    const [reconStatus, setReconStatus] = useState<string>('Chờ khách xác nhận');
 
    // Load from localStorage & mock list
@@ -178,11 +183,16 @@ export default function FinancialReconciliation() {
    useEffect(() => {
       if (selected) {
          setDepositInput(selected.deposit || 0);
-         setRentLiabilityInput(selected.rentLiability || 0);
-         setDamagedAssetInput(selected.damagedAssetFee || 0);
-         setUtilityInput(selected.utilityFee || 0);
-         setCleaningInput(selected.cleaningFee || 150000);
-         setOtherInput(0);
+         
+         const initialDetails: ChiTietDoiSoat[] = [];
+         if (selected.rentLiability > 0) initialDetails.push({ id: '1', maLoaiKhauTru: 'NO_THUE', lyDo: 'Công nợ cũ thuê phòng', soTien: selected.rentLiability });
+         if (selected.damagedAssetFee > 0) initialDetails.push({ id: '2', maLoaiKhauTru: 'PHAT_TAI_SAN', lyDo: selected.damagedAssetDesc || 'Đền bù tài sản hỏng', soTien: selected.damagedAssetFee });
+         if (selected.utilityFee > 0) initialDetails.push({ id: '3', maLoaiKhauTru: 'NO_DIEN', lyDo: 'Điện nước cuối phát sinh', soTien: selected.utilityFee });
+         if (selected.cleaningFee > 0) initialDetails.push({ id: '4', maLoaiKhauTru: 'PHI_DON_DEP', lyDo: 'Chi phí dọn dẹp vệ sinh', soTien: selected.cleaningFee });
+         if (initialDetails.length === 0) initialDetails.push({ id: '4', maLoaiKhauTru: 'PHI_DON_DEP', lyDo: 'Chi phí dọn dẹp vệ sinh', soTien: 150000 });
+         
+         setChiTietList(initialDetails);
+
          setNotesInput(selected.notes || '');
          setAttachmentName(null);
          setIsReconciling(false);
@@ -200,8 +210,8 @@ export default function FinancialReconciliation() {
    }, [selected]);
 
    // Calculations
-   const totalDeductions = rentLiabilityInput + damagedAssetInput + utilityInput + cleaningInput + otherInput;
-   const netAmount = depositInput - totalDeductions;
+   const totalDeductions = chiTietList.reduce((sum, item) => sum + (Number(item.soTien) || 0), 0);
+   const netAmount = (Number(depositInput) || 0) - totalDeductions;
    const isSurplus = netAmount >= 0;
    const absoluteNet = Math.abs(netAmount);
 
@@ -229,11 +239,7 @@ export default function FinancialReconciliation() {
             const data = JSON.parse(saved);
             data.status = reconStatus; // 'Chờ khách xác nhận', 'Chờ hoàn cọc', or 'Chờ thanh toán bổ sung'
             data.deposit = depositInput;
-            data.rentLiability = rentLiabilityInput;
-            data.damagedAssetFee = damagedAssetInput;
-            data.utilityFee = utilityInput;
-            data.cleaningFee = cleaningInput;
-            data.otherFee = otherInput;
+            data.chiTietDoiSoat = chiTietList;
             data.totalDeductions = totalDeductions;
             data.netAmount = netAmount;
             data.reconcilerNotes = notesInput;
@@ -261,7 +267,14 @@ export default function FinancialReconciliation() {
    );
 
    const simulateFileUpload = () => {
-      setAttachmentName(`chung_tu_doi_soat_${selected?.room || 'P'}.pdf`);
+      fileInputRef.current?.click();
+   };
+
+   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+         setAttachmentName(file.name);
+      }
    };
 
    if (!selected) {
@@ -415,30 +428,14 @@ export default function FinancialReconciliation() {
                      <CheckCircle2 className="w-4 h-4 mr-2" /> Đã đối soát thành công
                   </span>
                )}
-               {!isReconciling && !isSaved && (
+               {!isSaved && (
                   <button
-                     onClick={() => {
-                        if (isBlocked) {
-                           showErrorModal(
-                              'Thiếu hợp đồng hoặc biên bản kiểm tra phòng! Không thể lập phiếu đối soát.',
-                              'Không thể lập phiếu đối soát'
-                           );
-                           return;
-                        }
-                        setIsReconciling(true);
-                     }}
-                     className={`px-5 py-2.5 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all duration-200 cursor-pointer ${isBlocked
+                     onClick={isReconciling ? handleSaveAndConfirm : undefined}
+                     disabled={!isReconciling}
+                     className={`px-5 py-2.5 rounded-lg text-sm font-bold flex items-center shadow-sm transition-all duration-200 ${!isReconciling
                         ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60'
-                        : 'bg-[#B7705F] hover:bg-[#a06050] text-white'
+                        : 'bg-[#8C4A3A] hover:bg-[#723a2d] text-white cursor-pointer'
                         }`}
-                  >
-                     <Calculator className="w-4 h-4 mr-2" /> Lập phiếu đối soát
-                  </button>
-               )}
-               {isReconciling && !isSaved && (
-                  <button
-                     onClick={handleSaveAndConfirm}
-                     className="px-5 py-2.5 bg-[#8C4A3A] hover:bg-[#723a2d] text-white rounded-lg text-sm font-bold transition-all duration-200 flex items-center shadow-sm cursor-pointer"
                   >
                      <Save className="w-4 h-4 mr-2" /> Lưu phiếu đối soát
                   </button>
@@ -557,69 +554,89 @@ export default function FinancialReconciliation() {
 
                      {/* Interactive inputs */}
                      <div className="space-y-4 mb-6 bg-[#FAF5F3]/30 p-4 rounded-xl border border-[#EAD3CC]/40">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Các khoản thu &amp; khấu trừ</h4>
-
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="flex justify-between items-center mb-4 border-b border-[#EAD3CC]/50 pb-3">
                            <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">Tiền cọc ban đầu (đ)</label>
-                              <input
-                                 type="number"
-                                 value={depositInput}
-                                 onChange={(e) => setDepositInput(Number(e.target.value))}
-                                 className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#B7705F]"
-                              />
+                              <h4 className="text-sm font-bold text-[#8C4A3A]">Bảng CHI_TIET_DOI_SOAT</h4>
+                              <p className="text-[10px] text-gray-500 mt-0.5">Thêm/bớt các khoản khấu trừ linh hoạt không giới hạn.</p>
                            </div>
-                           <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">Công nợ cũ thuê phòng (đ)</label>
-                              <input
-                                 type="number"
-                                 value={rentLiabilityInput}
-                                 onChange={(e) => setRentLiabilityInput(Number(e.target.value))}
-                                 className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#B7705F]"
-                              />
-                           </div>
+                           <button 
+                              onClick={() => setChiTietList([...chiTietList, { id: Date.now().toString(), maLoaiKhauTru: 'KHAC', lyDo: '', soTien: '' }])}
+                              className="px-3 py-1.5 bg-white border border-[#EAD3CC] text-[#8C4A3A] rounded shadow-sm text-xs font-bold hover:bg-[#FAF5F3] transition-colors"
+                           >
+                              + Thêm khoản trừ
+                           </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mt-2">
-                           <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">Đền bù tài sản hỏng (đ)</label>
-                              <input
-                                 type="number"
-                                 value={damagedAssetInput}
-                                 onChange={(e) => setDamagedAssetInput(Number(e.target.value))}
-                                 className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#B7705F]"
-                              />
-                           </div>
-                           <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">Điện nước cuối (đ)</label>
-                              <input
-                                 type="number"
-                                 value={utilityInput}
-                                 onChange={(e) => setUtilityInput(Number(e.target.value))}
-                                 className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#B7705F]"
-                              />
-                           </div>
+                        <div className="mb-4">
+                           <label className="block text-xs font-semibold text-gray-700 mb-1">Tiền cọc ban đầu (đ) <span className="text-gray-400 font-normal">- Lấy từ HOP_DONG_THUE</span></label>
+                           <input
+                              type="number"
+                              placeholder="0"
+                              value={depositInput}
+                              onChange={(e) => setDepositInput(e.target.value === '' ? '' : Number(e.target.value))}
+                              className="w-1/2 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-[#222222] focus:outline-none focus:ring-1 focus:ring-[#B7705F]"
+                           />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mt-2">
-                           <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">Chi phí dọn phòng (đ)</label>
-                              <input
-                                 type="number"
-                                 value={cleaningInput}
-                                 onChange={(e) => setCleaningInput(Number(e.target.value))}
-                                 className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#B7705F]"
-                              />
+                        <div className="space-y-2">
+                           <div className="grid grid-cols-12 gap-2 px-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                              <div className="col-span-3">Mã Loại</div>
+                              <div className="col-span-5">Lý do chi tiết</div>
+                              <div className="col-span-3">Số tiền (đ)</div>
+                              <div className="col-span-1 text-center">Xóa</div>
                            </div>
-                           <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">Chi phí phát sinh khác (đ)</label>
-                              <input
-                                 type="number"
-                                 value={otherInput}
-                                 onChange={(e) => setOtherInput(Number(e.target.value))}
-                                 className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#B7705F]"
-                              />
-                           </div>
+                           
+                           {chiTietList.map((item, idx) => (
+                              <div key={item.id} className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-gray-100 shadow-sm">
+                                 <div className="col-span-3">
+                                    <select 
+                                       value={item.maLoaiKhauTru}
+                                       onChange={(e) => setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, maLoaiKhauTru: e.target.value } : c))}
+                                       className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:border-[#B7705F]"
+                                    >
+                                       <option value="NO_THUE">NO_THUE</option>
+                                       <option value="NO_DIEN">NO_DIEN</option>
+                                       <option value="NO_NUOC">NO_NUOC</option>
+                                       <option value="PHAT_TAI_SAN">PHAT_TAI_SAN</option>
+                                       <option value="PHI_DON_DEP">PHI_DON_DEP</option>
+                                       <option value="PHAT_VI_PHAM">PHAT_VI_PHAM</option>
+                                       <option value="KHAC">KHAC</option>
+                                    </select>
+                                 </div>
+                                 <div className="col-span-5">
+                                    <input
+                                       type="text"
+                                       placeholder="Ghi chú chi tiết..."
+                                       value={item.lyDo}
+                                       onChange={(e) => setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, lyDo: e.target.value } : c))}
+                                       className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:border-[#B7705F]"
+                                    />
+                                 </div>
+                                 <div className="col-span-3">
+                                    <input
+                                       type="number"
+                                       placeholder="0"
+                                       value={item.soTien}
+                                       onChange={(e) => setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, soTien: e.target.value === '' ? '' : Number(e.target.value) } : c))}
+                                       className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-red-600 font-semibold focus:outline-none focus:border-[#B7705F]"
+                                    />
+                                 </div>
+                                 <div className="col-span-1 flex justify-center">
+                                    <button 
+                                       onClick={() => setChiTietList(chiTietList.filter(c => c.id !== item.id))}
+                                       className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                    >
+                                       ✕
+                                    </button>
+                                 </div>
+                              </div>
+                           ))}
+                           
+                           {chiTietList.length === 0 && (
+                              <div className="text-center py-4 text-xs text-gray-500 italic bg-white border border-gray-100 rounded">
+                                 Không có khoản khấu trừ nào. Khách hàng nhận lại đủ cọc gốc.
+                              </div>
+                           )}
                         </div>
                      </div>
 
@@ -628,7 +645,7 @@ export default function FinancialReconciliation() {
                         <div className="flex justify-between">
                            <span className="text-gray-500">Tiền cọc giữ ban đầu:</span>
                            <span className="font-bold text-gray-900">
-                              {depositInput.toLocaleString()} ₫
+                              {(Number(depositInput) || 0).toLocaleString()} ₫
                            </span>
                         </div>
                         <div className="flex justify-between text-gray-900">
@@ -720,6 +737,13 @@ export default function FinancialReconciliation() {
                            onClick={simulateFileUpload}
                            className="border border-dashed border-[#EAD3CC] rounded-lg p-4 flex flex-col items-center justify-center text-center bg-[#FAF5F3]/10 hover:bg-gray-50 cursor-pointer transition-colors"
                         >
+                           <input 
+                              type="file" 
+                              ref={fileInputRef} 
+                              onChange={handleFileChange} 
+                              className="hidden" 
+                              accept=".jpg,.png,.pdf" 
+                           />
                            <Upload className="w-5 h-5 text-gray-400 mb-1" />
                            {attachmentName ? (
                               <span className="text-sm text-[#8C4A3A] font-semibold flex items-center">

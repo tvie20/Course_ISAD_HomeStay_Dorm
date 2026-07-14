@@ -142,6 +142,7 @@ export default function FinancialReconciliation() {
    interface ChiTietDoiSoat {
       id: string;
       maLoaiKhauTru: string;
+      loaiDenBu?: string;
       lyDo: string;
       soTien: number | '';
       chiSoCu?: number;
@@ -214,14 +215,6 @@ export default function FinancialReconciliation() {
 
          const initialDetails: ChiTietDoiSoat[] = [];
          if (selected.rentLiability > 0) initialDetails.push({ id: '1', maLoaiKhauTru: 'NO_THUE', lyDo: 'Công nợ cũ thuê phòng', soTien: selected.rentLiability });
-
-         if (selected.damagedItems && selected.damagedItems.length > 0) {
-            selected.damagedItems.forEach((item: any, idx: number) => {
-               initialDetails.push({ id: `phat_${idx}`, maLoaiKhauTru: 'PHAT_TAI_SAN', lyDo: `${item.type}: ${item.desc}`, soTien: '' });
-            });
-         } else if (selected.damagedAssetDesc) {
-            initialDetails.push({ id: '2', maLoaiKhauTru: 'PHAT_TAI_SAN', lyDo: selected.damagedAssetDesc, soTien: '' });
-         }
 
          setChiTietList(initialDetails);
 
@@ -538,7 +531,7 @@ export default function FinancialReconciliation() {
                               <span className="text-[#666666] text-sm font-semibold mb-2">Báo cáo tình trạng tài sản:</span>
                               <div className="pl-2 space-y-2">
                                  <div className="flex justify-between items-start text-sm">
-                                    <span className="text-gray-500 w-16">+ Hỏng:</span>
+                                    <span className="text-gray-500 w-16">+ Hư hỏng:</span>
                                     <div className="flex-1 text-right font-semibold text-[#8C4A3A]">
                                        {selected.damagedItems?.filter((i: any) => i.type === 'Hỏng').length > 0
                                           ? selected.damagedItems.filter((i: any) => i.type === 'Hỏng').map((item: any, idx: number) => (
@@ -592,7 +585,7 @@ export default function FinancialReconciliation() {
                                  <h4 className="text-sm font-bold text-[#8C4A3A]">Thông tin chi tiết đối soát</h4>
                               </div>
                               <button
-                                 onClick={() => setChiTietList([...chiTietList, { id: Date.now().toString(), maLoaiKhauTru: 'KHAC', lyDo: '', soTien: '' }])}
+                                 onClick={() => setChiTietList([...chiTietList, { id: Date.now().toString(), maLoaiKhauTru: 'KHAC', loaiDenBu: 'Khác', lyDo: '', soTien: '' }])}
                                  className="px-3 py-1.5 bg-white border border-[#EAD3CC] text-[#8C4A3A] rounded shadow-sm text-xs font-bold hover:bg-[#FAF5F3] transition-colors"
                               >
                                  + Thêm khoản trừ
@@ -642,7 +635,7 @@ export default function FinancialReconciliation() {
                                              let chiSoCu = undefined;
                                              if (val === 'NO_DIEN') chiSoCu = 1250;
                                              if (val === 'NO_NUOC') chiSoCu = 105;
-                                             setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, maLoaiKhauTru: val, chiSoCu, chiSoMoi: undefined, soTien: '', lyDo: '' } : c));
+                                             setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, maLoaiKhauTru: val, chiSoCu, chiSoMoi: undefined, soTien: '', loaiDenBu: undefined, lyDo: '' } : c));
                                           }}
                                           className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:border-[#B7705F]"
                                        >
@@ -669,7 +662,7 @@ export default function FinancialReconciliation() {
                                                    }}
                                                    className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-gray-800 bg-white cursor-pointer flex justify-between items-center"
                                                 >
-                                                   <span className="truncate">{item.lyDo && item.lyDo !== '' ? item.lyDo : '-- Tra cứu bảng giá đền bù --'}</span>
+                                                   <span className="truncate">{item.loaiDenBu ? item.loaiDenBu : '-- Tra cứu bảng giá đền bù --'}</span>
                                                    <ChevronDown className="w-3 h-3 text-gray-500 flex-shrink-0 ml-1" />
                                                 </div>
                                                 {openDropdownId === item.id && (
@@ -693,7 +686,7 @@ export default function FinancialReconciliation() {
                                                                key={db.MaDenBu}
                                                                className="px-2 py-1.5 hover:bg-[#FAF5F3] cursor-pointer text-xs text-gray-700 border-b border-gray-50 last:border-0"
                                                                onClick={() => {
-                                                                  setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, lyDo: db.TenLoi, soTien: db.GiaThamKhao } : c));
+                                                                  setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, loaiDenBu: db.TenLoi, lyDo: db.TenLoi, soTien: db.GiaThamKhao } : c));
                                                                   setOpenDropdownId(null);
                                                                }}
                                                             >
@@ -703,7 +696,7 @@ export default function FinancialReconciliation() {
                                                          <div
                                                             className="px-2 py-1.5 hover:bg-[#FAF5F3] cursor-pointer text-xs text-[#B7705F] font-semibold"
                                                             onClick={() => {
-                                                               setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, lyDo: 'Khác', soTien: '' } : c));
+                                                               setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, loaiDenBu: 'Khác', lyDo: '', soTien: '' } : c));
                                                                setOpenDropdownId(null);
                                                             }}
                                                          >
@@ -713,13 +706,15 @@ export default function FinancialReconciliation() {
                                                    </div>
                                                 )}
                                              </div>
-                                             <input
-                                                type="text"
-                                                placeholder="Chi tiết lỗi phạt..."
-                                                value={item.lyDo === 'Khác' ? '' : item.lyDo}
-                                                onChange={(e) => setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, lyDo: e.target.value } : c))}
-                                                className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:border-[#B7705F]"
-                                             />
+                                             {item.loaiDenBu === 'Khác' && (
+                                                <input
+                                                   type="text"
+                                                   placeholder="Chi tiết lỗi phạt..."
+                                                   value={item.lyDo}
+                                                   onChange={(e) => setChiTietList(chiTietList.map(c => c.id === item.id ? { ...c, lyDo: e.target.value } : c))}
+                                                   className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:border-[#B7705F]"
+                                                />
+                                             )}
                                           </div>
                                        ) : (item.maLoaiKhauTru === 'NO_DIEN' || item.maLoaiKhauTru === 'NO_NUOC') ? (
                                           <div className="flex items-center gap-1 w-full relative">

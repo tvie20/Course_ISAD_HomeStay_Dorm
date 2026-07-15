@@ -5,7 +5,7 @@ import { Search, ArrowLeft, MapPin, CheckCircle, XCircle, HelpCircle } from 'luc
 interface Bed {
   bedId: string;
   price: number;
-  status: 'Đã thuê' | 'Trống';
+  status: 'Đã thuê' | 'Trống' | 'Đã cọc';
   note: string;
 }
 
@@ -84,7 +84,7 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
 
       // 6. Status Filter
       if (statusFilter) {
-        const rentedCount = room.beds.filter(b => b.status === 'Đã thuê').length;
+        const rentedCount = room.beds.filter(b => b.status === 'Đã thuê' || b.status === 'Đã cọc').length;
         if (statusFilter === 'Trống') {
           // Has at least one vacant bed
           if (rentedCount === room.capacity) return false;
@@ -112,7 +112,7 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
 
   // Helper to calculate rented beds count
   const getRentedCount = (room: Room) => {
-    return room.beds.filter(b => b.status === 'Đã thuê').length;
+    return room.beds.filter(b => b.status === 'Đã thuê' || b.status === 'Đã cọc').length;
   };
 
   // Helper to determine occupancy status badge & label
@@ -235,6 +235,8 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
                       <td className="px-4 py-4">
                         <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${bed.status === 'Đã thuê'
                             ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                            : bed.status === 'Đã cọc'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
                             : 'bg-green-50 text-green-700 border border-green-100'
                           }`}>
                           {bed.status}

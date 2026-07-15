@@ -43,4 +43,7 @@ router.use('/auth', authRoutes)
 router.use('/users', userRoutes)
 router.use('/assets', assetRoutes)
 
+const reconRoutes = require('./reconciliation.routes')
+router.use('/reconciliations', reconRoutes)
+
 module.exports = router

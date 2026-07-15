@@ -139,8 +139,11 @@ export default function RoomManagement() {
    const [errorMsg, setErrorMsg] = useState('');
    const [currentPage, setCurrentPage] = useState(1);
    const ITEMS_PER_PAGE = 10;
+   
+   React.useEffect(() => { setCurrentPage(1); }, [searchTerm, filterType]);
 
    const [formData, setFormData] = useState({ id: '', name: '', type: 'Phòng 4 người', floor: '1', maxCount: 4, status: 'TRỐNG', branch: 'Homestay Central Park' });
+
 
    const handleOpenAdd = () => {
       const nextRoomId = generateRoomId(rooms);
@@ -376,8 +379,6 @@ export default function RoomManagement() {
    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
    const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredRooms.length);
    const pagedRooms = filteredRooms.slice(startIndex, endIndex);
-
-   React.useEffect(() => { setCurrentPage(1); }, [searchTerm, filterType]);
 
    return (
       <div className="p-8 h-full max-w-7xl mx-auto">

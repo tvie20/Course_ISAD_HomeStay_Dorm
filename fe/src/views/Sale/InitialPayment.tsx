@@ -517,7 +517,32 @@ export default function InitialPayment({ branchId = '' }: { branchId?: string })
             </div>
          </div>
 
-          {selectedItem.status === 'Chờ thanh toán' && (
+         <div className="flex gap-4">
+            {(selectedItem.status === 'Chờ thanh toán' || selectedItem.status === 'Đã thanh toán') && (
+               <button onClick={async () => {
+                  if (!window.confirm('Bạn có chắc chắn muốn hủy phiếu cọc này? Hành động này không thể hoàn tác.')) return;
+                  try {
+                     const res = await fetch(`${API_URL}/api/v1/deposits/${selectedItem.id}/cancel`, {
+                        method: 'PUT'
+                     });
+                     const data = await res.json();
+                     if (data.status === 'success') {
+                        alert(data.data?.message || 'Đã hủy phiếu cọc thành công!');
+                        setSelectedItem({ ...selectedItem, status: 'Đã hủy' });
+                        fetchDeposits();
+                     } else {
+                        alert('Lỗi: ' + data.message);
+                     }
+                  } catch (err) {
+                     console.error(err);
+                     alert('Không thể kết nối đến server');
+                  }
+               }} className="flex-1 py-4 bg-red-100 text-red-600 rounded-xl text-sm font-bold shadow-sm hover:bg-red-200 transition-colors flex items-center justify-center">
+                  Hủy Phiếu Cọc
+               </button>
+            )}
+
+            {selectedItem.status === 'Chờ thanh toán' && (
              <button onClick={async () => {
                 try {
                    const res = await fetch(`${API_URL}/api/v1/deposits/${selectedItem.id}/confirm`, {
@@ -543,7 +568,8 @@ export default function InitialPayment({ branchId = '' }: { branchId?: string })
              }} className="w-full py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
                <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận đã thanh toán
             </button>
-         )}
+            )}
+         </div>
       </div>
    );
 }

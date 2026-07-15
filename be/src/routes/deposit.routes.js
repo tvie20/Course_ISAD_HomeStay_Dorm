@@ -17,4 +17,8 @@ router.put('/:id/checkin-schedule', depositController.updateCheckinSchedule)
 // Xác nhận đã thanh toán tiền cọc
 router.put('/:id/confirm', depositController.confirmPayment)
 
+
+// Huy cọc
+router.put('/:id/cancel', depositController.cancelDeposit)
+
 module.exports = router

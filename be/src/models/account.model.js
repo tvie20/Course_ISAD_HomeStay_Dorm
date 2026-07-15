@@ -115,7 +115,7 @@ exports.createAccountForExistingCustomer = async (customerId, overridePassword) 
 exports.login = async (username, password, userType) => {
     try {
         const pool = await sql.connect()
-        
+
         // 1. Check credentials
         const accReq = pool.request()
         accReq.input('TenDangNhap', sql.VarChar, username)
@@ -124,30 +124,30 @@ exports.login = async (username, password, userType) => {
             SELECT MaTaiKhoan, TrangThai FROM TAI_KHOAN 
             WHERE TenDangNhap = @TenDangNhap AND MatKhau = @MatKhau
         `)
-        
+
         if (accRes.recordset.length === 0) {
             throw new Error('Sai tên đăng nhập hoặc mật khẩu')
         }
-        
+
         const account = accRes.recordset[0]
-        
+
         const maTaiKhoan = account.MaTaiKhoan
         let role = ''
         let employeeId = ''
-        
+
         // 2. Identify Role
         const nvReq = pool.request()
         nvReq.input('MaTaiKhoan', sql.VarChar, maTaiKhoan)
         const nvRes = await nvReq.query(`
             SELECT MaNhanVien, HoTen, ChucVu, MaChiNhanh FROM NHAN_VIEN WHERE MaTaiKhoan = @MaTaiKhoan
         `)
-        
+
         let fullName = ''
         let branch = ''
 
         if (nvRes.recordset.length > 0) {
             if (userType === 'guest') {
-                throw new Error('Tài khoản này là của Nhân viên. Vui lòng chọn đúng vai trò Nhân viên để đăng nhập.')
+                throw new Error('Không tìm thấy tài khoản. Hãy chú ý chọn đúng vai trò để đăng nhập!')
             }
             const nv = nvRes.recordset[0]
             const chucVu = (nv.ChucVu || '').toLowerCase()
@@ -168,7 +168,7 @@ exports.login = async (username, password, userType) => {
             `)
             if (khRes.recordset.length > 0) {
                 if (userType === 'staff') {
-                    throw new Error('Tài khoản này là của Khách hàng. Vui lòng chọn đúng vai trò Khách hàng để đăng nhập.')
+                    throw new Error('Không tìm thấy tài khoản. Hãy chú ý chọn đúng vai trò để đăng nhập!')
                 }
                 role = 'guest'
                 employeeId = khRes.recordset[0].MaKhachHang
@@ -177,7 +177,7 @@ exports.login = async (username, password, userType) => {
                 throw new Error('Tài khoản không thuộc nhân viên hay khách hàng')
             }
         }
-        
+
         return {
             username: employeeId,
             name: fullName,

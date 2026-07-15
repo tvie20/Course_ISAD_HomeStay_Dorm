@@ -45,3 +45,7 @@ exports.confirmPayment = async (data) => {
     return result
 }
 
+
+exports.cancelDeposit = async (data) => {
+    return await depositModel.cancelDeposit(data)
+}

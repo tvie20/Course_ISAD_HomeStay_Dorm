@@ -21,7 +21,7 @@ exports.create = async (data) => {
         // Han thanh toan luu INT (so gio) theo cau truc DB
         request.input('HanThanhToan', sql.Int, 24)
         
-        request.input('Status', sql.NVarChar, 'Chờ thanh toán')
+        request.input('Status', sql.NVarChar, 'Đã thanh toán')
         request.input('MaPhieuDangKy', sql.VarChar, data.RegistrationID || null)
         request.input('HinhThucThanhToan', sql.NVarChar, data.PaymentMethod || null)
 
@@ -260,6 +260,30 @@ exports.confirmPayment = async (data) => {
             UPDATE PHIEU_COC 
             SET TrangThai = @Status
             WHERE MaPhieuCoc = @DepositID;
+
+            DECLARE @MaPhong CHAR(6);
+            SELECT @MaPhong = MaPhong FROM PHIEUCOC_PHONG WHERE MaPhieuCoc = @DepositID;
+
+            IF EXISTS (SELECT 1 FROM PHIEUCOC_GIUONG WHERE MaPhieuCoc = @DepositID)
+            BEGIN
+                UPDATE GIUONG
+                SET TrangThai = N'Đã cọc'
+                WHERE MaPhong = @MaPhong AND SoThuTu IN (
+                    SELECT SoThuTu FROM PHIEUCOC_GIUONG WHERE MaPhieuCoc = @DepositID
+                );
+            END
+            ELSE
+            BEGIN
+                UPDATE GIUONG SET TrangThai = N'Đã cọc' WHERE MaPhong = @MaPhong;
+                UPDATE PHONG SET TrangThai = N'Đã cọc' WHERE MaPhong = @MaPhong;
+            END
+
+            IF NOT EXISTS (
+                SELECT 1 FROM GIUONG WHERE MaPhong = @MaPhong AND TrangThai = N'Trống'
+            )
+            BEGIN
+                UPDATE PHONG SET TrangThai = N'Đã cọc' WHERE MaPhong = @MaPhong;
+            END
         `
 
         const result = await request.query(query)
@@ -270,6 +294,67 @@ exports.confirmPayment = async (data) => {
         }
     } catch (error) {
         console.error("Error in deposit model (confirmPayment):", error)
+        throw error
+    }
+}
+
+
+// Huy phieu coc va tao doi soat
+exports.cancelDeposit = async (data) => {
+    try {
+        const pool = await sql.connect()
+        const request = pool.request()
+
+        if (!data.id) throw new Error("Missing DepositID")
+        request.input('MaPhieuCoc', sql.VarChar, data.id)
+        
+        const resCoc = await request.query("SELECT SoTienCoc, TrangThai FROM PHIEU_COC WHERE MaPhieuCoc = @MaPhieuCoc")
+        if (resCoc.recordset.length === 0) throw new Error("Không tìm thấy phiếu cọc")
+        const coc = resCoc.recordset[0]
+
+        const queryHuy = `
+            UPDATE PHIEU_COC SET TrangThai = N'Đã hủy' WHERE MaPhieuCoc = @MaPhieuCoc;
+            
+            DECLARE @MaPhong CHAR(6);
+            SELECT @MaPhong = MaPhong FROM PHIEUCOC_PHONG WHERE MaPhieuCoc = @MaPhieuCoc;
+            
+            IF EXISTS (SELECT 1 FROM PHIEUCOC_GIUONG WHERE MaPhieuCoc = @MaPhieuCoc)
+            BEGIN
+                UPDATE GIUONG SET TrangThai = N'Trống' 
+                WHERE MaPhong = @MaPhong AND SoThuTu IN (SELECT SoThuTu FROM PHIEUCOC_GIUONG WHERE MaPhieuCoc = @MaPhieuCoc) AND TrangThai = N'Đã cọc';
+            END
+            ELSE
+            BEGIN
+                UPDATE GIUONG SET TrangThai = N'Trống' WHERE MaPhong = @MaPhong AND TrangThai = N'Đã cọc';
+            END
+            
+            UPDATE PHONG SET TrangThai = N'Trống' WHERE MaPhong = @MaPhong AND TrangThai = N'Đã cọc';
+        `
+        await request.query(queryHuy)
+
+        let msg = 'Đã hủy phiếu cọc.';
+        if (coc.TrangThai === 'Đã thanh toán' || coc.TrangThai === 'Sắp nhận phòng') {
+            const tienHoan = coc.SoTienCoc * 0.8;
+            const maDoiSoat = await generateNextId('DOI_SOAT_HOAN_COC', 'MaDoiSoat', 'DS');
+            
+            const dsReq = pool.request()
+            dsReq.input('MaDoiSoat', sql.VarChar, maDoiSoat)
+            dsReq.input('TyLeHoan', sql.Float, 0.8)
+            dsReq.input('TienHoan', sql.Int, tienHoan)
+            dsReq.input('NgayDoiSoat', sql.DateTime, new Date())
+            dsReq.input('MaPhieuCoc', sql.VarChar, data.id)
+            dsReq.input('TrangThai', sql.NVarChar, 'Chờ đối soát')
+            
+            await dsReq.query(`
+                INSERT INTO DOI_SOAT_HOAN_COC (MaDoiSoat, TyLeHoan, TienHoan, NgayDoiSoat, MaPhieuCoc, TrangThai)
+                VALUES (@MaDoiSoat, @TyLeHoan, @TienHoan, @NgayDoiSoat, @MaPhieuCoc, @TrangThai)
+            `)
+            msg += ' Đã chuyển lệnh hoàn tiền 80% sang kế toán.';
+        }
+
+        return { success: true, message: msg }
+    } catch (error) {
+        console.error("Error in deposit model (cancelDeposit):", error)
         throw error
     }
 }

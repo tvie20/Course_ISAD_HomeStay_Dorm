@@ -62,7 +62,7 @@ CREATE TABLE PHONG (
 	LoaiPhong  NVARCHAR(100),
 	Tang       INT,
 	SucChua    INT,
-	TrangThai  NVARCHAR(100)  CHECK(TrangThai IN(N'Đã thuê', N'Trống')),
+	TrangThai  NVARCHAR(100)  CHECK(TrangThai IN(N'Đã thuê', N'Đã cọc', N'Trống')),
 	MoTa       NVARCHAR(100),
 	MaChiNhanh CHAR(6)
 );
@@ -71,7 +71,7 @@ CREATE TABLE GIUONG (
 	MaPhong   CHAR(6),
 	SoThuTu   INT,
 	GiaGiuong INT,
-	TrangThai NVARCHAR(100) CHECK(TrangThai IN(N'Đã thuê', N'Trống')),
+	TrangThai NVARCHAR(100) CHECK(TrangThai IN(N'Đã thuê', N'Đã cọc', N'Trống')),
 	GhiChu    NVARCHAR(100)
 
 	PRIMARY KEY (MaPhong, SoThuTu)

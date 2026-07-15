@@ -83,3 +83,9 @@ exports.confirmPayment = catchAsync(async (req, res, next) => {
         data: result
     })
 })
+
+exports.cancelDeposit = catchAsync(async (req, res, next) => {
+    const payload = { ...req.params, ...req.query, ...req.body }
+    const result = await depositService.cancelDeposit(payload)
+    res.status(200).json({ status: 'success', data: result })
+})

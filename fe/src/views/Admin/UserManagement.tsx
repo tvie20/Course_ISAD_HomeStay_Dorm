@@ -476,7 +476,7 @@ export default function UserManagement() {
           <input
             type={showPassword ? 'text' : 'password'}
             required={!isEdit}
-            value={formData.password}
+            value={formData.password || ''}
             onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
             className={`${inputCls} pr-10`}
             placeholder={isEdit ? 'Bỏ trống nếu không đổi...' : 'Khởi tạo mật khẩu...'}

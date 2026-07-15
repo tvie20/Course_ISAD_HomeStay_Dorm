@@ -85,11 +85,21 @@ exports.create = async (data) => {
             const updateBedReq = pool.request()
             updateBedReq.input('DepositID', sql.VarChar, data.DepositID)
             await updateBedReq.query(`
-                UPDATE g
-                SET g.TrangThai = N'Đã thuê'
-                FROM GIUONG g
-                INNER JOIN PHIEUCOC_GIUONG pcg ON g.MaPhong = pcg.MaPhong AND g.SoThuTu = pcg.SoThuTu
-                WHERE pcg.MaPhieuCoc = @DepositID
+                
+UPDATE g
+SET g.TrangThai = N'Đã thuê'
+FROM GIUONG g
+INNER JOIN PHIEUCOC_GIUONG pcg ON g.MaPhong = pcg.MaPhong AND g.SoThuTu = pcg.SoThuTu
+WHERE pcg.MaPhieuCoc = @DepositID;
+
+DECLARE @MaPhong CHAR(6);
+SELECT @MaPhong = MaPhong FROM PHIEUCOC_PHONG WHERE MaPhieuCoc = @DepositID;
+
+IF NOT EXISTS (SELECT 1 FROM GIUONG WHERE MaPhong = @MaPhong AND TrangThai != N'Đã thuê')
+BEGIN
+    UPDATE PHONG SET TrangThai = N'Đã thuê' WHERE MaPhong = @MaPhong;
+END
+
             `)
         }
 

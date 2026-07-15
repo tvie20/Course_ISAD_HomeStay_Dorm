@@ -68,4 +68,18 @@ exports.updateCheckinSchedule = catchAsync(async (req, res, next) => {
         data: result
     })
 })
+// Xac nhan thanh toan tien coc
+exports.confirmPayment = catchAsync(async (req, res, next) => {
+    const payload = {
+        ...req.params,
+        ...req.query,
+        ...req.body
+    }
 
+    const result = await depositService.confirmPayment(payload)
+
+    res.status(200).json({
+        status: 'success',
+        data: result
+    })
+})

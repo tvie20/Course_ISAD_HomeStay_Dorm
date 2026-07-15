@@ -1,11 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Home, BedDouble } from 'lucide-react';
 
 export default function GuestRegistration({ onReturn }: { onReturn?: () => void }) {
   const [showSuccess, setShowSuccess] = useState(false);
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
+  const [roomTypes, setRoomTypes] = useState<{id: string, name: string}[]>([]);
+  
+  const [formData, setFormData] = useState({
+    FullName: 'Nguyễn Văn A',
+    Gender: '',
+    BirthDate: '',
+    IdentityCard: '',
+    Nationality: 'Việt Nam',
+    PhoneNumber: '',
+    Email: '',
+    PermanentAddress: '',
+    Occupation: '',
+    BranchID: '',
+    RoomTypeID: '',
+    ExpectedPrice: '',
+    ExpectedOccupants: 1,
+    ExpectedMoveInDate: '',
+    ExpectedDuration: 6,
+    Notes: ''
+  });
 
-  const handleSubmit = () => {
-    setShowSuccess(true);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  useEffect(() => {
+    fetch('http://localhost:8080/api/v1/branches')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setBranches(data.data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch branches', err));
+
+    fetch('http://localhost:8080/api/v1/room-types')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setRoomTypes(data.data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch room types', err));
+  }, []);
+
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/registrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+        setShowSuccess(true);
+      } else {
+        alert('Có lỗi xảy ra khi tạo phiếu đăng ký: ' + data.message);
+      }
+    } catch (err) {
+      console.error('Submit error:', err);
+      alert('Không thể kết nối đến máy chủ.');
+    }
   };
 
   return (
@@ -19,7 +82,7 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
          <p className="text-gray-500 text-sm">Chào mừng bạn đến với HomeStay Dorm. Vui lòng điền thông tin bên dưới để gửi yêu cầu.</p>
       </div>
 
-      {/* Header */}
+      {/* Form Area */}
       <div className="max-w-4xl mx-auto w-full px-4 space-y-6 flex-1">
         
         {/* Section 1 */}
@@ -34,43 +97,43 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Họ và tên đầy đủ <span className="text-[#B7705F]">*</span></label>
-               <input type="text" defaultValue="Nguyễn Văn A" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="text" name="FullName" value={formData.FullName} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Giới tính <span className="text-[#B7705F]">*</span></label>
-               <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
-                  <option>Chọn giới tính</option>
-                  <option>Nam</option>
-                  <option>Nữ</option>
+               <select name="Gender" value={formData.Gender} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
+                  <option value="">Chọn giới tính</option>
+                  <option value="Nam">Nam</option>
+                  <option value="Nữ">Nữ</option>
                </select>
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Ngày sinh <span className="text-[#B7705F]">*</span></label>
-               <input type="date" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="date" name="BirthDate" value={formData.BirthDate} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Số CCCD / Hộ chiếu <span className="text-[#B7705F]">*</span></label>
-               <input type="text" placeholder="Nhập số CCCD/Hộ chiếu" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="text" name="IdentityCard" value={formData.IdentityCard} onChange={handleChange} placeholder="Nhập số CCCD/Hộ chiếu" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Quốc tịch</label>
-               <input type="text" defaultValue="Việt Nam" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="text" name="Nationality" value={formData.Nationality} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Số điện thoại <span className="text-[#B7705F]">*</span></label>
-               <input type="text" placeholder="090 123 4567" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="text" name="PhoneNumber" value={formData.PhoneNumber} onChange={handleChange} placeholder="090 123 4567" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Email <span className="text-[#B7705F]">*</span></label>
-               <input type="email" placeholder="example@email.com" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="email" name="Email" value={formData.Email} onChange={handleChange} placeholder="example@email.com" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div className="md:col-span-2">
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Địa chỉ thường trú</label>
-               <input type="text" placeholder="Số nhà, Đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="text" name="PermanentAddress" value={formData.PermanentAddress} onChange={handleChange} placeholder="Số nhà, Đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div className="md:col-span-2">
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Nghề nghiệp / Trường học / Nơi làm việc</label>
-               <input type="text" placeholder="Sinh viên Đại học Bách Khoa / Nhân viên IT" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="text" name="Occupation" value={formData.Occupation} onChange={handleChange} placeholder="Sinh viên Đại học Bách Khoa / Nhân viên IT" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
           </div>
         </div>
@@ -87,41 +150,37 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Khu vực / Chi nhánh mong muốn <span className="text-[#B7705F]">*</span></label>
-               <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
+               <select name="BranchID" value={formData.BranchID} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
                   <option value="">Chọn chi nhánh</option>
-                  <option value="CN Quận 1">Homestay Central Park (Q.Bình Thạnh)</option>
-                  <option value="CN Quận 3">Sunrise Riverside (Nhà Bè)</option>
+                  {branches.map(branch => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
                </select>
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Loại phòng <span className="text-[#B7705F]">*</span></label>
-               <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
+               <select name="RoomTypeID" value={formData.RoomTypeID} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
                   <option value="">Chọn loại phòng</option>
-                  <option value="2">Phòng 2 người</option>
-                  <option value="4">Phòng 4 người</option>
-                  <option value="6">Phòng 6 người</option>
+                  {roomTypes.map(rt => (
+                    <option key={rt.id} value={rt.id}>{rt.name}</option>
+                  ))}
                </select>
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Mức giá dự kiến (VNĐ/tháng)</label>
-               <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
-                  <option value="">Chọn mức giá</option>
-                  <option value="1tr-1.5tr">1.000.000 - 1.500.000 đ</option>
-                  <option value="1.5tr-2tr">1.500.000 - 2.000.000 đ</option>
-                  <option value=">2tr">Trên 2.000.000 đ</option>
-               </select>
+               <input type="number" name="ExpectedPrice" value={formData.ExpectedPrice} onChange={handleChange} placeholder="Ví dụ: 1500000" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Số lượng người dự kiến ở <span className="text-[#B7705F]">*</span></label>
-               <input type="number" min="1" placeholder="Ví dụ: 1" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="number" name="ExpectedOccupants" value={formData.ExpectedOccupants} onChange={handleChange} min="1" placeholder="Ví dụ: 1" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Ngày dự kiến chuyển vào <span className="text-[#B7705F]">*</span></label>
-               <input type="date" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="date" name="ExpectedMoveInDate" value={formData.ExpectedMoveInDate} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
-               <label className="block text-sm font-medium mb-1.5 text-gray-700">Thời gian thuê dự kiến <span className="text-[#B7705F]">*</span></label>
-               <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
+               <label className="block text-sm font-medium mb-1.5 text-gray-700">Thời gian thuê dự kiến (tháng) <span className="text-[#B7705F]">*</span></label>
+               <select name="ExpectedDuration" value={formData.ExpectedDuration} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
                   <option value="">Chọn thời gian</option>
                   <option value="3">3 tháng</option>
                   <option value="6">6 tháng</option>
@@ -143,6 +202,9 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
           <div>
              <label className="block text-sm font-medium mb-1.5 text-gray-700">Ghi chú / Yêu cầu đặc biệt</label>
              <textarea 
+               name="Notes"
+               value={formData.Notes}
+               onChange={handleChange}
                rows={4} 
                placeholder="Nhập các yêu cầu khác (ví dụ: cần phòng có ban công, có nuôi thú cưng nhỏ, yêu cầu bạn cùng phòng...)" 
                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm resize-none"

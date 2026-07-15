@@ -42,26 +42,33 @@ export default function App() {
   const [user, setUser] = useState<{username: string, role: Role} | null>(null);
   const [activeMenu, setActiveMenu] = useState<string>('');
 
-  const handleLogin = (username: string) => {
-    let role: Role | '' = '';
-    const u = username.toUpperCase();
-    if (u.startsWith('ADMIN')) role = 'admin';
-    else if (u.startsWith('SALE')) role = 'sale';
-    else if (u.startsWith('ACCOUNTANT')) role = 'accountant';
-    else if (u.startsWith('MANAGER')) role = 'manager';
-    else if (u.startsWith('GUEST')) role = 'guest';
-    
-    if (role) {
-      setUser({ username, role });
-      setAppState('dashboard');
+  const handleLogin = async (username: string, password?: string) => {
+    try {
+      const res = await fetch('http://localhost:8080/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
       
-      if (role === 'admin') setActiveMenu('branches');
-      else if (role === 'sale') setActiveMenu('schedule');
-      else if (role === 'accountant') setActiveMenu('reconciliation');
-      else if (role === 'manager') setActiveMenu('room_inspection');
-      else if (role === 'guest') setActiveMenu('view_contract');
-    } else {
-      alert("Username phải bắt đầu bằng admin, sale, accountant, manager, hoặc guest");
+      if (data.status === 'success') {
+        const { username: employeeId, role } = data.data;
+        setUser({ username: employeeId, role });
+        setAppState('dashboard');
+        
+        if (role === 'admin') setActiveMenu('branches');
+        else if (role === 'sale') setActiveMenu('schedule');
+        else if (role === 'accountant') setActiveMenu('reconciliation');
+        else if (role === 'manager') setActiveMenu('room_inspection');
+        else if (role === 'guest') setActiveMenu('view_contract');
+      } else {
+        alert("Đăng nhập thất bại: " + data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Lỗi kết nối đến máy chủ");
     }
   };
 
@@ -120,7 +127,7 @@ export default function App() {
 
     if (user?.role === 'sale') {
        switch (activeMenu) {
-         case 'schedule': return <ScheduleView />;
+         case 'schedule': return <ScheduleView employeeId={user.username} />;
          case 'initial_payments': return <InitialPayment />;
          case 'checkin': return <CheckIn />;
          case 'leases': return <LeaseContract />; // Mock for booking/contract
@@ -148,10 +155,20 @@ export default function App() {
     }
 
     if (user?.role === 'guest') {
+       // user.username serves as the customerId (e.g., "KH0001") if they log in with that.
+       // Default fallback to "KH0001" if they log in with generic "GUEST001".
+       let customerId = 'KH0001';
+       const rawUsername = user.username.toUpperCase();
+       if (rawUsername.startsWith('KH')) {
+           customerId = rawUsername;
+       } else if (rawUsername.startsWith('GUEST_KH')) {
+           customerId = rawUsername.replace('GUEST_', '');
+       }
+       
        switch (activeMenu) {
-         case 'view_contract': return <ViewContract />;
-         case 'checkout_request': return <CheckoutRequest />;
-         case 'service_payment': return <ServicePayment onNavigate={setActiveMenu} />;
+         case 'view_contract': return <ViewContract customerId={customerId} />;
+         case 'checkout_request': return <CheckoutRequest customerId={customerId} />;
+         case 'service_payment': return <ServicePayment onNavigate={setActiveMenu} customerId={customerId} />;
          default: return <ViewPlaceholder name={activeMenu} />;
        }
     }

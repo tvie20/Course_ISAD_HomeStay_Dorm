@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ArrowLeft, MapPin, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 
 interface Bed {
@@ -17,98 +17,11 @@ interface Room {
   capacity: number; // e.g. 4
   branch: string; // e.g. CN Quận 1
   fullBranchName: string; // e.g. Homestay Central Park
-  status: 'Đã thuê' | 'Trống' | 'BẢO TRÌ';
+  status: 'Đang cho thuê' | 'Đang sửa chữa';
   beds: Bed[];
 }
 
-// Initial mock dataset representing rooms and their beds
-const INITIAL_ROOMS_DATA: Room[] = [
-  {
-    id: 'RM-101',
-    roomCode: 'Phòng 101',
-    name: 'Phòng Harmony A1',
-    type: 'Phòng 4 người',
-    floor: '1',
-    capacity: 4,
-    branch: 'CN Quận 1',
-    fullBranchName: 'Homestay Central Park',
-    status: 'Đã thuê',
-    beds: [
-      { bedId: 'Giường 1', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 1500000, status: 'Đã thuê', note: 'Giường trên' },
-      { bedId: 'Giường 3', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 4', price: 1500000, status: 'Đã thuê', note: 'Giường trên' },
-    ]
-  },
-  {
-    id: 'RM-102',
-    roomCode: 'Phòng 102',
-    name: 'Phòng Harmony A2',
-    type: 'Phòng 4 người',
-    floor: '1',
-    capacity: 4,
-    branch: 'CN Quận 1',
-    fullBranchName: 'Homestay Central Park',
-    status: 'Đã thuê',
-    beds: [
-      { bedId: 'Giường 1', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 1500000, status: 'Trống', note: 'Giường trên' },
-      { bedId: 'Giường 3', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 4', price: 1500000, status: 'Trống', note: 'Giường trên' },
-    ]
-  },
-  {
-    id: 'RM-201',
-    roomCode: 'Phòng 201',
-    name: 'Phòng Harmony B1',
-    type: 'Phòng 6 người',
-    floor: '2',
-    capacity: 6,
-    branch: 'CN Quận 3',
-    fullBranchName: 'Sunrise Riverside',
-    status: 'Trống',
-    beds: [
-      { bedId: 'Giường 1', price: 1200000, status: 'Trống', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 1200000, status: 'Trống', note: 'Giường trên' },
-      { bedId: 'Giường 3', price: 1200000, status: 'Trống', note: 'Giường dưới' },
-      { bedId: 'Giường 4', price: 1200000, status: 'Trống', note: 'Giường trên' },
-      { bedId: 'Giường 5', price: 1200000, status: 'Trống', note: 'Giường dưới' },
-      { bedId: 'Giường 6', price: 1200000, status: 'Trống', note: 'Giường trên' },
-    ]
-  },
-  {
-    id: 'RM-202',
-    roomCode: 'Phòng 202',
-    name: 'Phòng Serene B2',
-    type: 'Phòng 4 người',
-    floor: '2',
-    capacity: 4,
-    branch: 'CN Quận 3',
-    fullBranchName: 'Sunrise Riverside',
-    status: 'Đã thuê',
-    beds: [
-      { bedId: 'Giường 1', price: 1600000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 1600000, status: 'Đã thuê', note: 'Giường trên' },
-      { bedId: 'Giường 3', price: 1600000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 4', price: 1600000, status: 'Trống', note: 'Giường trên' },
-    ]
-  },
-  {
-    id: 'RM-301',
-    roomCode: 'Phòng 301',
-    name: 'Phòng Luxury C1',
-    type: 'Phòng 2 người',
-    floor: '3',
-    capacity: 2,
-    branch: 'CN Quận 1',
-    fullBranchName: 'Homestay Central Park',
-    status: 'BẢO TRÌ',
-    beds: [
-      { bedId: 'Giường 1', price: 2000000, status: 'Trống', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 2000000, status: 'Trống', note: 'Giường trên' },
-    ]
-  }
-];
+// Mock dataset removed, fetching from API
 
 export default function RoomStatus() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,12 +32,25 @@ export default function RoomStatus() {
   const [statusFilter, setStatusFilter] = useState('');
 
   // Results & UI State
-  const [results, setResults] = useState<Room[]>(INITIAL_ROOMS_DATA);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
+  const [results, setResults] = useState<Room[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  useEffect(() => {
+    fetch('http://localhost:8080/api/v1/rooms/status')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setAllRooms(data.data);
+          setResults(data.data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch rooms:', err));
+  }, []);
+
   const handleSearch = () => {
-    const filtered = INITIAL_ROOMS_DATA.filter(room => {
+    const filtered = allRooms.filter(room => {
       // 1. Search Query (matches roomCode, room ID, room name, or bed ID inside)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -180,7 +106,7 @@ export default function RoomStatus() {
     setTypeFilter('');
     setPriceFilter('');
     setStatusFilter('');
-    setResults(INITIAL_ROOMS_DATA);
+    setResults(allRooms);
   };
 
   // Helper to calculate rented beds count
@@ -269,8 +195,7 @@ export default function RoomStatus() {
 
             <div className="mt-8 pt-4 border-t border-gray-100">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Trạng thái vận hành</label>
-              <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold ${selectedRoom.status === 'ĐANG Ở' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                  selectedRoom.status === 'TRỐNG' ? 'bg-green-50 text-green-700 border border-green-100' :
+              <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold ${selectedRoom.status === 'Đang cho thuê' ? 'bg-green-50 text-green-700 border border-green-100' :
                     'bg-red-50 text-red-700 border border-red-100'
                 }`}>
                 {selectedRoom.status}

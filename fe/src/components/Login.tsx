@@ -3,7 +3,7 @@ import { Home, Eye, HelpCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface LoginProps {
-  onLogin: (username: string) => void;
+  onLogin: (username: string, password?: string) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -13,13 +13,10 @@ export default function Login({ onLogin }: LoginProps) {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim()) {
-      let finalUsername = username.trim();
-      // Prefix with 'guest' if customer is selected and doesn't already have a valid prefix to satisfy App.tsx logic for mockup
-      if (userType === 'guest' && !finalUsername.toLowerCase().startsWith('guest')) {
-        finalUsername = 'guest_' + finalUsername;
-      }
-      onLogin(finalUsername);
+    if (username.trim() && password.trim()) {
+      onLogin(username.trim(), password.trim());
+    } else {
+      alert("Vui lòng nhập tên đăng nhập và mật khẩu.");
     }
   };
 

@@ -1,18 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CalendarDays, Clock, Save, Search, User } from 'lucide-react';
 
-const MOCK_LIST = [
-   { id: 'DK-2023-01', branch: 'CN Quận 1', customer: 'Lê Văn Khách', phone: '0901234567', status: 'Chờ phản hồi' },
-   { id: 'DK-2023-02', branch: 'CN Quận 3', customer: 'Nguyễn Thị B', phone: '0987654321', status: 'Đồng ý đặt cọc', date: '21/10/2023', time: '09:00' },
-   { id: 'DK-2023-03', branch: 'CN Quận 1', customer: 'Phạm C', phone: '0912345678', status: 'Chờ xếp lịch' },
-];
-
-export default function ScheduleView({ onNavigate }: { onNavigate?: (menu: string) => void }) {
-   const [list, setList] = useState(MOCK_LIST);
+export default function ScheduleView({ onNavigate, employeeId }: { onNavigate?: (menu: string) => void, employeeId?: string }) {
+   const [list, setList] = useState<any[]>([]);
    const [selectedItem, setSelectedItem] = useState<any>(null);
    const [branchFilter, setBranchFilter] = useState('');
    const [statusFilter, setStatusFilter] = useState('');
+
+   // Form states for appointment
+   const [appointmentDate, setAppointmentDate] = useState('');
+   const [appointmentTime, setAppointmentTime] = useState('');
+   const [appointmentNote, setAppointmentNote] = useState('');
    const [searchTerm, setSearchTerm] = useState('');
+
+   useEffect(() => {
+      fetch('http://localhost:8080/api/v1/registrations')
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               setList(data.data);
+            }
+         })
+         .catch(err => console.error('Failed to fetch registrations', err));
+   }, []);
 
    if (!selectedItem) {
       return (
@@ -45,8 +55,9 @@ export default function ScheduleView({ onNavigate }: { onNavigate?: (menu: strin
                      className="border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#B7705F]"
                   >
                      <option value="">Tất cả chi nhánh</option>
-                     <option value="CN Quận 1">CN Quận 1</option>
-                     <option value="CN Quận 3">CN Quận 3</option>
+                     {Array.from(new Set(list.map(i => i.branch).filter(Boolean))).map(branchName => (
+                        <option key={branchName as string} value={branchName as string}>{branchName as string}</option>
+                     ))}
                   </select>
                </div>
 
@@ -59,10 +70,9 @@ export default function ScheduleView({ onNavigate }: { onNavigate?: (menu: strin
                      className="border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#B7705F]"
                   >
                      <option value="">Tất cả trạng thái</option>
-                     <option value="Chờ xếp lịch">Chờ xếp lịch</option>
+                     <option value="Đang xử lý">Đang xử lý</option>
                      <option value="Chờ phản hồi">Chờ phản hồi</option>
-                     <option value="Đồng ý đặt cọc">Đồng ý đặt cọc</option>
-                     <option value="Ngừng xem phòng">Ngừng xem phòng</option>
+                     <option value="Đã xử lý">Đã xử lý</option>
                   </select>
                </div>
             </div>
@@ -97,12 +107,21 @@ export default function ScheduleView({ onNavigate }: { onNavigate?: (menu: strin
                               <td className="px-6 py-4 text-[#666666]">{item.phone}</td>
                               <td className="px-6 py-4 text-[#666666]">{item.branch}</td>
                               <td className="px-6 py-4">
-                                 <span className={`px-2.5 py-1 rounded text-xs font-semibold ${item.status.includes('Chờ') ? 'bg-orange-50 text-orange-600' : item.status === 'Đồng ý đặt cọc' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                 <span className={`px-2.5 py-1 rounded text-xs font-semibold 
+                                    ${item.status === 'Đang xử lý' ? 'bg-orange-50 text-orange-600' : 
+                                      item.status === 'Chờ phản hồi' ? 'bg-blue-50 text-blue-600' : 
+                                      item.status === 'Ngừng xem phòng' ? 'bg-gray-100 text-gray-600' :
+                                      'bg-green-50 text-green-600'}`}>
                                     {item.status}
                                  </span>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                 <button onClick={() => setSelectedItem(item)} className="px-3 py-1.5 text-sm font-medium text-[#B7705F] bg-orange-50 hover:bg-[#F3E1DC] rounded-lg transition-colors inline-block">
+                                 <button onClick={() => {
+                                    setSelectedItem(item);
+                                    setAppointmentDate(item.date || '');
+                                    setAppointmentTime(item.time || '');
+                                    setAppointmentNote(item.note || '');
+                                 }} className="px-3 py-1.5 text-sm font-medium text-[#B7705F] bg-orange-50 hover:bg-[#F3E1DC] rounded-lg transition-colors inline-block">
                                     Chi tiết
                                  </button>
                               </td>
@@ -142,7 +161,7 @@ export default function ScheduleView({ onNavigate }: { onNavigate?: (menu: strin
             </div>
          </div>
 
-         {selectedItem.status === 'Chờ xếp lịch' ? (
+         {selectedItem.status === 'Đang xử lý' ? (
             <div className="bg-white rounded-2xl shadow-sm border border-[#EAD3CC] overflow-hidden p-6">
                <h2 className="text-lg font-bold text-[#222222] mb-4">Sắp xếp lịch xem phòng</h2>
                <div className="space-y-4">
@@ -157,84 +176,99 @@ export default function ScheduleView({ onNavigate }: { onNavigate?: (menu: strin
                         <label className="block text-sm font-semibold text-[#666666] mb-2 flex items-center">
                            <CalendarDays className="w-4 h-4 mr-1" /> Ngày hẹn
                         </label>
-                        <input type="date" className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F]" />
+                        <input type="date" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F]" />
                      </div>
                      <div>
                         <label className="block text-sm font-semibold text-[#666666] mb-2 flex items-center">
                            <Clock className="w-4 h-4 mr-1" /> Giờ hẹn
                         </label>
-                        <input type="time" className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F]" />
+                        <input type="time" value={appointmentTime} onChange={(e) => setAppointmentTime(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F]" />
                      </div>
                   </div>
                   <div>
                      <label className="block text-sm font-semibold text-[#666666] mb-2">
                         Lưu ý kèm theo (Tùy chọn)
                      </label>
-                     <textarea rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F] resize-none" placeholder="Nhập các lưu ý về giờ giấc, yêu cầu khách..."></textarea>
+                     <textarea rows={3} value={appointmentNote} onChange={(e) => setAppointmentNote(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F] resize-none" placeholder="Nhập các lưu ý về giờ giấc, yêu cầu khách..."></textarea>
                   </div>
                </div>
 
-               <button onClick={() => {
-                  setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Chờ phản hồi' } : i));
-                  setSelectedItem(null);
-                  alert('Lưu lịch hẹn thành công!');
-               }} className="w-full mt-6 py-3 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
-                  <Save className="w-4 h-4 mr-2" /> Lưu lịch hẹn
-               </button>
+               <div className="mt-6">
+                  <button onClick={async () => {
+                     if (!appointmentDate || !appointmentTime) {
+                        alert('Vui lòng chọn ngày và giờ hẹn!');
+                        return;
+                     }
+                     try {
+                        const payload = {
+                           RegistrationID: selectedItem.id,
+                           AppointmentDate: appointmentDate,
+                           AppointmentTime: appointmentTime,
+                           Note: appointmentNote,
+                           EmployeeID: employeeId
+                        };
+                        const res = await fetch('http://localhost:8080/api/v1/appointments', {
+                           method: 'POST',
+                           headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify(payload)
+                        });
+                        const data = await res.json();
+                        
+                        if (data.status === 'success') {
+                           // Cập nhật trạng thái sang "Chờ phản hồi"
+                           const updatedItem = { ...selectedItem, status: 'Chờ phản hồi', date: appointmentDate, time: appointmentTime, note: appointmentNote };
+                           setList(list.map(i => i.id === selectedItem.id ? updatedItem : i));
+                           setSelectedItem(updatedItem);
+                        } else {
+                           alert('Có lỗi xảy ra: ' + data.message);
+                        }
+                     } catch (err) {
+                        console.error('Error creating appointment', err);
+                        alert('Không thể kết nối với server.');
+                     }
+                  }} className="w-full py-3 px-4 bg-[#B7705F] text-white rounded-xl font-bold hover:bg-[#a06050] flex items-center justify-center transition-colors shadow-sm">
+                     <Save className="w-4 h-4 mr-2" /> Lưu lịch hẹn
+                  </button>
+               </div>
+            </div>
+         ) : selectedItem.status === 'Chờ phản hồi' ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-[#EAD3CC] overflow-hidden p-6">
+               <h2 className="text-lg font-bold text-[#222222] mb-4">Kết quả xem phòng</h2>
+               <div className="space-y-4 mb-6 text-sm text-[#666666]">
+                  <p>Lịch hẹn: <strong>{selectedItem.time || appointmentTime || '--:--'} - {selectedItem.date || appointmentDate || 'dd/mm/yyyy'}</strong></p>
+               </div>
+               
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button onClick={() => {
+                     setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Ngừng xem phòng' } : i));
+                     setSelectedItem(null);
+                  }} className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors">
+                     Ngừng xem phòng
+                  </button>
+                  <button onClick={() => {
+                     setSelectedItem({ ...selectedItem, status: 'Đang xử lý' });
+                  }} className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors">
+                     <Clock className="w-4 h-4 mr-2" /> Xếp lịch mới
+                  </button>
+                  <button onClick={() => {
+                     setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đã xử lý' } : i));
+                     alert('Chuyển sang Đã xử lý! Dữ liệu đã sẵn sàng ở phần Lập phiếu đặt cọc.');
+                     if (onNavigate) onNavigate('initial_payments');
+                  }} className="py-3 px-4 bg-[#B7705F] text-white rounded-xl font-bold hover:bg-[#a06050] flex items-center justify-center transition-colors shadow-sm">
+                     <User className="w-4 h-4 mr-2" /> Đồng ý đặt cọc
+                  </button>
+               </div>
             </div>
          ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-[#EAD3CC] overflow-hidden p-6">
                <h2 className="text-lg font-bold text-[#222222] mb-4">Kết quả xem phòng</h2>
                <div className="space-y-4 mb-6 text-sm text-[#666666]">
-                  <p>Lịch hẹn: <strong>{selectedItem.time || '09:00'} - {selectedItem.date || '21/10/2023'}</strong></p>
+                  <p>Lịch hẹn: <strong>{selectedItem.time || appointmentTime || '--:--'} - {selectedItem.date || appointmentDate || 'dd/mm/yyyy'}</strong></p>
                </div>
-               {selectedItem.status === 'Chờ phản hồi' && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <button
-                        onClick={() => {
-                           setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Ngừng xem phòng' } : i));
-                           setSelectedItem(null);
-                        }}
-                        className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors"
-                     >
-                        Ngừng xem phòng
-                     </button>
-                     <button
-                        onClick={() => {
-                           setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Chờ xếp lịch' } : i));
-                           setSelectedItem(null);
-                        }}
-                        className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors"
-                     >
-                        <Clock className="w-4 h-4 mr-2 text-gray-500" />
-                        Xếp lịch mới
-                     </button>
-                     <button
-                        onClick={() => {
-                           setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đồng ý đặt cọc' } : i));
-                           setSelectedItem({ ...selectedItem, status: 'Đồng ý đặt cọc' });
-                           alert('Chuyển trạng thái thành công! Dữ liệu đã sẵn sàng ở phần Lập phiếu đặt cọc.');
-                           if (onNavigate) {
-                              onNavigate('initial_payments');
-                           }
-                        }}
-                        className="py-3 px-4 bg-[#B7705F] text-white rounded-xl font-bold hover:bg-[#a06050] flex items-center justify-center transition-colors shadow-sm"
-                     >
-                        <User className="w-4 h-4 mr-2" />
-                        Đồng ý đặt cọc
-                     </button>
-                  </div>
-               )}
-               {selectedItem.status === 'Đồng ý đặt cọc' && (
-                  <div className="p-4 bg-green-50 text-green-700 rounded-lg text-sm text-center font-medium">
-                     Khách đã đồng ý đặt cọc
-                  </div>
-               )}
-               {selectedItem.status === 'Ngừng xem phòng' && (
-                  <div className="p-4 bg-gray-50 text-gray-500 rounded-lg text-sm text-center font-medium">
-                     Khách đã ngừng xem phòng
-                  </div>
-               )}
+               
+               <div className="p-4 bg-green-50 text-green-700 rounded-lg text-sm text-center font-medium">
+                  Phiếu đăng ký đã được xử lý hoàn tất
+               </div>
             </div>
          )}
       </div>

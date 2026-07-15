@@ -1,17 +1,46 @@
 const { sql } = require('../config/database')
+const { generateNextId } = require('../utils/generateId')
 
-// Tạo biên bản bàn giao phòng/giường lúc khách vào ở
+// Tao bien ban ban giao phong/giuong luc khach vao o
 exports.create = async (data) => {
-    // TODO: Viết câu lệnh SQL hoặc gọi Stored Procedure ở đây
-    /*
-    Ví dụ:
-    const pool = await sql.connect()
-    const request = pool.request()
-    if (data.id) request.input('id', sql.Int, data.id)
-    const result = await request.query('SELECT * FROM TableName WHERE id = @id')
-    return result.recordset
-    */
-    
-    return { message: 'Pending SQL for create in handover model' }
+    try {
+        const pool = await sql.connect()
+        const request = pool.request()
+
+        // Thong tin ban giao
+        request.input('ContractID', sql.VarChar, data.ContractID)
+        request.input('HandoverDate', sql.DateTime, data.HandoverDate || new Date())
+        request.input('Note', sql.NVarChar, data.Note || '')
+        request.input('Status', sql.NVarChar, 'Đã bàn giao')
+
+        const maBienBan = await generateNextId('BIEN_BAN_BAN_GIAO', 'MaBienBan', 'BB')
+        request.input('MaBienBan', sql.VarChar, maBienBan)
+
+        const query = `
+            INSERT INTO BIEN_BAN_BAN_GIAO (
+                MaBienBan, NgayBanGiao, SoChiaKhoa, GhiChu, TrangThai, MaHopDong
+            )
+            VALUES (
+                @MaBienBan, @HandoverDate, 1, @Note, @Status, @ContractID
+            )
+        `
+
+        const result = await request.query(query)
+
+        // Cap nhat hop dong thanh Đang có hiệu lực
+        if (data.ContractID) {
+            const updateContract = pool.request()
+            updateContract.input('ContractID', sql.VarChar, data.ContractID)
+            await updateContract.query("UPDATE HOP_DONG_THUE SET TrangThai = N'Còn hiệu lực' WHERE MaHopDong = @ContractID")
+        }
+
+        return {
+            id: maBienBan,
+            message: 'Lap bien ban ban giao thanh cong'
+        }
+    } catch (error) {
+        console.error("Error in handover model (create):", error)
+        throw error
+    }
 }
 

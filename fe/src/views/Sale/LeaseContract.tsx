@@ -1,17 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, UserCheck, CreditCard, Users, ShieldAlert, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import CreateLease from '../Sale/CreateLease';
 
-const MOCK_DEPOSITS = [
-   { id: 'DC-2023-088', room: 'P.101', customer: 'Nguyễn Văn A', phone: '0901234567', amount: '4,000,000 đ', beds: ['Giường 01'], isFullRoom: false, maxCount: 4 },
-   { id: 'DC-2023-089', room: 'P.102', customer: 'Trần Văn B', phone: '0907654321', amount: '12,000,000 đ', beds: ['Giường 01', 'Giường 02', 'Giường 03'], isFullRoom: false, maxCount: 4 },
-   { id: 'DC-2023-090', room: 'P.201', customer: 'Lê Thị C', phone: '0987654321', amount: '8,000,000 đ', beds: [], isFullRoom: true, maxCount: 2 },
-];
-
 export default function LeaseContract() {
+   const [deposits, setDeposits] = useState<any[]>([]);
    const [selectedDeposit, setSelectedDeposit] = useState<any>(null);
    const [isChecking, setIsChecking] = useState(false);
    const [isCreating, setIsCreating] = useState(false);
+   const [searchTerm, setSearchTerm] = useState('');
 
    const [numRoommates, setNumRoommates] = useState<number>(0);
    const [roommates, setRoommates] = useState<{ name: string; phone: string; cccd: string }[]>([
@@ -29,17 +25,26 @@ export default function LeaseContract() {
    const handleSelectDeposit = (deposit: any) => {
       setSelectedDeposit(deposit);
       setCustomerPhone(deposit.phone || '');
-      setCustomerCccd('');
+      setCustomerCccd(deposit.cccd || '');
       setIsChecking(true);
       setOcrSuccess(false);
       setUploadedFiles([]);
 
-      const calculatedNumRoommates = deposit.isFullRoom
-         ? (deposit.maxCount - 1)
-         : (deposit.beds && deposit.beds.length > 0 ? deposit.beds.length - 1 : 0);
+      const calculatedNumRoommates = deposit.beds && deposit.beds.length > 0 ? deposit.beds.length - 1 : 0;
       setNumRoommates(calculatedNumRoommates);
       setRoommates(Array.from({ length: Math.max(0, calculatedNumRoommates) }).map(() => ({ name: '', phone: '', cccd: '' })));
    };
+
+   useEffect(() => {
+      fetch('http://localhost:8080/api/v1/deposits')
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               setDeposits(data.data.filter((d: any) => d.status === 'Sắp nhận phòng'));
+            }
+         })
+         .catch(err => console.error(err));
+   }, []);
 
    const handleOcrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
@@ -62,6 +67,7 @@ export default function LeaseContract() {
       return (
          <CreateLease
             onCancel={() => { setIsCreating(false); setIsChecking(false); setSelectedDeposit(null); }}
+            onSuccess={() => { setIsCreating(false); setIsChecking(false); setSelectedDeposit(null); setDeposits(deposits.filter(d => d.id !== selectedDeposit.id)); }}
             initialData={{
                ...selectedDeposit,
                phone: customerPhone,
@@ -112,20 +118,18 @@ export default function LeaseContract() {
                               <label className="block text-xs font-semibold text-[#666666] mb-1">Số điện thoại khách hàng *</label>
                               <input
                                  type="text"
-                                 className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#B7705F] focus:outline-none font-medium text-gray-800"
-                                 placeholder="Nhập số điện thoại"
+                                 className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 focus:outline-none cursor-not-allowed"
                                  value={customerPhone}
-                                 onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
+                                 readOnly
                               />
                            </div>
                            <div>
                               <label className="block text-xs font-semibold text-[#666666] mb-1">Số CCCD *</label>
                               <input
                                  type="text"
-                                 className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#B7705F] focus:outline-none font-medium text-gray-800"
-                                 placeholder="Nhập số CCCD"
+                                 className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 focus:outline-none cursor-not-allowed"
                                  value={customerCccd}
-                                 onChange={(e) => setCustomerCccd(e.target.value.replace(/\D/g, ''))}
+                                 readOnly
                               />
                            </div>
                         </div>
@@ -259,6 +263,8 @@ export default function LeaseContract() {
                <input
                   type="text"
                   placeholder="Tìm theo Tên khách hàng/CCCD/..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
                />
             </div>
@@ -276,7 +282,7 @@ export default function LeaseContract() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-100">
-                  {MOCK_DEPOSITS.map(deposit => (
+                  {deposits.filter(d => !searchTerm || (d.customer && String(d.customer).toLowerCase().includes(searchTerm.toLowerCase())) || (d.id && String(d.id).toLowerCase().includes(searchTerm.toLowerCase())) || (d.cccd && String(d.cccd).toLowerCase().includes(searchTerm.toLowerCase()))).map(deposit => (
                      <tr key={deposit.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 font-medium text-[#B7705F]">{deposit.id}</td>
                         <td className="px-6 py-4 text-[#222222] font-semibold">{deposit.customer}</td>

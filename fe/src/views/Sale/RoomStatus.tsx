@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import API_URL from '../../api';
 import { Search, ArrowLeft, MapPin, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 
@@ -24,7 +24,7 @@ interface Room {
 
 // Mock dataset removed, fetching from API
 
-export default function RoomStatus() {
+export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [floorFilter, setFloorFilter] = useState('');
@@ -39,7 +39,7 @@ export default function RoomStatus() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/v1/rooms/status`)
+    fetch(`${API_URL}/api/v1/rooms/status${branchId ? `?branchId=${branchId}` : ''}`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -48,7 +48,7 @@ export default function RoomStatus() {
         }
       })
       .catch(err => console.error('Failed to fetch rooms:', err));
-  }, []);
+  }, [branchId]);
 
   const handleSearch = () => {
     const filtered = allRooms.filter(room => {

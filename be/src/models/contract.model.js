@@ -76,11 +76,21 @@ exports.create = async (data) => {
 
         await request.query(query)
 
-        // Neu hop dong duoc tao tu Phieu Coc, cap nhat lai trang thai phieu coc
+        // Neu hop dong duoc tao tu Phieu Coc, cap nhat lai trang thai phieu coc va trang thai giuong
         if (data.DepositID) {
             const updateDepReq = pool.request()
             updateDepReq.input('DepositID', sql.VarChar, data.DepositID)
             await updateDepReq.query("UPDATE PHIEU_COC SET TrangThai = N'Đã thanh toán' WHERE MaPhieuCoc = @DepositID")
+
+            const updateBedReq = pool.request()
+            updateBedReq.input('DepositID', sql.VarChar, data.DepositID)
+            await updateBedReq.query(`
+                UPDATE g
+                SET g.TrangThai = N'Đã thuê'
+                FROM GIUONG g
+                INNER JOIN PHIEUCOC_GIUONG pcg ON g.MaPhong = pcg.MaPhong AND g.SoThuTu = pcg.SoThuTu
+                WHERE pcg.MaPhieuCoc = @DepositID
+            `)
         }
 
         // Tự động cập nhật trạng thái KH → 'Đang ở' sau khi lập hợp đồng
@@ -152,8 +162,11 @@ exports.getPendingHandover = async (data) => {
             LEFT JOIN PHONG r ON pc_p.MaPhong = r.MaPhong
             LEFT JOIN PHIEUCOC_GIUONG pc_g ON pc.MaPhieuCoc = pc_g.MaPhieuCoc
             LEFT JOIN BIEN_BAN_BAN_GIAO bb ON c.MaHopDong = bb.MaHopDong
+            ${data.branchId ? "WHERE r.MaChiNhanh = @BranchID" : ""}
             ORDER BY c.NgayLap ASC
         `
+
+        if (data.branchId) request.input('BranchID', sql.VarChar, data.branchId)
 
         const result = await request.query(query)
 

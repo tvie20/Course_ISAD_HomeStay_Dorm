@@ -40,23 +40,23 @@ const ViewPlaceholder = ({ name }: { name: string }) => (
 
 export default function App() {
   const [appState, setAppState] = useState<'landing' | 'login' | 'register' | 'dashboard'>('landing');
-  const [user, setUser] = useState<{username: string, name: string, role: Role} | null>(null);
+  const [user, setUser] = useState<{username: string, name: string, role: Role, branch?: string} | null>(null);
   const [activeMenu, setActiveMenu] = useState<string>('');
 
-  const handleLogin = async (username: string, password?: string) => {
+  const handleLogin = async (username: string, password?: string, userType?: string) => {
     try {
       const res = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, userType })
       });
       const data = await res.json();
       
       if (data.status === 'success') {
-        const { username: employeeId, name: fullName, role } = data.data;
-        setUser({ username: employeeId, name: fullName || employeeId, role });
+        const { username: employeeId, name: fullName, role, branch } = data.data;
+        setUser({ username: employeeId, name: fullName || employeeId, role, branch });
         setAppState('dashboard');
         
         if (role === 'admin') setActiveMenu('branches');
@@ -128,11 +128,11 @@ export default function App() {
 
     if (user?.role === 'sale') {
        switch (activeMenu) {
-         case 'schedule': return <ScheduleView employeeId={user.username} />;
-         case 'initial_payments': return <InitialPayment />;
-         case 'checkin': return <CheckIn />;
-         case 'leases': return <LeaseContract />; // Mock for booking/contract
-         case 'room_status': return <RoomStatus />;
+         case 'schedule': return <ScheduleView employeeId={user.username} branchId={user.branch} onNavigate={(menu) => setActiveMenu(menu)} />;
+         case 'initial_payments': return <InitialPayment branchId={user.branch} />;
+         case 'checkin': return <CheckIn branchId={user.branch} />;
+         case 'leases': return <LeaseContract branchId={user.branch} />; // Mock for booking/contract
+         case 'room_status': return <RoomStatus branchId={user.branch} />;
          default: return <ViewPlaceholder name={activeMenu} />;
        }
     }

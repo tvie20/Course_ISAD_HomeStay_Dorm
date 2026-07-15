@@ -98,8 +98,11 @@ exports.getAll = async (data) => {
             LEFT JOIN KHACH_HANG kh ON reg.MaKhachHang = kh.MaKhachHang
             LEFT JOIN LICH_XEM_PHONG app ON reg.MaPhieuDangKy = app.MaPhieuDangKy
             LEFT JOIN CHI_NHANH cn ON reg.KhuVucMongMuon = cn.MaChiNhanh
+            ${data.branchId ? "WHERE cn.MaChiNhanh = @BranchID" : ""}
             ORDER BY reg.MaPhieuDangKy DESC
         `
+        
+        if (data.branchId) request.input('BranchID', sql.VarChar, data.branchId)
 
         const result = await request.query(query)
         

@@ -89,6 +89,7 @@ exports.getAll = async (data) => {
         // Lay danh sach cac khach hang dang trong giai doan cho nhan phong (bao gom ca cho thanh toan)
         const query = `
             SELECT 
+                r.MaChiNhanh AS branchId,
                 d.MaPhieuCoc AS id, 
                 r.MaPhong AS room, 
                 pc_g.SoThuTu AS bed, 
@@ -114,9 +115,12 @@ exports.getAll = async (data) => {
             LEFT JOIN KHACH_HANG kh ON pdk.MaKhachHang = kh.MaKhachHang
             LEFT JOIN LICH_NHAN_PHONG lnp ON d.MaPhieuCoc = lnp.MaPhieuCoc
             WHERE d.TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Chờ xếp lịch', N'Sắp nhận phòng')
+            ${data.branchId ? "AND r.MaChiNhanh = @BranchID" : ""}
             ORDER BY d.NgayDatCoc DESC
         `
 
+        if (data.branchId) request.input('BranchID', sql.VarChar, data.branchId)
+        
         const result = await request.query(query)
         
         // Nhom cac giuong lai thanh 1 mang beds
@@ -211,6 +215,7 @@ exports.getPendingPayments = async (data) => {
 
         const query = `
             SELECT 
+                r.MaChiNhanh AS branchId,
                 d.MaPhieuCoc AS id, 
                 r.TenPhong AS room, 
                 kh.HoTen AS customer, 
@@ -223,8 +228,11 @@ exports.getPendingPayments = async (data) => {
             LEFT JOIN PHIEU_DANG_KY pdk ON d.MaPhieuDangKy = pdk.MaPhieuDangKy
             LEFT JOIN KHACH_HANG kh ON pdk.MaKhachHang = kh.MaKhachHang
             WHERE d.TrangThai = N'Chờ thanh toán'
+            ${data.branchId ? "AND r.MaChiNhanh = @BranchID" : ""}
             ORDER BY d.NgayDatCoc DESC
         `
+        
+        if (data.branchId) request.input('BranchID', sql.VarChar, data.branchId)
 
         const result = await request.query(query)
         

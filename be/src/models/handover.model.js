@@ -43,4 +43,36 @@ exports.create = async (data) => {
         throw error
     }
 }
+// Lay danh sach cac phong/giuong dang co nguoi o (da ban giao)
+exports.getOccupiedRooms = async (data) => {
+    try {
+        const pool = await sql.connect()
+        const request = pool.request()
 
+        const query = `
+            SELECT 
+                bb.MaBienBan AS id,
+                r.TenPhong AS room,
+                N'Giường ' + RIGHT('0' + CAST(pc_g.SoThuTu AS varchar), 2) AS bed,
+                kh.HoTen AS customer,
+                CONVERT(varchar, bb.NgayBanGiao, 103) AS date,
+                N'Bình thường' AS status
+            FROM BIEN_BAN_BAN_GIAO bb
+            INNER JOIN HOP_DONG_THUE c ON bb.MaHopDong = c.MaHopDong
+            LEFT JOIN KHACHHANG_HOPDONGTHUE kh_hd ON c.MaHopDong = kh_hd.MaHopDong
+            LEFT JOIN KHACH_HANG kh ON kh_hd.MaKhachHang = kh.MaKhachHang
+            INNER JOIN PHIEU_COC pc ON c.MaPhieuCoc = pc.MaPhieuCoc
+            INNER JOIN PHIEUCOC_PHONG pc_p ON pc.MaPhieuCoc = pc_p.MaPhieuCoc
+            INNER JOIN PHONG r ON pc_p.MaPhong = r.MaPhong
+            INNER JOIN PHIEUCOC_GIUONG pc_g ON pc.MaPhieuCoc = pc_g.MaPhieuCoc
+            WHERE bb.TrangThai = N'Đã bàn giao' AND c.TrangThai = N'Còn hiệu lực'
+            ORDER BY bb.NgayBanGiao DESC
+        `
+
+        const result = await request.query(query)
+        return result.recordset
+    } catch (error) {
+        console.error("Error in handover model (getOccupiedRooms):", error)
+        throw error
+    }
+}

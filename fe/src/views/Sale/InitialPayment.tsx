@@ -1,10 +1,10 @@
-﻿// Mock data removed, fetching from API
+// Mock data removed, fetching from API
 
 import React, { useState, useEffect } from 'react';
 import API_URL from '../../api';
 import { Receipt, CreditCard, Banknote, CheckCircle, Search, Clock, ShieldCheck, Calculator, ArrowLeft, Plus, BedDouble } from 'lucide-react';
 
-export default function InitialPayment() {
+export default function InitialPayment({ branchId = '' }: { branchId?: string }) {
    const [list, setList] = useState<any[]>([]);
    const [registrations, setRegistrations] = useState<any[]>([]);
    const [rooms, setRooms] = useState<any[]>([]);
@@ -27,7 +27,7 @@ export default function InitialPayment() {
    const availableRooms = rooms.filter(r => r.beds.some((b: any) => b.status === 'Trống'));
 
    const fetchDeposits = () => {
-      fetch(`${API_URL}/api/v1/deposits`)
+      fetch(`${API_URL}/api/v1/deposits${branchId ? `?branchId=${branchId}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -39,7 +39,7 @@ export default function InitialPayment() {
    useEffect(() => {
       fetchDeposits();
       
-      fetch(`${API_URL}/api/v1/registrations`)
+      fetch(`${API_URL}/api/v1/registrations${branchId ? `?branchId=${branchId}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -47,7 +47,7 @@ export default function InitialPayment() {
             }
          });
 
-      fetch(`${API_URL}/api/v1/rooms/status`)
+      fetch(`${API_URL}/api/v1/rooms/status${branchId ? `?branchId=${branchId}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -365,14 +365,18 @@ export default function InitialPayment() {
                      <div className="mt-6 border-t border-gray-100 pt-6">
                         <div className="flex items-center justify-between mb-4">
                            <label className="text-sm font-semibold text-[#222222]">Chỉ định Giường thuê</label>
-                           <label className="flex items-center space-x-2 cursor-pointer">
+                           <label className={`flex items-center space-x-2 ${selectedRoom.beds.some((b: any) => b.status !== 'Trống') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                               <input
                                  type="checkbox"
                                  checked={isFullRoom}
+                                 disabled={selectedRoom.beds.some((b: any) => b.status !== 'Trống')}
                                  onChange={(e) => setIsFullRoom(e.target.checked)}
-                                 className="w-4 h-4 text-[#B7705F] border-gray-300 rounded focus:ring-[#B7705F]"
+                                 className={`w-4 h-4 text-[#B7705F] border-gray-300 rounded focus:ring-[#B7705F] ${selectedRoom.beds.some((b: any) => b.status !== 'Trống') ? 'cursor-not-allowed' : ''}`}
                               />
-                           <span className="text-sm font-semibold text-orange-600">Khách thuê nguyên phòng ({selectedRoom.maxCount} giường)</span>
+                           <span className="text-sm font-semibold text-orange-600">
+                              Khách thuê nguyên phòng ({selectedRoom.maxCount} giường)
+                              {selectedRoom.beds.some((b: any) => b.status !== 'Trống') && <span className="text-gray-500 ml-1 font-normal">(Phòng đã có khách)</span>}
+                           </span>
                            </label>
                         </div>
 

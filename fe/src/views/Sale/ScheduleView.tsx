@@ -102,12 +102,12 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
                   <tbody className="divide-y divide-gray-100">
                      {list
                         .filter(item => {
-                           const matchBranch = !branchFilter || item.branch === branchFilter;
-                           const matchStatus = !statusFilter || item.status === statusFilter;
-                           const matchSearch = !searchTerm ||
-                              item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              item.phone.includes(searchTerm) ||
-                              item.id.toLowerCase().includes(searchTerm.toLowerCase());
+                           const matchBranch = branchFilter === '' || item?.branch === branchFilter;
+                           const matchStatus = statusFilter === '' || item?.status === statusFilter;
+                           const matchSearch = searchTerm === '' || 
+                               item?.customer?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                               item?.phone?.includes(searchTerm) || 
+                               item?.id?.toLowerCase().includes(searchTerm.toLowerCase());
                            return matchBranch && matchStatus && matchSearch;
                         })
                         .map((item, idx) => (

@@ -24,7 +24,7 @@ CREATE TABLE PHIEU_DANG_KY (
 	NgayDuKienO    DATE,
 	ThoiHanThue    INT,
 	YeuCauKhac     NVARCHAR(100),
-	TrangThai      NVARCHAR(100)  CHECK(TrangThai IN(N'Đang xử lý', N'Đã xử lý')),
+	TrangThai      NVARCHAR(100)  CHECK(TrangThai IN(N'Đang xử lý', N'Đã xử lý', N'Chờ phản hồi')),
 	MaNhanVien     CHAR(6),
 	MaKhachHang    CHAR(6)
 );

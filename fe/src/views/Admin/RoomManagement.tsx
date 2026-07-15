@@ -10,26 +10,47 @@ const INITIAL_ROOMS = [
 ];
 
 export default function RoomManagement() {
-   const [rooms, setRooms] = useState(INITIAL_ROOMS);
-   const [bedsData, setBedsData] = useState<Record<string, { bedId: string, price: string, status: string, note: string }[]>>({
-      'P.101': [
-         { bedId: '01', price: '1.500.000', status: 'Đã thuê', note: 'Giường dưới' },
-         { bedId: '02', price: '1.500.000', status: 'Đã thuê', note: 'Giường trên' },
-      ],
-      'P.102': [
-         { bedId: '01', price: '1.500.000', status: 'Đã thuê', note: 'Giường dưới' },
-         { bedId: '02', price: '1.500.000', status: 'Đã thuê', note: 'Giường trên' },
-         { bedId: '03', price: '1.500.000', status: 'Trống', note: 'Giường dưới' },
-         { bedId: '04', price: '1.500.000', status: 'Trống', note: 'Giường trên' },
-      ],
-      'P.301': [
-         { bedId: '01', price: '1.500.000', status: 'Đã thuê', note: 'Giường dưới' },
-         { bedId: '02', price: '1.500.000', status: 'Đã thuê', note: 'Giường trên' },
-         { bedId: '03', price: '1.500.000', status: 'Đã thuê', note: 'Giường dưới' },
-         { bedId: '04', price: '1.500.000', status: 'Đã thuê', note: 'Giường trên' },
-      ]
-   });
+   const [rooms, setRooms] = useState<any[]>([]);
+   const [bedsData, setBedsData] = useState<Record<string, { bedId: string, price: string, status: string, note: string }[]>>({});
    const [selectedRoom, setSelectedRoom] = useState<any>(null);
+
+   React.useEffect(() => {
+      fetch('http://localhost:8080/api/v1/rooms/status')
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               const mappedRooms: any[] = [];
+               const mappedBeds: Record<string, any> = {};
+               
+               data.data.forEach((r: any) => {
+                  const beds = r.beds || [];
+                  const rentedCount = beds.filter((b: any) => b.status && b.status !== 'Trống').length;
+                  
+                  mappedRooms.push({
+                     id: r.id,
+                     name: r.name,
+                     type: r.type,
+                     floor: r.floor,
+                     currentCount: rentedCount,
+                     maxCount: r.capacity,
+                     status: r.status || 'TRỐNG',
+                     branch: r.fullBranchName || r.branch
+                  });
+
+                  mappedBeds[r.id] = beds.map((b: any) => ({
+                     bedId: b.bedId.toString(),
+                     price: new Intl.NumberFormat('vi-VN').format(b.price || 1500000),
+                     status: b.status || 'Trống',
+                     note: b.note || ''
+                  }));
+               });
+
+               setRooms(mappedRooms);
+               setBedsData(mappedBeds);
+            }
+         })
+         .catch(err => console.error(err));
+   }, []);
 
    const [showAddBed, setShowAddBed] = useState(false);
    const [isEditBed, setIsEditBed] = useState(false);

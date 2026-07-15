@@ -18,3 +18,9 @@ exports.getOne = async (data) => {
     return result
 }
 
+// Lấy danh sách tài sản của một phòng
+exports.getAssets = async (data) => {
+    const result = await roomModel.getAssets(data)
+    return result
+}
+

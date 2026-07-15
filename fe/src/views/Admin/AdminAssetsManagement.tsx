@@ -61,17 +61,8 @@ const conditionCls = (cond: string, isPending?: boolean) => {
 
 export default function AdminAssetsManagement() {
   // ── State: data ──────────────────────────────────────────────────────────
-  const [catalog, setCatalog] = useState<AssetCatalog[]>(() => {
-    const s = localStorage.getItem('asset_catalog_v2');
-    if (s) try { return JSON.parse(s); } catch { }
-    return DEFAULT_CATALOG;
-  });
-
-  const [records, setRecords] = useState<AssetRecord[]>(() => {
-    const s = localStorage.getItem('asset_records_admin_v2');
-    if (s) try { return JSON.parse(s); } catch { }
-    return DEFAULT_RECORDS;
-  });
+  const [catalog, setCatalog] = useState<AssetCatalog[]>([]);
+  const [records, setRecords] = useState<AssetRecord[]>([]);
 
   // ── State: UI ────────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
@@ -112,14 +103,17 @@ export default function AdminAssetsManagement() {
   };
 
   useEffect(() => {
-    const sync = () => {
-      const r = localStorage.getItem('asset_records_admin_v2');
-      if (r) try { setRecords(JSON.parse(r)); } catch { }
-      const c = localStorage.getItem('asset_catalog_v2');
-      if (c) try { setCatalog(JSON.parse(c)); } catch { }
-    };
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
+    Promise.all([
+      fetch('http://localhost:8080/api/v1/assets/catalog').then(res => res.json()),
+      fetch('http://localhost:8080/api/v1/assets/allocations').then(res => res.json())
+    ]).then(([catalogData, allocationsData]) => {
+      if (catalogData.status === 'success') {
+        setCatalog(catalogData.data);
+      }
+      if (allocationsData.status === 'success') {
+        setRecords(allocationsData.data);
+      }
+    }).catch(err => console.error(err));
   }, []);
 
   const resetForm = (branch = BRANCHES[0]) => {

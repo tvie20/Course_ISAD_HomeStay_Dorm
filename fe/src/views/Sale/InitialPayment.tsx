@@ -1,24 +1,12 @@
-import React, { useState } from 'react';
+// Mock data removed, fetching from API
+
+import React, { useState, useEffect } from 'react';
 import { Receipt, CreditCard, Banknote, CheckCircle, Search, Clock, ShieldCheck, Calculator, ArrowLeft, Plus, BedDouble } from 'lucide-react';
 
-const MOCK_REGISTRATIONS = [
-   { id: 'DK-2023-01', customer: 'Lê Văn Khách', phone: '0901234567', cccd: '079123456789', email: 'khach@example.com', address: 'Quận 1, TP.HCM', status: 'Đồng ý đặt cọc', expectedPrice: '2000000' },
-   { id: 'DK-2023-02', customer: 'Nguyễn Thị B', phone: '0987654321', cccd: '079987654321', email: 'nguyenb@example.com', address: 'Quận 2, TP.HCM', status: 'Đã xử lý', expectedPrice: '1500000' },
-   { id: 'DK-2023-03', customer: 'Phạm C', phone: '0912345678', cccd: '079111222333', email: 'phamc@example.com', address: 'Quận 3, TP.HCM', status: 'Đồng ý đặt cọc', expectedPrice: '1500000' },
-];
-
-const MOCK_ROOMS = [
-   { id: 'P.101', maxCount: 2, price: 2000000, beds: [{ id: '01', status: 'Trống' }, { id: '02', status: 'Trống' }] },
-   { id: 'P.102', maxCount: 4, price: 1500000, beds: [{ id: '01', status: 'Trống' }, { id: '02', status: 'Trống' }, { id: '03', status: 'Trống' }, { id: '04', status: 'Trống' }] },
-];
-
-const MOCK_LIST = [
-   { id: 'DC-001', room: 'P.102', beds: ['01'], customer: 'Trần Văn B', phone: '0901234567', cccd: '079123456789', email: 'khachhang@example.com', address: '123 Đường ABC, Q.Y, TP.HCM', status: 'Chờ thanh toán', amount: '4,000,000 đ', expiredAt: '14:00 - 21/10/2023', rentPrice: '2000000', isFullRoom: false },
-   { id: 'DC-002', room: 'P.201', beds: ['03'], customer: 'Lê Thị C', phone: '0987654321', cccd: '079987654321', email: 'lethic@example.com', address: '456 XYZ', status: 'Đã thanh toán', amount: '16,000,000 đ', rentPrice: '2000000', isFullRoom: true },
-];
-
 export default function InitialPayment() {
-   const [list, setList] = useState(MOCK_LIST);
+   const [list, setList] = useState<any[]>([]);
+   const [registrations, setRegistrations] = useState<any[]>([]);
+   const [rooms, setRooms] = useState<any[]>([]);
    const [viewMode, setViewMode] = useState<'list' | 'detail' | 'create'>('list');
    const [selectedItem, setSelectedItem] = useState<any>(null);
 
@@ -30,58 +18,117 @@ export default function InitialPayment() {
    const [rentPrice, setRentPrice] = useState('0');
    const [isFullRoom, setIsFullRoom] = useState(false);
    const [searchTerm, setSearchTerm] = useState('');
+   const [paymentMethod, setPaymentMethod] = useState('Chuyển khoản');
 
    const [isRoomDropdownOpen, setIsRoomDropdownOpen] = useState(false);
    const [roomSearchQuery, setRoomSearchQuery] = useState('');
 
-   const availableRooms = MOCK_ROOMS.filter(r => r.beds.some(b => b.status === 'Trống'));
+   const availableRooms = rooms.filter(r => r.beds.some((b: any) => b.status === 'Trống'));
+
+   const fetchDeposits = () => {
+      fetch('http://localhost:8080/api/v1/deposits')
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               setList(data.data);
+            }
+         });
+   };
+
+   useEffect(() => {
+      fetchDeposits();
+      
+      fetch('http://localhost:8080/api/v1/registrations')
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               setRegistrations(data.data);
+            }
+         });
+
+      fetch('http://localhost:8080/api/v1/rooms/status')
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               const mappedRooms = data.data.map((r: any) => ({
+                  id: r.id,
+                  maxCount: r.capacity,
+                  price: r.beds[0]?.price || 1500000,
+                  beds: r.beds.map((b: any) => ({
+                     id: b.bedId.toString(),
+                     status: b.status,
+                     price: b.price || 1500000
+                  }))
+               }));
+               setRooms(mappedRooms);
+            }
+         });
+   }, []);
 
    const handleSearchCCCD = () => {
       if (!searchCCCD.trim()) return;
       const lowerSearch = searchCCCD.toLowerCase().trim();
-      const found = MOCK_REGISTRATIONS.find(r =>
-         r.status === 'Đồng ý đặt cọc' &&
-         (r.cccd.toLowerCase().includes(lowerSearch) ||
-            r.phone.toLowerCase().includes(lowerSearch) ||
-            r.customer.toLowerCase().includes(lowerSearch))
+      const found = registrations.find(r =>
+         r.status === 'Đã xử lý' &&
+         ((r.cccd && r.cccd.toLowerCase().includes(lowerSearch)) ||
+            (r.phone && r.phone.toLowerCase().includes(lowerSearch)) ||
+            (r.customer && r.customer.toLowerCase().includes(lowerSearch)))
       );
       if (found) {
          setRegistration(found);
       } else {
-         alert("Không tìm thấy Phiếu đăng ký nào ở trạng thái 'Đồng ý đặt cọc' khớp với thông tin này.");
+         alert("Không tìm thấy Phiếu đăng ký nào ở trạng thái 'Đã xử lý' khớp với thông tin này.");
          setRegistration(null);
       }
    };
 
-   const selectedRoom = MOCK_ROOMS.find(r => r.id === selectedRoomId);
+   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
    const calculatedBeds = isFullRoom && selectedRoom ? selectedRoom.maxCount : selectedBeds.length;
-   const rentNumber = parseInt(rentPrice) || 0;
-   const totalDeposit = rentNumber * 2 * calculatedBeds;
+   const totalRent = selectedRoom ? (
+       isFullRoom 
+       ? selectedRoom.beds.reduce((sum: number, b: any) => sum + (b.price || 0), 0)
+       : selectedBeds.reduce((sum: number, bedId: string) => {
+           const bed = selectedRoom.beds.find((b: any) => b.id === bedId);
+           return sum + (bed?.price || 0);
+       }, 0)
+   ) : 0;
+   const totalDeposit = totalRent * 2;
 
-   const handleCreateDeposit = () => {
+   const handleCreateDeposit = async () => {
       if (!registration) return;
       if (!selectedRoom) return alert('Vui lòng chọn phòng');
       if (!isFullRoom && selectedBeds.length === 0) return alert('Vui lòng chọn giường');
 
-      const newDeposit = {
-         id: `DC-00${list.length + 1}`,
-         room: selectedRoomId,
-         beds: isFullRoom ? selectedRoom.beds.map(b => b.id) : selectedBeds,
-         customer: registration.customer,
-         phone: registration.phone,
-         cccd: registration.cccd,
-         email: registration.email,
-         address: registration.address,
-         status: 'Chờ thanh toán',
-         amount: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalDeposit),
-         expiredAt: '24 giờ tới',
-         rentPrice: rentPrice,
-         isFullRoom: isFullRoom
+      const payload = {
+         RegistrationID: registration.id,
+         CustomerName: registration.customer,
+         PhoneNumber: registration.phone,
+         CCCD: registration.cccd,
+         RoomID: selectedRoomId,
+         Beds: isFullRoom ? selectedRoom.beds.map((b: any) => b.id) : selectedBeds,
+         Amount: totalDeposit,
+         DepositDate: new Date().toISOString(),
+         PaymentMethod: paymentMethod,
       };
 
-      setList([newDeposit, ...list]);
-      setViewMode('list');
-      alert("Gửi yêu cầu thanh toán thành công!");
+      try {
+         const res = await fetch('http://localhost:8080/api/v1/deposits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+         });
+         const data = await res.json();
+         if (data.status === 'success') {
+            alert('Gửi yêu cầu thanh toán thành công!');
+            fetchDeposits();
+            setViewMode('list');
+         } else {
+            alert('Lỗi: ' + data.message);
+         }
+      } catch (err) {
+         console.error(err);
+         alert('Không thể kết nối đến server');
+      }
    };
 
    if (viewMode === 'list') {
@@ -129,7 +176,7 @@ export default function InitialPayment() {
                            <td className="px-6 py-4 font-bold text-[#B7705F]">{item.id}</td>
                            <td className="px-6 py-4 font-medium text-[#222222]">{item.customer}</td>
                            <td className="px-6 py-4 text-[#666666]">{item.cccd}</td>
-                           <td className="px-6 py-4 text-[#666666]">{item.room} - {item.beds.join(', ')}</td>
+                           <td className="px-6 py-4 text-[#666666]">{item.room} - {item.beds ? item.beds.join(', ') : ''}</td>
                            <td className="px-6 py-4 text-[#B7705F] font-bold">{item.amount}</td>
                            <td className="px-6 py-4">
                               <span className={`px-2.5 py-1 rounded text-xs font-semibold ${item.status === 'Đã thanh toán' ? 'bg-green-50 text-green-600' : item.status === 'Chờ thanh toán' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
@@ -198,9 +245,9 @@ export default function InitialPayment() {
                                  </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-100">
-                                 {MOCK_REGISTRATIONS.filter(r => {
+                                 {registrations.filter(r => {
                                     const term = searchCCCD.toLowerCase().trim();
-                                    return r.status === 'Đồng ý đặt cọc' && (!term || r.cccd.toLowerCase().includes(term) || r.phone.toLowerCase().includes(term) || r.customer.toLowerCase().includes(term));
+                                    return r.status === 'Đã xử lý' && (!term || (r.cccd && r.cccd.toLowerCase().includes(term)) || (r.phone && r.phone.toLowerCase().includes(term)) || (r.customer && r.customer.toLowerCase().includes(term)));
                                  }).map((reg, idx) => (
                                     <tr key={idx} className="hover:bg-gray-50">
                                        <td className="px-4 py-3 font-medium text-[#B7705F]">{reg.id}</td>
@@ -253,7 +300,7 @@ export default function InitialPayment() {
                               className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm flex justify-between items-center focus:outline-none focus:border-[#B7705F]"
                            >
                               <span className="text-gray-800 font-medium">
-                                 {selectedRoomId ? `${selectedRoomId} (Tối đa ${MOCK_ROOMS.find(r => r.id === selectedRoomId)?.maxCount} người)` : '-- Chọn phòng --'}
+                                 {selectedRoomId ? `${selectedRoomId} (Tối đa ${rooms.find(r => r.id === selectedRoomId)?.maxCount} người)` : '-- Chọn phòng --'}
                               </span>
                            </button>
 
@@ -302,12 +349,12 @@ export default function InitialPayment() {
                         </div>
                      </div>
                      <div>
-                        <label className="block text-sm font-semibold text-[#666666] mb-2">Tiền thuê 1 giường cố định (VND/tháng)</label>
+                        <label className="block text-sm font-semibold text-[#666666] mb-2">Tổng tiền thuê dự kiến (VND/tháng)</label>
                         <input
                            type="text"
                            readOnly
-                           value={rentPrice !== '0' ? new Intl.NumberFormat('vi-VN').format(Number(rentPrice)) : ''}
-                           placeholder="Chọn phòng để xem giá..."
+                           value={totalRent !== 0 ? new Intl.NumberFormat('vi-VN').format(totalRent) : ''}
+                           placeholder="Chọn phòng và giường để xem giá..."
                            className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 font-medium text-[#666666] focus:outline-none"
                         />
                      </div>
@@ -324,13 +371,13 @@ export default function InitialPayment() {
                                  onChange={(e) => setIsFullRoom(e.target.checked)}
                                  className="w-4 h-4 text-[#B7705F] border-gray-300 rounded focus:ring-[#B7705F]"
                               />
-                              <span className="text-sm font-semibold text-orange-600">Khách thuê nguyên phòng ({selectedRoom.maxCount} giường)</span>
+                           <span className="text-sm font-semibold text-orange-600">Khách thuê nguyên phòng ({selectedRoom.maxCount} giường)</span>
                            </label>
                         </div>
 
                         {!isFullRoom && (
-                           <div className="grid grid-cols-4 gap-4">
-                              {selectedRoom.beds.map(bed => {
+                            <div className="grid grid-cols-4 gap-4">
+                               {selectedRoom.beds.map((bed: any) => {
                                  const isSelected = selectedBeds.includes(bed.id);
                                  return (
                                     <div
@@ -350,7 +397,7 @@ export default function InitialPayment() {
                                           {isSelected && <CheckCircle className="w-4 h-4 text-[#B7705F]" />}
                                        </div>
                                        <div className={`font-bold ${isSelected ? 'text-[#8C4A3A]' : 'text-gray-700'}`}>Giường {bed.id}</div>
-                                       <div className="text-xs text-gray-500 mt-1">{bed.status}</div>
+                                       <div className="text-xs text-gray-500 mt-1">{bed.status} - {new Intl.NumberFormat('vi-VN').format(bed.price || 0)}đ</div>
                                     </div>
                                  );
                               })}
@@ -364,7 +411,7 @@ export default function InitialPayment() {
                         <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 flex items-center justify-between">
                            <div>
                               <p className="text-sm font-semibold text-gray-800">TỔNG KẾT TIỀN CỌC</p>
-                              <p className="text-xs text-gray-500 mt-1">Công thức: (Tiền Thuê 2 tháng) x Số Giường = {rentNumber} x 2 x {calculatedBeds}</p>
+                              <p className="text-xs text-gray-500 mt-1">Công thức: Tổng Tiền Thuê ({new Intl.NumberFormat('vi-VN').format(totalRent)}) x 2 tháng</p>
                            </div>
                            <div className="text-right">
                               <span className="block text-xs text-gray-500 uppercase">Tổng cọc yêu cầu</span>
@@ -372,6 +419,15 @@ export default function InitialPayment() {
                                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalDeposit)}
                               </span>
                            </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                           <label className="block text-sm font-semibold text-[#666666] mb-2">Hình thức thanh toán</label>
+                           <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]">
+                              <option value="Chuyển khoản">Chuyển khoản</option>
+                              <option value="Tiền mặt">Tiền mặt</option>
+                              <option value="Thẻ tín dụng">Thẻ tín dụng</option>
+                           </select>
                         </div>
 
                         <button onClick={handleCreateDeposit} className="w-full mt-6 py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
@@ -418,7 +474,7 @@ export default function InitialPayment() {
                   </div>
                   <div>
                      <span className="block text-sm text-gray-500 mb-1">Số giường thuê</span>
-                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-medium">{selectedItem.beds.length}</div>
+                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-medium">{selectedItem.beds ? selectedItem.beds.length : 0}</div>
                   </div>
                   <div className="mt-4 p-4 bg-[#FAF5F3] rounded-xl border border-[#EAD3CC]">
                      <span className="block text-xs text-gray-500 mb-1">Công thức: (Tiền Thuê 2 tháng) x Số Giường</span>
@@ -456,12 +512,30 @@ export default function InitialPayment() {
             </div>
          </div>
 
-         {selectedItem.status === 'Chờ thanh toán' && (
-            <button onClick={() => {
-               setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đã thanh toán' } : i));
-               setSelectedItem({ ...selectedItem, status: 'Đã thanh toán' });
-               alert('Xác nhận đã thanh toán thành công! Sẽ tự động chuyển xếp lịch nhận phòng.');
-            }} className="w-full py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
+          {selectedItem.status === 'Chờ thanh toán' && (
+             <button onClick={async () => {
+                try {
+                   const res = await fetch(`http://localhost:8080/api/v1/deposits/${selectedItem.id}/confirm`, {
+                      method: 'PUT'
+                   });
+                   const data = await res.json();
+                   if (data.status === 'success') {
+                      alert('Xác nhận đã thanh toán thành công! Sẽ tự động chuyển xếp lịch nhận phòng.');
+                      setSelectedItem({ ...selectedItem, status: 'Đã thanh toán' });
+                      // Cập nhật lại danh sách (fetch lại) để sync dữ liệu
+                      fetch('http://localhost:8080/api/v1/deposits')
+                         .then(r => r.json())
+                         .then(d => {
+                            if (d.status === 'success') setList(d.data);
+                         });
+                   } else {
+                      alert('Lỗi: ' + data.message);
+                   }
+                } catch (err) {
+                   console.error(err);
+                   alert('Không thể kết nối đến server');
+                }
+             }} className="w-full py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
                <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận đã thanh toán
             </button>
          )}

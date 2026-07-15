@@ -9,7 +9,8 @@ const dbConfig = {
     port: parseInt(process.env.DB_PORT),
     options: {
         encrypt: true,
-        trustServerCertificate: true
+        trustServerCertificate: true,
+        useUTC: false
     },
     pool: {
         max: 10,

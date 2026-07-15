@@ -61,19 +61,7 @@ function syncManagerToBranch(user: UserRecord, allUsers: UserRecord[]) {
 }
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<UserRecord[]>(() => {
-    const s = localStorage.getItem('user_list_v2');
-    if (s) {
-      try {
-        const parsed = JSON.parse(s);
-        return parsed.map((u: UserRecord) => ({
-          ...u,
-          status: u.status === 'Hoạt động' ? 'Đang hoạt động' : u.status
-        }));
-      } catch { }
-    }
-    return DEFAULT_USERS;
-  });
+  const [users, setUsers] = useState<UserRecord[]>([]);
 
   // Danh sách chi nhánh để hiển thị tên đẹp hơn trong dropdown
   const [branches, setBranches] = useState<Branch[]>(() => {
@@ -83,6 +71,19 @@ export default function UserManagement() {
   });
 
   useEffect(() => {
+    fetch('http://localhost:8080/api/v1/users')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          const mappedUsers = data.data.map((u: any) => ({
+            ...u,
+            status: u.status || 'Đang hoạt động'
+          }));
+          setUsers(mappedUsers);
+        }
+      })
+      .catch(err => console.error(err));
+
     const sync = () => {
       const s = localStorage.getItem('branch_list_v2');
       if (s) try { setBranches(JSON.parse(s)); } catch { }
@@ -105,11 +106,12 @@ export default function UserManagement() {
 
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', cccd: '', role: 'Khách hàng',
-    password: '', branch: 'CN001', status: 'Đang hoạt động'
+    password: '', branch: 'CN001', status: 'Đang hoạt động',
+    room: '', bed: ''
   });
 
   const handleOpenAdd = () => {
-    setFormData({ name: '', email: '', phone: '', cccd: '', role: 'Khách hàng', password: '', branch: 'CN001', status: 'Đang hoạt động' });
+    setFormData({ name: '', email: '', phone: '', cccd: '', role: 'Khách hàng', password: '', branch: 'CN001', status: 'Đang hoạt động', room: '', bed: '' });
     setErrorMsg(''); setSuccessMsg(''); setShowAdd(true);
   };
 
@@ -146,7 +148,7 @@ export default function UserManagement() {
   };
 
   const handleOpenEdit = (user: any) => {
-    setFormData({ name: user.name, email: user.email, phone: user.phone || '', cccd: user.cccd || '', role: user.role, password: '', branch: user.branch || 'CN001', status: user.status || 'Đang hoạt động' });
+    setFormData({ name: user.name, email: user.email, phone: user.phone || '', cccd: user.cccd || '', role: user.role, password: '', branch: user.branch || 'CN001', status: user.status || 'Đang hoạt động', room: user.room || '', bed: user.bed || '' });
     setErrorMsg(''); setSuccessMsg(''); setShowEdit(user);
   };
 
@@ -308,6 +310,18 @@ export default function UserManagement() {
                     {branchSelectOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
+                {formData.role === 'Khách hàng' && (
+                  <>
+                    <div>
+                      <label className={labelCls}>Phòng (Mã hoặc Tên)</label>
+                      <input type="text" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })} className={inputCls} placeholder="VD: P.101" />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Giường</label>
+                      <input type="text" value={formData.bed} onChange={e => setFormData({ ...formData, bed: e.target.value })} className={inputCls} placeholder="VD: 01" />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
@@ -366,6 +380,18 @@ export default function UserManagement() {
                     {branchSelectOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
+                {formData.role === 'Khách hàng' && (
+                  <>
+                    <div>
+                      <label className={labelCls}>Phòng (Mã hoặc Tên)</label>
+                      <input type="text" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })} className={inputCls} placeholder="VD: P.101" />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Giường</label>
+                      <input type="text" value={formData.bed} onChange={e => setFormData({ ...formData, bed: e.target.value })} className={inputCls} placeholder="VD: 01" />
+                    </div>
+                  </>
+                )}
                 <div className="md:col-span-2 border-t border-gray-100 pt-3">
                   <label className={labelCls}>Trạng thái tài khoản *</label>
                   <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} className={`${inputCls} bg-white`}>

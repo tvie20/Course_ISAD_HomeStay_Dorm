@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import API_URL from './api';
 import Login from './components/Login';
 import Sidebar, { Role, MENUS } from './components/Sidebar';
 import LandingPage from './views/Home/LandingPage';
@@ -39,12 +40,12 @@ const ViewPlaceholder = ({ name }: { name: string }) => (
 
 export default function App() {
   const [appState, setAppState] = useState<'landing' | 'login' | 'register' | 'dashboard'>('landing');
-  const [user, setUser] = useState<{username: string, role: Role} | null>(null);
+  const [user, setUser] = useState<{username: string, name: string, role: Role} | null>(null);
   const [activeMenu, setActiveMenu] = useState<string>('');
 
   const handleLogin = async (username: string, password?: string) => {
     try {
-      const res = await fetch('http://localhost:8080/api/v1/auth/login', {
+      const res = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -54,8 +55,8 @@ export default function App() {
       const data = await res.json();
       
       if (data.status === 'success') {
-        const { username: employeeId, role } = data.data;
-        setUser({ username: employeeId, role });
+        const { username: employeeId, name: fullName, role } = data.data;
+        setUser({ username: employeeId, name: fullName || employeeId, role });
         setAppState('dashboard');
         
         if (role === 'admin') setActiveMenu('branches');
@@ -180,7 +181,7 @@ export default function App() {
     <div className="flex min-h-screen bg-[#FAF5F3]">
       <Sidebar 
         role={user!.role} 
-        username={user!.username} 
+        username={user!.name || user!.username} 
         activeMenu={activeMenu} 
         onMenuSelect={setActiveMenu} 
         onLogout={handleLogout}

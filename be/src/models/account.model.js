@@ -64,6 +64,54 @@ exports.generateAccountForCustomer = async (customerId) => {
     }
 }
 
+// Tạo tài khoản cho KH đã có trong DB (từ tab "Cần cấp tài khoản")
+// TenDangNhap = MaKhachHang, MatKhau = '123' (mặc định)
+exports.createAccountForExistingCustomer = async (customerId, overridePassword) => {
+    try {
+        const pool = await sql.connect()
+
+        // Kiểm tra KH tồn tại và chưa có tài khoản
+        const checkReq = pool.request()
+        checkReq.input('CustomerID', sql.VarChar, customerId)
+        const checkRes = await checkReq.query(`
+            SELECT MaKhachHang, HoTen, MaTaiKhoan FROM KHACH_HANG WHERE MaKhachHang = @CustomerID
+        `)
+        if (checkRes.recordset.length === 0) throw new Error('Không tìm thấy khách hàng')
+        if (checkRes.recordset[0].MaTaiKhoan) throw new Error('Khách hàng này đã có tài khoản')
+
+        const password = overridePassword || '123'
+        const maTaiKhoan = await generateNextId('TAI_KHOAN', 'MaTaiKhoan', 'TK')
+
+        // Tạo TAI_KHOAN
+        const insReq = pool.request()
+        insReq.input('MaTaiKhoan', sql.VarChar, maTaiKhoan)
+        insReq.input('TenDangNhap', sql.VarChar, customerId)   // dùng MaKhachHang làm username
+        insReq.input('MatKhau', sql.VarChar, password)
+        insReq.input('TrangThai', sql.NVarChar, 'Đang hoạt động')
+        await insReq.query(`
+            INSERT INTO TAI_KHOAN (MaTaiKhoan, TenDangNhap, MatKhau, TrangThai)
+            VALUES (@MaTaiKhoan, @TenDangNhap, @MatKhau, @TrangThai)
+        `)
+
+        // Gán MaTaiKhoan → KHACH_HANG
+        const updReq = pool.request()
+        updReq.input('MaTaiKhoan', sql.VarChar, maTaiKhoan)
+        updReq.input('CustomerID', sql.VarChar, customerId)
+        await updReq.query(`UPDATE KHACH_HANG SET MaTaiKhoan = @MaTaiKhoan WHERE MaKhachHang = @CustomerID`)
+
+        return {
+            customerId,
+            accountId: maTaiKhoan,
+            username: customerId,
+            password,
+            name: checkRes.recordset[0].HoTen
+        }
+    } catch (error) {
+        console.error("Error in account model (createAccountForExistingCustomer):", error)
+        throw error
+    }
+}
+
 exports.login = async (username, password) => {
     try {
         const pool = await sql.connect()
@@ -91,12 +139,14 @@ exports.login = async (username, password) => {
         const nvReq = pool.request()
         nvReq.input('MaTaiKhoan', sql.VarChar, maTaiKhoan)
         const nvRes = await nvReq.query(`
-            SELECT MaNhanVien, ChucVu FROM NHAN_VIEN WHERE MaTaiKhoan = @MaTaiKhoan
+            SELECT MaNhanVien, HoTen, ChucVu FROM NHAN_VIEN WHERE MaTaiKhoan = @MaTaiKhoan
         `)
         
+        let fullName = ''
         if (nvRes.recordset.length > 0) {
             const chucVu = (nvRes.recordset[0].ChucVu || '').toLowerCase()
             employeeId = nvRes.recordset[0].MaNhanVien
+            fullName = nvRes.recordset[0].HoTen || ''
             if (chucVu.includes('kinh doanh')) role = 'sale'
             else if (chucVu.includes('kế toán') || chucVu.includes('ke toan')) role = 'accountant'
             else if (chucVu.includes('quản lý') || chucVu.includes('quan ly')) role = 'manager'
@@ -107,11 +157,12 @@ exports.login = async (username, password) => {
             const khReq = pool.request()
             khReq.input('MaTaiKhoan', sql.VarChar, maTaiKhoan)
             const khRes = await khReq.query(`
-                SELECT MaKhachHang FROM KHACH_HANG WHERE MaTaiKhoan = @MaTaiKhoan
+                SELECT MaKhachHang, HoTen FROM KHACH_HANG WHERE MaTaiKhoan = @MaTaiKhoan
             `)
             if (khRes.recordset.length > 0) {
                 role = 'guest'
                 employeeId = khRes.recordset[0].MaKhachHang
+                fullName = khRes.recordset[0].HoTen || ''
             } else {
                 throw new Error('Tài khoản không thuộc nhân viên hay khách hàng')
             }
@@ -119,6 +170,7 @@ exports.login = async (username, password) => {
         
         return {
             username: employeeId,
+            name: fullName,
             role: role
         }
     } catch (error) {

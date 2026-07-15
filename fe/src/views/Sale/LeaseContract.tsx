@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { Search, UserCheck, CreditCard, Users, ShieldAlert, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import CreateLease from '../Sale/CreateLease';
 
@@ -36,7 +37,7 @@ export default function LeaseContract() {
    };
 
    useEffect(() => {
-      fetch('http://localhost:8080/api/v1/deposits')
+      fetch(`${API_URL}/api/v1/deposits`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {

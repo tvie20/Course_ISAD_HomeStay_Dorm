@@ -83,6 +83,13 @@ exports.create = async (data) => {
             await updateDepReq.query("UPDATE PHIEU_COC SET TrangThai = N'Đã thanh toán' WHERE MaPhieuCoc = @DepositID")
         }
 
+        // Tự động cập nhật trạng thái KH → 'Đang ở' sau khi lập hợp đồng
+        if (customerId) {
+            const updateKHReq = pool.request()
+            updateKHReq.input('MaKhachHang', sql.VarChar, customerId)
+            await updateKHReq.query("UPDATE KHACH_HANG SET TrangThai = N'Đang ở' WHERE MaKhachHang = @MaKhachHang")
+        }
+
         // Them nguoi o cung (roommates)
         if (data.roommates && Array.isArray(data.roommates)) {
             for (const rm of data.roommates) {

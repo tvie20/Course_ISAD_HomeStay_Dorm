@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { FileText, Home, FileSignature, Wallet, Send, AlertCircle, Clock, X, CheckCircle2 } from 'lucide-react';
 
 export default function CheckoutRequest({ customerId }: { customerId?: string }) {
@@ -16,14 +17,14 @@ export default function CheckoutRequest({ customerId }: { customerId?: string })
       setLoading(true);
       const id = customerId || 'KH0001';
       // Fetch active contract
-      const contractRes = await fetch(`http://localhost:8080/api/v1/contracts/active-contract?CustomerID=${id}`);
+      const contractRes = await fetch(`${API_URL}/api/v1/contracts/active-contract?CustomerID=${id}`);
       const contractData = await contractRes.json();
       if (contractData.status === 'success') {
         setActiveContract(contractData.data);
       }
 
       // Fetch checkout request
-      const requestRes = await fetch(`http://localhost:8080/api/v1/checkout-requests/my-requests?CustomerID=${id}`);
+      const requestRes = await fetch(`${API_URL}/api/v1/checkout-requests/my-requests?CustomerID=${id}`);
       const requestData = await requestRes.json();
       if (requestData.status === 'success' && requestData.data && requestData.data.length > 0) {
         const latestRequest = requestData.data[0];
@@ -56,7 +57,7 @@ export default function CheckoutRequest({ customerId }: { customerId?: string })
           Reason: note
         };
 
-        const response = await fetch('http://localhost:8080/api/v1/checkout-requests', {
+        const response = await fetch(`${API_URL}/api/v1/checkout-requests`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)

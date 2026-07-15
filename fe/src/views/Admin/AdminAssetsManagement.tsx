@@ -3,6 +3,7 @@ import {
   Search, Trash2, XCircle, CheckCircle2, AlertTriangle,
   Filter, Info, Eye, Plus, Save, PenSquare, ChevronDown
 } from 'lucide-react';
+import API_URL from '../../api';
 
 // ── Danh mục tài sản (DANHSACHTAISAN) ────────────────────────────────────────
 interface AssetCatalog {
@@ -30,11 +31,11 @@ interface AssetRecord {
 const BRANCHES = ['Chi nhánh 1', 'Chi nhánh 2', 'Chi nhánh 3', 'Chi nhánh 4'];
 
 const DEFAULT_CATALOG: AssetCatalog[] = [
-  { maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', soLuongTon: 5, moTa: 'Máy lạnh inverter, làm lạnh nhanh' },
-  { maTaiSan: 'TS-002', tenTaiSan: 'Tủ lạnh Aqua 90L', soLuongTon: 3, moTa: 'Tủ lạnh ngăn đá trên' },
-  { maTaiSan: 'TS-003', tenTaiSan: 'Giường tầng gỗ', soLuongTon: 10 },
-  { maTaiSan: 'TS-004', tenTaiSan: 'Bình nóng lạnh Ariston 20L', soLuongTon: 6 },
-  { maTaiSan: 'TS-005', tenTaiSan: 'Tivi LG 43 inch', soLuongTon: 4 },
+  { maTaiSan: 'TS0001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', soLuongTon: 5, moTa: 'Máy lạnh inverter, làm lạnh nhanh' },
+  { maTaiSan: 'TS0002', tenTaiSan: 'Tủ lạnh Aqua 90L', soLuongTon: 3, moTa: 'Tủ lạnh ngăn đá trên' },
+  { maTaiSan: 'TS0003', tenTaiSan: 'Giường tầng gỗ', soLuongTon: 10 },
+  { maTaiSan: 'TS0004', tenTaiSan: 'Bình nóng lạnh Ariston 20L', soLuongTon: 6 },
+  { maTaiSan: 'TS0005', tenTaiSan: 'Tivi LG 43 inch', soLuongTon: 4 },
 ];
 
 const DEFAULT_RECORDS: AssetRecord[] = [
@@ -76,6 +77,8 @@ export default function AdminAssetsManagement() {
 
   const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
   const [assetSearchQuery, setAssetSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // ── State: form ──────────────────────────────────────────────────────────
   const [formMaTaiSan, setFormMaTaiSan] = useState('');
@@ -104,8 +107,8 @@ export default function AdminAssetsManagement() {
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8080/api/v1/assets/catalog').then(res => res.json()),
-      fetch('http://localhost:8080/api/v1/assets/allocations').then(res => res.json())
+      fetch(`${API_URL}/api/v1/assets/catalog`).then(res => res.json()),
+      fetch(`${API_URL}/api/v1/assets/allocations`).then(res => res.json())
     ]).then(([catalogData, allocationsData]) => {
       if (catalogData.status === 'success') {
         setCatalog(catalogData.data);
@@ -115,6 +118,16 @@ export default function AdminAssetsManagement() {
       }
     }).catch(err => console.error(err));
   }, []);
+
+  const generateAssetCode = (existingCatalog: AssetCatalog[]) => {
+    const numbers = existingCatalog
+      .map(item => item.maTaiSan?.match(/^TS(\d{4})$/i)?.[1])
+      .filter((value): value is string => Boolean(value))
+      .map(value => Number(value));
+
+    const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+    return `TS${String(next).padStart(4, '0')}`;
+  };
 
   const resetForm = (branch = BRANCHES[0]) => {
     setFormMaTaiSan(catalog[0]?.maTaiSan || '');
@@ -167,8 +180,7 @@ export default function AdminAssetsManagement() {
     } else {
       if (!formTenTaiSan.trim()) { showToast('Vui lòng nhập tên tài sản!', 'error'); return; }
       if (formSoLuongTon <= 0) { showToast('Vui lòng nhập số lượng tồn lớn hơn 0!', 'error'); return; }
-      const nextNum = String(catalog.length + 1).padStart(3, '0');
-      const newMa = `TS-${nextNum}`;
+      const newMa = generateAssetCode(catalog);
       const newCat: AssetCatalog = { maTaiSan: newMa, tenTaiSan: formTenTaiSan.trim(), soLuongTon: formSoLuongTon };
       persist(records, [...catalog, newCat]);
       showToast(`Đã thêm tài sản mới "${formTenTaiSan.trim()}" (${newMa}) vào danh mục`, 'success');
@@ -306,6 +318,14 @@ export default function AdminAssetsManagement() {
 
   const totalAllocated = records.reduce((s, r) => s + r.soLuong, 0);
 
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / ITEMS_PER_PAGE));
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageEnd = Math.min(pageStart + ITEMS_PER_PAGE, filteredRecords.length);
+  const pagedRecords = filteredRecords.slice(pageStart, pageEnd);
+
+  // Reset về trang 1 khi filter thay đổi
+  React.useEffect(() => { setCurrentPage(1); }, [searchTerm, filterBranch, filterCondition]);
+
   return (
     <div className="p-8 h-full max-w-7xl mx-auto">
 
@@ -414,7 +434,7 @@ export default function AdminAssetsManagement() {
                   Không tìm thấy tài sản phù hợp.
                 </td>
               </tr>
-            ) : filteredRecords.map(item => (
+            ) : pagedRecords.map(item => (
               <tr key={item.id} className="hover:bg-[#FAF5F3]/40 transition-colors">
                 <td className="px-5 py-3 font-mono text-xs font-bold text-[#B7705F]">{item.maTaiSan}</td>
                 <td className="px-5 py-3">
@@ -447,6 +467,44 @@ export default function AdminAssetsManagement() {
             ))}
           </tbody>
         </table>
+        {/* Pagination */}
+        <div className="p-4 border-t border-[#EAD3CC]/50 bg-[#FAF5F3]/40 flex items-center justify-between text-sm text-[#666666]">
+          <span className="text-xs font-medium">
+            {filteredRecords.length === 0
+              ? 'Không có kết quả'
+              : `Hiển thị ${pageStart + 1}–${pageEnd} trên ${filteredRecords.length} tài sản`}
+          </span>
+          {totalPages > 1 && (
+            <div className="flex space-x-1 items-center">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-8 h-8 flex items-center justify-center border rounded-lg text-xs font-semibold transition-all ${currentPage === i + 1
+                    ? 'border-[#B7705F] bg-[#B7705F] text-white'
+                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                &gt;
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Modal: Add ─────────────────────────────────────────────────── */}
@@ -540,9 +598,9 @@ export default function AdminAssetsManagement() {
                   <div className="grid grid-cols-2 gap-3 mt-4">
                     <div>
                       <label className="block text-sm font-semibold text-[#666] mb-2">Nhập số lượng thêm</label>
-                      <input type="number" min={0} value={formThemTonKho} onChange={e => setFormThemTonKho(+e.target.value)}
+                      <input type="number" min={0} value={formThemTonKho === 0 ? '' : formThemTonKho} onChange={e => setFormThemTonKho(+e.target.value)}
                         className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]"
-                        placeholder="Ví dụ: 5" />
+                        placeholder="0" />
                     </div>
                   </div>
                 </div>
@@ -557,7 +615,7 @@ export default function AdminAssetsManagement() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-semibold text-[#666] mb-2">Nhập số lượng thêm</label>
-                      <input type="number" min={1} value={formSoLuongTon} onChange={e => setFormSoLuongTon(+e.target.value)}
+                      <input type="number" min={1} value={formSoLuongTon || ''} onChange={e => setFormSoLuongTon(+e.target.value)}
                         className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]" />
                     </div>
                   </div>
@@ -663,8 +721,21 @@ export default function AdminAssetsManagement() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-semibold text-[#666] mb-2">Số lượng phân bổ</label>
-                  <input type="number" min={1} value={formSoLuong} onChange={e => setFormSoLuong(+e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]" />
+                  {(() => {
+                    const cat2 = catalog.find(c => c.maTaiSan === formMaTaiSan);
+                    const allocated2 = records.filter(r => r.maTaiSan === formMaTaiSan).reduce((s, r) => s + r.soLuong, 0);
+                    const avail2 = cat2 ? cat2.soLuongTon - allocated2 : 9999;
+                    const isOver = formSoLuong > avail2;
+                    return (
+                      <>
+                        <input type="number" min={1} max={avail2 > 0 ? avail2 : 1} value={formSoLuong || ''}
+                          onChange={e => setFormSoLuong(+e.target.value)}
+                          className={`w-full bg-white border rounded-lg p-3 text-sm focus:outline-none ${isOver ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-[#B7705F]'
+                            }`} />
+                        {isOver && <p className="text-[11px] text-red-500 mt-1">Vượt quá số lượng khả dụng ({avail2})</p>}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#666] mb-2">Tình trạng</label>
@@ -726,8 +797,29 @@ export default function AdminAssetsManagement() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-[#666] mb-1.5">Số lượng</label>
-                  <input type="number" min={1} value={formSoLuong} onChange={e => setFormSoLuong(+e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]" />
+                  {(() => {
+                    const cat3 = catalog.find(c => c.maTaiSan === selectedRecord.maTaiSan);
+                    const allocated3 = records.filter(r => r.maTaiSan === selectedRecord.maTaiSan && r.id !== selectedRecord.id).reduce((s, r) => s + r.soLuong, 0);
+                    const avail3 = cat3 ? cat3.soLuongTon - allocated3 : 9999;
+                    const isOver3 = formSoLuong > avail3;
+                    return (
+                      <>
+                        <input type="number" min={1} max={avail3 > 0 ? avail3 : 1} value={formSoLuong || ''}
+                          onChange={e => setFormSoLuong(+e.target.value)}
+                          className={`w-full bg-white border rounded-lg p-3 text-sm focus:outline-none ${isOver3 ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-[#B7705F]'}`} />
+                        {cat3 && <p className="text-[11px] text-gray-400 mt-1">Tối đa: {avail3} {isOver3 && <span className="text-red-500 font-semibold">(vượt quá!)</span>}</p>}
+                      </>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#666] mb-1.5">Tình trạng</label>
+                  <select value={formCondition} onChange={e => setFormCondition(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]">
+                    <option>Tốt</option>
+                    <option>Hư hỏng nhẹ</option>
+                    <option>Cần thay thế</option>
+                  </select>
                 </div>
               </div>
               <div>

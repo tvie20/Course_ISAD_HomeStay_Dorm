@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { X, BedDouble, Camera, PenSquare, Edit3, ArrowLeft, Package, CheckCircle } from 'lucide-react';
 
 // Matches Manager's AssetRecord
@@ -38,7 +39,7 @@ export default function Handover() {
   const [handoverItems, setHandoverItems] = useState<HandoverItem[]>([]);
 
   const fetchContracts = () => {
-    fetch('http://localhost:8080/api/v1/contracts/pending-handover')
+    fetch(`${API_URL}/api/v1/contracts/pending-handover`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -59,7 +60,7 @@ export default function Handover() {
     const room = selected.room;
     const bed = selected.bed;
 
-    fetch(`http://localhost:8080/api/v1/rooms/${room}/assets?bed=${bed}`)
+    fetch(`${API_URL}/api/v1/rooms/${room}/assets?bed=${bed}`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -122,7 +123,7 @@ export default function Handover() {
         Note: finalNote,
         HandoverDate: new Date().toISOString(),
       };
-      const res = await fetch('http://localhost:8080/api/v1/handovers', {
+      const res = await fetch(`${API_URL}/api/v1/handovers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

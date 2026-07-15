@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
+import API_URL from '../../api';
 import { X, Printer, Zap, Droplets, Wifi, ParkingCircle, CheckCircle } from 'lucide-react';
 
 export default function CreateLease({ onCancel, onSuccess, initialData }: { onCancel: () => void, onSuccess?: () => void, initialData?: any }) {
@@ -29,7 +30,7 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
             roommates: roommates
          };
          
-         const res = await fetch('http://localhost:8080/api/v1/contracts', {
+         const res = await fetch(`${API_URL}/api/v1/contracts`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

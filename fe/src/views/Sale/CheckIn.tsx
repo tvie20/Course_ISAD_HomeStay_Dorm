@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { ArrowLeft, Calendar, Clock, Save, Search, User } from 'lucide-react';
 
 export default function CheckIn() {
@@ -11,7 +12,7 @@ export default function CheckIn() {
   const [formNote, setFormNote] = useState('');
 
   const fetchDeposits = () => {
-    fetch('http://localhost:8080/api/v1/deposits')
+    fetch(`${API_URL}/api/v1/deposits`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -212,7 +213,7 @@ export default function CheckIn() {
                }
                
                try {
-                  const res = await fetch(`http://localhost:8080/api/v1/deposits/${selectedItem.id}/checkin-schedule`, {
+                  const res = await fetch(`${API_URL}/api/v1/deposits/${selectedItem.id}/checkin-schedule`, {
                      method: 'PUT',
                      headers: { 'Content-Type': 'application/json' },
                      body: JSON.stringify({

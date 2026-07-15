@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, BedDouble } from 'lucide-react';
+import API_URL from '../../api';
 
 export default function GuestRegistration({ onReturn }: { onReturn?: () => void }) {
   const [showSuccess, setShowSuccess] = useState(false);
@@ -31,7 +32,7 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
   };
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/v1/branches')
+    fetch(`${API_URL}/api/v1/branches`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -40,7 +41,7 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
       })
       .catch(err => console.error('Failed to fetch branches', err));
 
-    fetch('http://localhost:8080/api/v1/room-types')
+    fetch(`${API_URL}/api/v1/room-types`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -52,7 +53,7 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
 
   const handleSubmit = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/registrations', {
+      const response = await fetch(`${API_URL}/api/v1/registrations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

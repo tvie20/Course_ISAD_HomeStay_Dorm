@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { Download, Check, X, ShieldCheck } from 'lucide-react';
 
 export default function ViewContract({ customerId }: { customerId?: string }) {
@@ -10,7 +11,7 @@ export default function ViewContract({ customerId }: { customerId?: string }) {
       try {
         const id = customerId;
 
-        const res = await fetch(`http://localhost:8080/api/v1/contracts/active-contract?CustomerID=${id}`);
+        const res = await fetch(`${API_URL}/api/v1/contracts/active-contract?CustomerID=${id}`);
         const data = await res.json();
         if (data.status === 'success') {
           setContract(data.data);

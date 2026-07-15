@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { ArrowLeft, CalendarDays, Clock, Save, Search, User } from 'lucide-react';
 
 const MOCK_LIST = [
@@ -20,7 +21,7 @@ export default function ScheduleView({ onNavigate, employeeId }: { onNavigate?: 
    const [searchTerm, setSearchTerm] = useState('');
 
    useEffect(() => {
-      fetch('http://localhost:8080/api/v1/registrations')
+      fetch(`${API_URL}/api/v1/registrations`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -215,7 +216,7 @@ export default function ScheduleView({ onNavigate, employeeId }: { onNavigate?: 
                            Note: appointmentNote,
                            EmployeeID: employeeId
                         };
-                        const res = await fetch('http://localhost:8080/api/v1/appointments', {
+                        const res = await fetch(`${API_URL}/api/v1/appointments`, {
                            method: 'POST',
                            headers: { 'Content-Type': 'application/json' },
                            body: JSON.stringify(payload)

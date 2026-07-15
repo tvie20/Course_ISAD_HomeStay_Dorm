@@ -72,7 +72,7 @@ export default function BranchManagement() {
   // ── Sync khi UserManagement cập nhật ──────────────────────────────────
   useEffect(() => {
     // Load branches from DB
-    fetch('http://localhost:8080/api/v1/branches')
+    fetch('http://localhost:5000/api/v1/branches')
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {

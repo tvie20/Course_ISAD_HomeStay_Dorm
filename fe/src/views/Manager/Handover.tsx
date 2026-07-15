@@ -38,7 +38,7 @@ export default function Handover() {
   const [handoverItems, setHandoverItems] = useState<HandoverItem[]>([]);
 
   const fetchContracts = () => {
-    fetch('http://localhost:8080/api/v1/contracts/pending-handover')
+    fetch('http://localhost:5000/api/v1/contracts/pending-handover')
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -59,7 +59,7 @@ export default function Handover() {
     const room = selected.room;
     const bed = selected.bed;
 
-    fetch(`http://localhost:8080/api/v1/rooms/${room}/assets?bed=${bed}`)
+    fetch(`http://localhost:5000/api/v1/rooms/${room}/assets?bed=${bed}`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -122,7 +122,7 @@ export default function Handover() {
         Note: finalNote,
         HandoverDate: new Date().toISOString(),
       };
-      const res = await fetch('http://localhost:8080/api/v1/handovers', {
+      const res = await fetch('http://localhost:5000/api/v1/handovers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

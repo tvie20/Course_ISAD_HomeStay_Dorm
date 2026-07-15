@@ -7,7 +7,7 @@ export default function ServicePayment({ onNavigate, customerId }: { onNavigate?
   const fetchInvoices = async () => {
     try {
       const id = customerId || 'KH0001';
-      const res = await fetch(`http://localhost:8080/api/v1/invoices?CustomerID=${id}`);
+      const res = await fetch(`http://localhost:5000/api/v1/invoices?CustomerID=${id}`);
       const data = await res.json();
       if (data.status === 'success') {
         setInvoices(data.data);
@@ -59,7 +59,7 @@ export default function ServicePayment({ onNavigate, customerId }: { onNavigate?
         PaymentDate: new Date().toISOString()
       };
 
-      const response = await fetch('http://localhost:8080/api/v1/payments', {
+      const response = await fetch('http://localhost:5000/api/v1/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

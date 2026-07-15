@@ -38,7 +38,7 @@ export default function RoomStatus() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/v1/rooms/status')
+    fetch('http://localhost:5000/api/v1/rooms/status')
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {

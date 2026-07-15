@@ -10,7 +10,7 @@ export default function ViewContract({ customerId }: { customerId?: string }) {
       try {
         const id = customerId;
 
-        const res = await fetch(`http://localhost:8080/api/v1/contracts/active-contract?CustomerID=${id}`);
+        const res = await fetch(`http://localhost:5000/api/v1/contracts/active-contract?CustomerID=${id}`);
         const data = await res.json();
         if (data.status === 'success') {
           setContract(data.data);

@@ -2,15 +2,15 @@ const sql = require('mssql')
 require('dotenv').config()
 
 const dbConfig = {
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER,
-    database: process.env.DB_DATABASE,
-    port: parseInt(process.env.DB_PORT),
+    user: 'sa', 
+    password: '18022005', // Điền mật khẩu sa của bạn
+    server: '127.0.0.1',             // Giữ nguyên IP local
+    database: 'Course_Homestay_Dorm', // Tên database đã tạo trong SSMS
+    port: 1433,                       // Cổng mà netstat đã báo LISTENING
     options: {
         encrypt: true,
-        trustServerCertificate: true,
-        useUTC: false
+        trustServerCertificate: true // Giữ nguyên để bỏ qua chứng chỉ bảo mật
+        // KHÔNG ĐỂ DÒNG instanceName Ở ĐÂY NỮA
     },
     pool: {
         max: 10,

@@ -104,8 +104,8 @@ export default function AdminAssetsManagement() {
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8080/api/v1/assets/catalog').then(res => res.json()),
-      fetch('http://localhost:8080/api/v1/assets/allocations').then(res => res.json())
+      fetch('http://localhost:5000/api/v1/assets/catalog').then(res => res.json()),
+      fetch('http://localhost:5000/api/v1/assets/allocations').then(res => res.json())
     ]).then(([catalogData, allocationsData]) => {
       if (catalogData.status === 'success') {
         setCatalog(catalogData.data);

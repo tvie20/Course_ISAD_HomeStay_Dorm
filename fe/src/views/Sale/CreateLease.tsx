@@ -29,7 +29,7 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
             roommates: roommates
          };
          
-         const res = await fetch('http://localhost:8080/api/v1/contracts', {
+         const res = await fetch('http://localhost:5000/api/v1/contracts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

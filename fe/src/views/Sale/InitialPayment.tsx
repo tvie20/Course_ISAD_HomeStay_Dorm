@@ -26,7 +26,7 @@ export default function InitialPayment() {
    const availableRooms = rooms.filter(r => r.beds.some((b: any) => b.status === 'Trống'));
 
    const fetchDeposits = () => {
-      fetch('http://localhost:8080/api/v1/deposits')
+      fetch('http://localhost:5000/api/v1/deposits')
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -38,7 +38,7 @@ export default function InitialPayment() {
    useEffect(() => {
       fetchDeposits();
       
-      fetch('http://localhost:8080/api/v1/registrations')
+      fetch('http://localhost:5000/api/v1/registrations')
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -46,7 +46,7 @@ export default function InitialPayment() {
             }
          });
 
-      fetch('http://localhost:8080/api/v1/rooms/status')
+      fetch('http://localhost:5000/api/v1/rooms/status')
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -112,7 +112,7 @@ export default function InitialPayment() {
       };
 
       try {
-         const res = await fetch('http://localhost:8080/api/v1/deposits', {
+         const res = await fetch('http://localhost:5000/api/v1/deposits', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -515,7 +515,7 @@ export default function InitialPayment() {
           {selectedItem.status === 'Chờ thanh toán' && (
              <button onClick={async () => {
                 try {
-                   const res = await fetch(`http://localhost:8080/api/v1/deposits/${selectedItem.id}/confirm`, {
+                   const res = await fetch(`http://localhost:5000/api/v1/deposits/${selectedItem.id}/confirm`, {
                       method: 'PUT'
                    });
                    const data = await res.json();
@@ -523,7 +523,7 @@ export default function InitialPayment() {
                       alert('Xác nhận đã thanh toán thành công! Sẽ tự động chuyển xếp lịch nhận phòng.');
                       setSelectedItem({ ...selectedItem, status: 'Đã thanh toán' });
                       // Cập nhật lại danh sách (fetch lại) để sync dữ liệu
-                      fetch('http://localhost:8080/api/v1/deposits')
+                      fetch('http://localhost:5000/api/v1/deposits')
                          .then(r => r.json())
                          .then(d => {
                             if (d.status === 'success') setList(d.data);

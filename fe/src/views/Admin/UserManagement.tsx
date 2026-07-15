@@ -71,7 +71,7 @@ export default function UserManagement() {
   });
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/v1/users')
+    fetch('http://localhost:5000/api/v1/users')
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {

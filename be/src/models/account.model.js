@@ -64,7 +64,7 @@ exports.generateAccountForCustomer = async (customerId) => {
     }
 }
 
-exports.login = async (username, password) => {
+exports.login = async (username, password, userType) => {
     try {
         const pool = await sql.connect()
         
@@ -91,12 +91,19 @@ exports.login = async (username, password) => {
         const nvReq = pool.request()
         nvReq.input('MaTaiKhoan', sql.VarChar, maTaiKhoan)
         const nvRes = await nvReq.query(`
-            SELECT MaNhanVien, ChucVu FROM NHAN_VIEN WHERE MaTaiKhoan = @MaTaiKhoan
+            SELECT MaNhanVien, ChucVu, MaChiNhanh FROM NHAN_VIEN WHERE MaTaiKhoan = @MaTaiKhoan
         `)
         
+        let branch = ''
+
         if (nvRes.recordset.length > 0) {
-            const chucVu = (nvRes.recordset[0].ChucVu || '').toLowerCase()
-            employeeId = nvRes.recordset[0].MaNhanVien
+            if (userType === 'guest') {
+                throw new Error('Tài khoản này là của Nhân viên. Vui lòng chọn đúng vai trò Nhân viên để đăng nhập.')
+            }
+            const nv = nvRes.recordset[0]
+            const chucVu = (nv.ChucVu || '').toLowerCase()
+            employeeId = nv.MaNhanVien
+            branch = nv.MaChiNhanh || ''
             if (chucVu.includes('kinh doanh')) role = 'sale'
             else if (chucVu.includes('kế toán') || chucVu.includes('ke toan')) role = 'accountant'
             else if (chucVu.includes('quản lý') || chucVu.includes('quan ly')) role = 'manager'
@@ -110,6 +117,9 @@ exports.login = async (username, password) => {
                 SELECT MaKhachHang FROM KHACH_HANG WHERE MaTaiKhoan = @MaTaiKhoan
             `)
             if (khRes.recordset.length > 0) {
+                if (userType === 'staff') {
+                    throw new Error('Tài khoản này là của Khách hàng. Vui lòng chọn đúng vai trò Khách hàng để đăng nhập.')
+                }
                 role = 'guest'
                 employeeId = khRes.recordset[0].MaKhachHang
             } else {
@@ -119,7 +129,8 @@ exports.login = async (username, password) => {
         
         return {
             username: employeeId,
-            role: role
+            role: role,
+            branch: branch
         }
     } catch (error) {
         console.error("Error in account model (login):", error)

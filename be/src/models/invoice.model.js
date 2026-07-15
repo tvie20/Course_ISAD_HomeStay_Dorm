@@ -17,9 +17,9 @@ exports.getAll = async (data) => {
         const query = `
             SELECT 
                 ptt.MaPhieuThanhToan AS id,
-                N'Tháng hiện tại' AS month,
-                r.TenPhong AS room,
-                0 AS base,
+                COALESCE(hdt.KyThanhToan, N'Tháng ' + CONVERT(varchar, MONTH(COALESCE(ptt.ThoiGianThanhToan, GETDATE()))) + '/' + CONVERT(varchar, YEAR(COALESCE(ptt.ThoiGianThanhToan, GETDATE())))) AS month,
+                COALESCE(r.TenPhong, r_hdt.TenPhong, N'Phí dịch vụ chung') AS room,
+                COALESCE(hdt.PhiDichVu, ptt.SoTien) AS base,
                 0 AS electricity,
                 0 AS water,
                 0 AS service,
@@ -30,6 +30,11 @@ exports.getAll = async (data) => {
             FROM PHIEU_THANH_TOAN ptt
             LEFT JOIN DIEN_NUOC dn ON ptt.MaPhieuThanhToan = dn.MaPhieuThanhToan
             LEFT JOIN PHONG r ON dn.MaPhong = r.MaPhong
+            LEFT JOIN HOP_DONG hd ON ptt.MaPhieuThanhToan = hd.MaPhieuThanhToan
+            LEFT JOIN HOP_DONG_THUE hdt ON hd.MaHopDong = hdt.MaHopDong
+            LEFT JOIN PHIEU_COC pc ON hdt.MaPhieuCoc = pc.MaPhieuCoc
+            LEFT JOIN PHIEUCOC_PHONG pcp ON pc.MaPhieuCoc = pcp.MaPhieuCoc
+            LEFT JOIN PHONG r_hdt ON pcp.MaPhong = r_hdt.MaPhong
             WHERE ptt.MaKhachHang = @CustomerID
             ORDER BY ptt.MaPhieuThanhToan DESC
         `

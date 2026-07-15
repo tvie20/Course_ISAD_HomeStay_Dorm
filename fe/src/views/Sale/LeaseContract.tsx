@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, UserCheck, CreditCard, Users, ShieldAlert, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import CreateLease from '../Sale/CreateLease';
 
-export default function LeaseContract() {
+export default function LeaseContract({ branchId = '' }: { branchId?: string }) {
    const [deposits, setDeposits] = useState<any[]>([]);
    const [selectedDeposit, setSelectedDeposit] = useState<any>(null);
    const [isChecking, setIsChecking] = useState(false);
@@ -36,7 +36,7 @@ export default function LeaseContract() {
    };
 
    useEffect(() => {
-      fetch('http://localhost:8080/api/v1/deposits')
+      fetch(`http://localhost:8080/api/v1/deposits${branchId ? `?branchId=${branchId}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {

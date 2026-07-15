@@ -2,7 +2,7 @@ const catchAsync = require('../utils/catchAsync')
 const accountModel = require('../models/account.model')
 
 exports.login = catchAsync(async (req, res, next) => {
-    const { username, password } = req.body
+    const { username, password, userType } = req.body
 
     if (!username || !password) {
         return res.status(400).json({
@@ -12,7 +12,7 @@ exports.login = catchAsync(async (req, res, next) => {
     }
 
     try {
-        const result = await accountModel.login(username, password)
+        const result = await accountModel.login(username, password, userType)
         res.status(200).json({
             status: 'success',
             data: result

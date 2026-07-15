@@ -7,7 +7,7 @@ const MOCK_LIST = [
    { id: 'DK-2023-03', branch: 'CN Quận 1', customer: 'Phạm C', phone: '0912345678', status: 'Đang xử lý' },
 ];
 
-export default function ScheduleView({ onNavigate, employeeId }: { onNavigate?: (menu: string) => void, employeeId?: string }) {
+export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: { onNavigate?: (menu: string) => void, employeeId?: string, branchId?: string }) {
    const [list, setList] = useState<any[]>([]);
    const [selectedItem, setSelectedItem] = useState<any>(null);
    const [branchFilter, setBranchFilter] = useState('');
@@ -19,8 +19,8 @@ export default function ScheduleView({ onNavigate, employeeId }: { onNavigate?: 
    const [appointmentNote, setAppointmentNote] = useState('');
    const [searchTerm, setSearchTerm] = useState('');
 
-   useEffect(() => {
-      fetch('http://localhost:8080/api/v1/registrations')
+   const fetchAppointments = () => {
+      fetch(`http://localhost:8080/api/v1/registrations${branchId ? `?branchId=${branchId}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -28,7 +28,11 @@ export default function ScheduleView({ onNavigate, employeeId }: { onNavigate?: 
             }
          })
          .catch(err => console.error('Failed to fetch registrations', err));
-   }, []);
+   };
+
+   useEffect(() => {
+      fetchAppointments();
+   }, [branchId]);
 
    if (!selectedItem) {
       return (

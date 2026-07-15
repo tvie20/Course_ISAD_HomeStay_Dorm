@@ -92,18 +92,21 @@ export default function Handover() {
   }, [selected]);
 
   const toggleConfirm = (idx: number) => {
+    if (selected?.status === 'Đã bàn giao') return;
     setHandoverItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, confirmed: !item.confirmed } : item
     ));
   };
 
   const updateCondition = (idx: number, condition: string) => {
+    if (selected?.status === 'Đã bàn giao') return;
     setHandoverItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, condition } : item
     ));
   };
 
   const updateNote = (idx: number, note: string) => {
+    if (selected?.status === 'Đã bàn giao') return;
     setHandoverItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, note } : item
     ));
@@ -279,7 +282,12 @@ export default function Handover() {
             </div>
             <div className="text-right bg-gray-100 px-4 py-2 rounded-lg">
               <p className="text-xs font-semibold text-gray-500 uppercase">Ngày bàn giao</p>
-              <p className="text-lg font-bold text-gray-900">{selected.date}</p>
+              <p className="text-lg font-bold text-gray-900">
+                {(() => {
+                  const d = new Date(selected.date);
+                  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                })()}
+              </p>
             </div>
           </div>
           <p className="text-sm italic text-gray-500 mt-6">* Vui lòng kiểm tra và xác nhận từng tài sản bàn giao. Tick ✓ để xác nhận tài sản đã bàn giao đúng.</p>
@@ -396,22 +404,26 @@ export default function Handover() {
       {/* Footer Actions */}
       <div className="bg-[#FAF5F3] px-6 py-4 border-t border-gray-100 flex items-center justify-between mt-0">
         <p className="text-sm text-gray-500 max-w-sm">
-          {allConfirmed
-            ? <span className="text-green-600 font-medium">✓ Đã xác nhận tất cả tài sản bàn giao</span>
-            : <span>Vui lòng tick xác nhận từng tài sản trước khi hoàn tất</span>
+          {selected?.status === 'Đã bàn giao'
+            ? <span className="text-gray-500 font-medium">Biên bản đã chốt và không thể chỉnh sửa.</span>
+            : allConfirmed
+              ? <span className="text-green-600 font-medium">✓ Đã xác nhận tất cả tài sản bàn giao</span>
+              : <span>Vui lòng tick xác nhận từng tài sản trước khi hoàn tất</span>
           }
         </p>
         <div className="flex space-x-3">
           <button onClick={() => setSelected(null)} className="px-6 py-2.5 rounded-lg border border-[#B7705F] text-[#B7705F] hover:bg-[#F3E1DC]/30 font-medium text-sm transition-colors">
             Hủy bỏ
           </button>
-          <button
-            onClick={handleCompleteHandover}
-            disabled={!allConfirmed}
-            className={`px-6 py-2.5 rounded-lg font-medium text-sm flex items-center shadow-sm transition-colors ${allConfirmed ? 'bg-[#B7705F] text-white hover:bg-[#a06050]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-            Hoàn tất bàn giao & Bắt đầu lưu trú
-          </button>
+          {selected?.status !== 'Đã bàn giao' && (
+            <button
+              onClick={handleCompleteHandover}
+              disabled={!allConfirmed}
+              className={`px-6 py-2.5 rounded-lg font-medium text-sm flex items-center shadow-sm transition-colors ${allConfirmed ? 'bg-[#B7705F] text-white hover:bg-[#a06050]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              Hoàn tất bàn giao & Bắt đầu lưu trú
+            </button>
+          )}
         </div>
       </div>
     </div>

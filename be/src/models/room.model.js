@@ -8,8 +8,8 @@ exports.getStatus = async (data) => {
 
         // Co the them dieu kien loc theo chi nhanh (BranchID) neu co truyen len
         let whereClause = ''
-        if (data.BranchID) {
-            request.input('BranchID', sql.VarChar, data.BranchID)
+        if (data.branchId) {
+            request.input('BranchID', sql.VarChar, data.branchId)
             whereClause = 'WHERE r.MaChiNhanh = @BranchID'
         }
 

@@ -23,7 +23,7 @@ interface Room {
 
 // Mock dataset removed, fetching from API
 
-export default function RoomStatus() {
+export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [floorFilter, setFloorFilter] = useState('');
@@ -38,7 +38,7 @@ export default function RoomStatus() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/v1/rooms/status')
+    fetch(`http://localhost:8080/api/v1/rooms/status${branchId ? `?branchId=${branchId}` : ''}`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -47,7 +47,7 @@ export default function RoomStatus() {
         }
       })
       .catch(err => console.error('Failed to fetch rooms:', err));
-  }, []);
+  }, [branchId]);
 
   const handleSearch = () => {
     const filtered = allRooms.filter(room => {

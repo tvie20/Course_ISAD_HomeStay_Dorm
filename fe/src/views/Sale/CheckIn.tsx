@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Calendar, Clock, Save, Search, User } from 'lucide-react';
 
-export default function CheckIn() {
+export default function CheckIn({ branchId = '' }: { branchId?: string }) {
   const [list, setList] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,7 +11,7 @@ export default function CheckIn() {
   const [formNote, setFormNote] = useState('');
 
   const fetchDeposits = () => {
-    fetch('http://localhost:8080/api/v1/deposits')
+    fetch(`http://localhost:8080/api/v1/deposits${branchId ? `?branchId=${branchId}` : ''}`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {

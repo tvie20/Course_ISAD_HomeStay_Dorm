@@ -24,7 +24,7 @@ CREATE TABLE PHIEU_DANG_KY (
 	NgayDuKienO    DATE,
 	ThoiHanThue    INT,
 	YeuCauKhac     NVARCHAR(100),
-	TrangThai      NVARCHAR(100)  CHECK(TrangThai IN(N'Đang xử lý', N'Đã xử lý'),)
+	TrangThai      NVARCHAR(100)  CHECK(TrangThai IN(N'Đang xử lý', N'Đã xử lý')),
 	MaNhanVien     CHAR(6),
 	MaKhachHang    CHAR(6)
 );
@@ -43,7 +43,7 @@ CREATE TABLE PHIEU_COC (
 	NgayDatCoc        DATE,
 	HanThanhToan      INT,
 	HinhThucThanhToan NVARCHAR(100),
-	TrangThai         NVARCHAR(100)  CHECK(TrangThai IN(N'Chờ thanh toán', N'Đã thanh toán', N'Quá hạn thanh toán'),)
+	TrangThai         NVARCHAR(100)  CHECK(TrangThai IN(N'Chờ thanh toán', N'Đã thanh toán', N'Quá hạn thanh toán')),
 	MaPhieuDangKy     CHAR(6)
 );
 
@@ -62,7 +62,7 @@ CREATE TABLE PHONG (
 	LoaiPhong  NVARCHAR(100),
 	Tang       INT,
 	SucChua    INT,
-	TrangThai  NVARCHAR(100)  CHECK(TrangThai IN(N'Đã thuê', N'Trống'),)
+	TrangThai  NVARCHAR(100)  CHECK(TrangThai IN(N'Đã thuê', N'Trống')),
 	MoTa       NVARCHAR(100),
 	MaChiNhanh CHAR(6)
 );
@@ -71,7 +71,7 @@ CREATE TABLE GIUONG (
 	MaPhong   CHAR(6),
 	SoThuTu   INT,
 	GiaGiuong INT,
-	TrangThai NVARCHAR(100) CHECK(TrangThai IN(N'Đã thuê', N'Trống'),)
+	TrangThai NVARCHAR(100) CHECK(TrangThai IN(N'Đã thuê', N'Trống')),
 	GhiChu    NVARCHAR(100)
 
 	PRIMARY KEY (MaPhong, SoThuTu)
@@ -83,14 +83,14 @@ CREATE TABLE CHI_NHANH (
 	DiaChi      NVARCHAR(100),
 	SDT         CHAR(10),
 	Email       VARCHAR(100),
-	TrangThai   NVARCHAR(100)  CHECK(TrangThai IN(N'Đang hoạt động', N'Không hoạt động'),)
+	TrangThai   NVARCHAR(100)  CHECK(TrangThai IN(N'Đang hoạt động', N'Không hoạt động')),
 	MaNhanVien  CHAR(6)
 );
 
 CREATE TABLE DIEU_KIEN_LUU_TRU (
 	MaDieuKien      CHAR(6)        PRIMARY KEY,
 	MoTa            NVARCHAR(100),
-	TrangThaiApDung NVARCHAR(100) CHECK(TrangThai IN(N'Đang áp dụng', N'Ngưng áp dụng')),
+	TrangThaiApDung NVARCHAR(100) CHECK(TrangThaiApDung IN(N'Đang áp dụng', N'Ngưng áp dụng')),
 	ThoiGianApDung  INT
 );
 
@@ -111,7 +111,7 @@ CREATE TABLE HOP_DONG_THUE (
 	GiaThue     INT,
 	KyThanhToan NVARCHAR(100),
 	PhiDichVu   INT,
-	TrangThai   NVARCHAR(100)  CHECK(TrangThai IN(N'Còn hiệu lực', N'Đã thanh lý'),)
+	TrangThai   NVARCHAR(100)  CHECK(TrangThai IN(N'Còn hiệu lực', N'Đã thanh lý')),
 	MaPhieuCoc  CHAR(6)
 );
 
@@ -144,7 +144,7 @@ CREATE TABLE BIEN_BAN_BAN_GIAO (
 	NgayBanGiao DATE,
 	SoChiaKhoa  INT,
 	GhiChu      NVARCHAR(100),
-	TrangThai   NVARCHAR(100)  CHECK(TrangThai IN(N'Chưa bàn giao', N'Đã bàn giao'),)
+	TrangThai   NVARCHAR(100)  CHECK(TrangThai IN(N'Chưa bàn giao', N'Đã bàn giao')),
 	MaHopDong   CHAR(6)
 );
 
@@ -197,7 +197,7 @@ CREATE TABLE DOI_SOAT_HOAN_COC (
 CREATE TABLE CHI_TIET_DOI_SOAT (
 	MaPhieuKiemTra CHAR(6),
 	MaDoiSoat      CHAR(6),
-	MaLoaiKhauTru  CHAR(6) CHECK(MaLoaiKhauTru IN('NO_THUE', 'NO_DIEN', 'PHAT_TAI_SAN', 'PHAT_VI_PHAM', 'PHI_DON_DEP')),
+	MaLoaiKhauTru  VARCHAR(20) CHECK(MaLoaiKhauTru IN('NO_THUE', 'NO_DIEN', 'PHAT_TAI_SAN', 'PHAT_VI_PHAM', 'PHI_DON_DEP')),
 	SoTienKhauTru  INT,
 	LyDoChiTiet    NVARCHAR(100)
 
@@ -249,7 +249,7 @@ CREATE TABLE KHACH_HANG (
 	DiaChiThuongTru NVARCHAR(100),
 	NgheNghiep      NVARCHAR(100),
 	NgayDangKy      DATE,
-	TrangThai       NVARCHAR(100)  CHECK(TrangThai IN(N'Đang quyết định', N'Đang ở', N'Kết thúc lưu trú'),)
+	TrangThai       NVARCHAR(100)  CHECK(TrangThai IN(N'Đang quyết định', N'Đang ở', N'Kết thúc lưu trú')),
 	MaTaiKhoan      CHAR(6)
 );
 
@@ -269,7 +269,7 @@ CREATE TABLE TAI_KHOAN (
 CREATE TABLE PHIEU_THANH_TOAN (
 	MaPhieuThanhToan    CHAR(6)        PRIMARY KEY,
 	PhuongThucThanhToan NVARCHAR(100),
-	TrangThaiThanhToan  NVARCHAR(100)  CHECK(TrangThaiThanhToan IN(N'Chờ thanh toán', N'Đã thanh toán'),)
+	TrangThaiThanhToan  NVARCHAR(100)  CHECK(TrangThaiThanhToan IN(N'Chờ thanh toán', N'Đã thanh toán')),
 	ThoiGianThanhToan   DATETIME,
 	SoTien              INT,
 	MaKhachHang         CHAR(6),
@@ -758,11 +758,11 @@ INSERT INTO GIUONG (MaPhong, SoThuTu, GiaGiuong, TrangThai, GhiChu) VALUES
 
 -- 9. DIEU_KIEN_LUU_TRU
 INSERT INTO DIEU_KIEN_LUU_TRU (MaDieuKien, MoTa, TrangThaiApDung, ThoiGianApDung) VALUES
-('DK0001', N'Không hút thuốc trong phòng',        N'Áp dụng', 0),
-('DK0002', N'Giới nghiêm sau 23h00',               N'Áp dụng', 23),
-('DK0003', N'Không mang thú cưng vào homestay',    N'Áp dụng', 0),
-('DK0004', N'Giữ yên lặng sau 22h00',              N'Áp dụng', 22),
-('DK0005', N'Không được chuyển nhượng phòng cho người khác', N'Áp dụng', 0);
+('DK0001', N'Không hút thuốc trong phòng',        N'Đang áp dụng', 0),
+('DK0002', N'Giới nghiêm sau 23h00',               N'Đang áp dụng', 23),
+('DK0003', N'Không mang thú cưng vào homestay',    N'Đang áp dụng', 0),
+('DK0004', N'Giữ yên lặng sau 22h00',              N'Đang áp dụng', 22),
+('DK0005', N'Không được chuyển nhượng phòng cho người khác', N'Đang áp dụng', 0);
 
 -- 10. QUY_DINH
 INSERT INTO QUY_DINH (MaQuyDinh, TieuDe, NoiDung, LoaiQuyDinh, NgayBanHanh, TrangThai) VALUES
@@ -787,13 +787,13 @@ INSERT INTO PHIEU_DANG_KY (MaPhieuDangKy, SoNguoiDuKien, GioiTinhYeuCau, KhuVucM
 
 -- 12. LICH_XEM_PHONG
 INSERT INTO LICH_XEM_PHONG (MaPhieuDangKy, NgayGioHen, KetQua) VALUES
-('PDK001', '2026-06-03 09:00:00', N'Đã xem, khách hài lòng'),
-('PDK002', '2026-06-08 14:00:00', N'Đã xem, khách hài lòng'),
-('PDK003', '2026-06-13 10:30:00', N'Đã xem, đồng ý thuê'),
-('PDK005', '2026-06-23 15:00:00', N'Đã xem, cân nhắc thêm'),
-('PDK006', '2026-06-30 09:30:00', N'Chưa đến xem'),
-('PDK008', '2026-07-07 11:00:00', N'Đã lên lịch'),
-('PDK010', '2026-07-11 16:00:00', N'Đã lên lịch');
+('PDK001', '2026-06-03 09:00:00', N'Đồng ý đặt cọc'),
+('PDK002', '2026-06-08 14:00:00', N'Đồng ý đặt cọc'),
+('PDK003', '2026-06-13 10:30:00', N'Đồng ý đặt cọc'),
+('PDK005', '2026-06-23 15:00:00', N'Chờ phản hồi'),
+('PDK006', '2026-06-30 09:30:00', N'Ngừng xem phòng'),
+('PDK008', '2026-07-07 11:00:00', N'Chờ xếp lịch'),
+('PDK010', '2026-07-11 16:00:00', N'Chờ xếp lịch');
 
 -- 13. PHIEU_COC
 INSERT INTO PHIEU_COC (MaPhieuCoc, SoTienCoc, NgayDatCoc, HanThanhToan, HinhThucThanhToan, TrangThai, MaPhieuDangKy) VALUES
@@ -942,10 +942,10 @@ INSERT INTO PHIEU_KIEM_TRA (MaPhieuKiemTra, NgayKiemTra, LoaiKiemTra, MaPhong, M
 
 -- 28. CHI_TIET_KIEM_TRA
 INSERT INTO CHI_TIET_KIEM_TRA (MaPhieuKiemTra, MaVatDung, MaDenBu, SoLuong, TinhTrang, GhiChu) VALUES
-('PK0001', 'TS0001', 'DB0005', 1, N'Bình thường', N'Máy lạnh hoạt động tốt, hơi bụi'),
-('PK0002', 'TS0006', 'DB0001', 1, N'Trầy xước nhẹ', N'Trầy nhẹ ở góc giường'),
+('PK0001', 'TS0001', 'DB0005', 1, N'Tốt', N'Máy lạnh hoạt động tốt, hơi bụi'),
+('PK0002', 'TS0006', 'DB0001', 1, N'Hư hỏng', N'Trầy nhẹ ở góc giường'),
 ('PK0003', 'TS0005', 'DB0003', 1, N'Mất',          N'Quạt bị mất, khách chưa báo'),
-('PK0004', 'TS0003', 'DB0005', 1, N'Cần vệ sinh',  N'Tủ quần áo bị bẩn'),
+('PK0004', 'TS0003', 'DB0005', 1, N'Tốt',  N'Tủ quần áo bị bẩn'),
 ('PK0006', 'TS0007', 'DB0002', 1, N'Hư hỏng',      N'Bình nóng lạnh không hoạt động do dùng sai cách');
 
 -- 29. BIEN_BAN_BAN_GIAO
@@ -972,8 +972,8 @@ INSERT INTO YEU_CAU_TRA_PHONG (MaYeuCau, NgayDuKienTra, LyDo, GhiChu, TrangThai,
 
 -- 32. BIEN_BAN_TRA_PHONG
 INSERT INTO BIEN_BAN_TRA_PHONG (MaBienBan, NgayTra, TinhTrangPhong, MaHopDong, MaNhanVien, MaYeuCau) VALUES
-('BT0001', '2026-07-05', N'Phòng còn tốt, có trầy xước nhẹ nội thất', 'HD0004', 'NV0005', 'YC0001'),
-('BT0002', '2026-06-30', N'Phòng sạch sẽ, thiếu 1 vật dụng',          'HD0004', 'NV0005', 'YC0001');
+('BT0001', '2026-07-05', N'Có đền bù', 'HD0004', 'NV0005', 'YC0001'),
+('BT0002', '2026-06-30', N'Có đền bù',          'HD0004', 'NV0005', 'YC0001');
 
 -- 33. DOI_SOAT_HOAN_COC
 INSERT INTO DOI_SOAT_HOAN_COC (MaDoiSoat, TyLeHoan, TienHoan, NgayDoiSoat, MaHopDong, MaNhanVien, TrangThai) VALUES

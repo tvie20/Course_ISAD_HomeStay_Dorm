@@ -10,11 +10,12 @@ exports.create = async (data) => {
         // Cac bien dau vao tu Frontend
         request.input('RegistrationID', sql.VarChar, data.RegistrationID)
         request.input('Note', sql.NVarChar, data.Note || '')
-        
+        request.input('EmployeeID', sql.VarChar, data.EmployeeID || '')
+
         // Gộp AppointmentDate và AppointmentTime thành chuỗi định dạng YYYY-MM-DD HH:mm:ss
         const ngayGioHenStr = `${data.AppointmentDate} ${data.AppointmentTime}:00`
         const ngayGioHenObj = new Date(`${data.AppointmentDate}T${data.AppointmentTime}`)
-        
+
         // 1. Tao lich hen moi vao bang LICH_XEM_PHONG
         const query = `
             INSERT INTO LICH_XEM_PHONG (
@@ -22,20 +23,28 @@ exports.create = async (data) => {
             )
             VALUES (
                 @RegistrationID, @NgayGioHen, @Note
-            )
+            );
+
+            IF @EmployeeID <> ''
+            BEGIN
+                UPDATE PHIEU_DANG_KY
+                SET MaNhanVien = @EmployeeID
+                WHERE MaPhieuDangKy = @RegistrationID
+            END
         `
+
         // Gửi dưới dạng chuỗi để SQL Server tự parse theo Local Time (tránh lỗi lệch múi giờ NodeJS)
         request.input('NgayGioHen', sql.VarChar, ngayGioHenStr)
 
         await request.query(query)
-        
+
         // Tạo chuỗi giả làm ID để frontend sử dụng (ghép MaPhieuDangKy và timestamp)
         const compositeId = `${data.RegistrationID}_${ngayGioHenObj.getTime()}`
-        
+
         // 2. Tu dong cap nhat trang thai phieu dang ky tuong ung
         const updateRegRequest = pool.request()
         updateRegRequest.input('RegistrationID', sql.VarChar, data.RegistrationID)
-        
+
         let updateQuery = `
             UPDATE PHIEU_DANG_KY 
             SET TrangThai = N'Đã xử lý'
@@ -84,7 +93,7 @@ exports.updateStatus = async (data) => {
         `
 
         const result = await request.query(query)
-        
+
         return {
             success: result.rowsAffected[0] > 0,
             message: 'Cập nhật trạng thái lịch hẹn thành công'

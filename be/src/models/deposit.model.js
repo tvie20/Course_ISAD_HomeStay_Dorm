@@ -116,10 +116,12 @@ exports.getAll = async (data) => {
             LEFT JOIN LICH_NHAN_PHONG lnp ON d.MaPhieuCoc = lnp.MaPhieuCoc
             WHERE d.TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Chờ xếp lịch', N'Sắp nhận phòng')
             ${data.branchId ? "AND r.MaChiNhanh = @BranchID" : ""}
+            ${data.employeeId ? "AND pdk.MaNhanVien = @EmployeeID" : ""}
             ORDER BY d.NgayDatCoc DESC
         `
 
         if (data.branchId) request.input('BranchID', sql.VarChar, data.branchId)
+        if (data.employeeId) request.input('EmployeeID', sql.VarChar, data.employeeId)
         
         const result = await request.query(query)
         
@@ -229,10 +231,12 @@ exports.getPendingPayments = async (data) => {
             LEFT JOIN KHACH_HANG kh ON pdk.MaKhachHang = kh.MaKhachHang
             WHERE d.TrangThai = N'Chờ thanh toán'
             ${data.branchId ? "AND r.MaChiNhanh = @BranchID" : ""}
+            ${data.employeeId ? "AND pdk.MaNhanVien = @EmployeeID" : ""}
             ORDER BY d.NgayDatCoc DESC
         `
         
         if (data.branchId) request.input('BranchID', sql.VarChar, data.branchId)
+        if (data.employeeId) request.input('EmployeeID', sql.VarChar, data.employeeId)
 
         const result = await request.query(query)
         

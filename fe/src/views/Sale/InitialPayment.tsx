@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import API_URL from '../../api';
 import { Receipt, CreditCard, Banknote, CheckCircle, Search, Clock, ShieldCheck, Calculator, ArrowLeft, Plus, BedDouble } from 'lucide-react';
 
-export default function InitialPayment({ branchId = '' }: { branchId?: string }) {
+export default function InitialPayment({ branchId = '', employeeId = '' }: { branchId?: string, employeeId?: string }) {
    const [list, setList] = useState<any[]>([]);
    const [registrations, setRegistrations] = useState<any[]>([]);
    const [rooms, setRooms] = useState<any[]>([]);
@@ -27,7 +27,7 @@ export default function InitialPayment({ branchId = '' }: { branchId?: string })
    const availableRooms = rooms.filter(r => r.beds.some((b: any) => b.status === 'Trống'));
 
    const fetchDeposits = () => {
-      fetch(`${API_URL}/api/v1/deposits${branchId ? `?branchId=${branchId}` : ''}`)
+      fetch(`${API_URL}/api/v1/deposits${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -39,7 +39,7 @@ export default function InitialPayment({ branchId = '' }: { branchId?: string })
    useEffect(() => {
       fetchDeposits();
       
-      fetch(`${API_URL}/api/v1/registrations${branchId ? `?branchId=${branchId}` : ''}`)
+      fetch(`${API_URL}/api/v1/registrations${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {

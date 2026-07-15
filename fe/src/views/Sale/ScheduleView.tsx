@@ -21,7 +21,7 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
    const [searchTerm, setSearchTerm] = useState('');
 
    const fetchAppointments = () => {
-      fetch(`${API_URL}/api/v1/registrations${branchId ? `?branchId=${branchId}` : ''}`)
+      fetch(`${API_URL}/api/v1/registrations${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {

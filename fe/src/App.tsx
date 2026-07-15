@@ -170,9 +170,9 @@ export default function App() {
 
       {/* Sale Routes */}
       <Route path="/schedule" element={<DashboardLayout><ScheduleView employeeId={user?.username || ''} branchId={user?.branch} onNavigate={(menu) => navigate(`/${menu}`)} /></DashboardLayout>} />
-      <Route path="/initial_payments" element={<DashboardLayout><InitialPayment branchId={user?.branch} /></DashboardLayout>} />
-      <Route path="/checkin" element={<DashboardLayout><CheckIn branchId={user?.branch} /></DashboardLayout>} />
-      <Route path="/leases" element={<DashboardLayout><LeaseContract branchId={user?.branch} /></DashboardLayout>} />
+      <Route path="/initial_payments" element={<DashboardLayout><InitialPayment employeeId={user?.username || ''} branchId={user?.branch} /></DashboardLayout>} />
+      <Route path="/checkin" element={<DashboardLayout><CheckIn employeeId={user?.username || ''} branchId={user?.branch} /></DashboardLayout>} />
+      <Route path="/leases" element={<DashboardLayout><LeaseContract employeeId={user?.username || ''} branchId={user?.branch} /></DashboardLayout>} />
       <Route path="/room_status" element={<DashboardLayout><RoomStatus branchId={user?.branch} /></DashboardLayout>} />
 
       {/* Accountant Routes */}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import API_URL from '../../api';
 import { ArrowLeft, Calendar, Clock, Save, Search, User } from 'lucide-react';
 
-export default function CheckIn({ branchId = '' }: { branchId?: string }) {
+export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?: string, employeeId?: string }) {
   const [list, setList] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,7 +12,7 @@ export default function CheckIn({ branchId = '' }: { branchId?: string }) {
   const [formNote, setFormNote] = useState('');
 
   const fetchDeposits = () => {
-    fetch(`${API_URL}/api/v1/deposits${branchId ? `?branchId=${branchId}` : ''}`)
+    fetch(`${API_URL}/api/v1/deposits${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {

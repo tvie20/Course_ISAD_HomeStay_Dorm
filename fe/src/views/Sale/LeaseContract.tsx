@@ -3,7 +3,7 @@ import API_URL from '../../api';
 import { Search, UserCheck, CreditCard, Users, ShieldAlert, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import CreateLease from '../Sale/CreateLease';
 
-export default function LeaseContract({ branchId = '' }: { branchId?: string }) {
+export default function LeaseContract({ branchId = '', employeeId = '' }: { branchId?: string, employeeId?: string }) {
    const [deposits, setDeposits] = useState<any[]>([]);
    const [selectedDeposit, setSelectedDeposit] = useState<any>(null);
    const [isChecking, setIsChecking] = useState(false);
@@ -37,7 +37,7 @@ export default function LeaseContract({ branchId = '' }: { branchId?: string }) 
    };
 
    useEffect(() => {
-      fetch(`${API_URL}/api/v1/deposits${branchId ? `?branchId=${branchId}` : ''}`)
+      fetch(`${API_URL}/api/v1/deposits${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {

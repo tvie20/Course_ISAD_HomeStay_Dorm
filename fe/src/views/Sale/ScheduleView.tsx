@@ -81,6 +81,7 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
                   >
                      <option value="">Tất cả trạng thái</option>
                      <option value="Đang xử lý">Đang xử lý</option>
+                     <option value="Chờ phản hồi">Chờ phản hồi</option>
                      <option value="Đã xử lý">Đã xử lý</option>
                   </select>
                </div>
@@ -116,16 +117,20 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
                               <td className="px-6 py-4 text-[#666666]">{item.phone}</td>
                               <td className="px-6 py-4 text-[#666666]">{item.branch}</td>
                               <td className="px-6 py-4">
-                                 <span className={`px-2.5 py-1 rounded text-xs font-semibold ${item.status === 'Đang xử lý' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'}`}>
+                                 <span className={`px-2.5 py-1 rounded text-xs font-semibold 
+                                    ${item.status === 'Đang xử lý' ? 'bg-orange-50 text-orange-600' :
+                                       item.status === 'Chờ phản hồi' ? 'bg-blue-50 text-blue-600' :
+                                          item.status === 'Ngừng xem phòng' ? 'bg-gray-100 text-gray-600' :
+                                             'bg-green-50 text-green-600'}`}>
                                     {item.status}
                                  </span>
                               </td>
                               <td className="px-6 py-4 text-right">
                                  <button onClick={() => {
                                     setSelectedItem(item);
-                                    setAppointmentDate('');
-                                    setAppointmentTime('');
-                                    setAppointmentNote('');
+                                    setAppointmentDate(item.date || '');
+                                    setAppointmentTime(item.time || '');
+                                    setAppointmentNote(item.note || '');
                                  }} className="px-3 py-1.5 text-sm font-medium text-[#B7705F] bg-orange-50 hover:bg-[#F3E1DC] rounded-lg transition-colors inline-block">
                                     Chi tiết
                                  </button>
@@ -168,7 +173,7 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
 
          {selectedItem.status === 'Đang xử lý' ? (
             <div className="bg-white rounded-2xl shadow-sm border border-[#EAD3CC] overflow-hidden p-6">
-               <h2 className="text-lg font-bold text-[#222222] mb-4">Xử lý Phiếu đăng ký (Lịch xem phòng)</h2>
+               <h2 className="text-lg font-bold text-[#222222] mb-4">Sắp xếp lịch xem phòng</h2>
                <div className="space-y-4">
                   <div>
                      <label className="block text-sm font-semibold text-[#666666] mb-2 flex items-center">
@@ -198,14 +203,7 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
                   </div>
                </div>
 
-               <div className="grid grid-cols-2 gap-4 mt-6">
-                  <button onClick={() => {
-                     setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đã xử lý' } : i));
-                     setSelectedItem(null);
-                     alert('Đã xử lý: Khách không đồng ý đặt cọc hoặc hủy hẹn!');
-                  }} className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors">
-                     Hủy / Không đặt cọc
-                  </button>
+               <div className="mt-6">
                   <button onClick={async () => {
                      if (!appointmentDate || !appointmentTime) {
                         alert('Vui lòng chọn ngày và giờ hẹn!');
@@ -225,14 +223,12 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
                            body: JSON.stringify(payload)
                         });
                         const data = await res.json();
-                        
+
                         if (data.status === 'success') {
-                           setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đã xử lý' } : i));
-                           setSelectedItem({ ...selectedItem, status: 'Đã xử lý' });
-                           alert('Đã lên lịch hẹn và chuyển sang Đã xử lý! Dữ liệu đã sẵn sàng ở phần Lập phiếu đặt cọc.');
-                           if (onNavigate) {
-                              onNavigate('initial_payments');
-                           }
+                           // Cập nhật trạng thái sang "Chờ phản hồi"
+                           const updatedItem = { ...selectedItem, status: 'Chờ phản hồi', date: appointmentDate, time: appointmentTime, note: appointmentNote };
+                           setList(list.map(i => i.id === selectedItem.id ? updatedItem : i));
+                           setSelectedItem(updatedItem);
                         } else {
                            alert('Có lỗi xảy ra: ' + data.message);
                         }
@@ -240,8 +236,36 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
                         console.error('Error creating appointment', err);
                         alert('Không thể kết nối với server.');
                      }
+                  }} className="w-full py-3 px-4 bg-[#B7705F] text-white rounded-xl font-bold hover:bg-[#a06050] flex items-center justify-center transition-colors shadow-sm">
+                     <Save className="w-4 h-4 mr-2" /> Lưu lịch hẹn
+                  </button>
+               </div>
+            </div>
+         ) : selectedItem.status === 'Chờ phản hồi' ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-[#EAD3CC] overflow-hidden p-6">
+               <h2 className="text-lg font-bold text-[#222222] mb-4">Kết quả xem phòng</h2>
+               <div className="space-y-4 mb-6 text-sm text-[#666666]">
+                  <p>Lịch hẹn: <strong>{selectedItem.time || appointmentTime || '--:--'} - {selectedItem.date || appointmentDate || 'dd/mm/yyyy'}</strong></p>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button onClick={() => {
+                     setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Ngừng xem phòng' } : i));
+                     setSelectedItem(null);
+                  }} className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors">
+                     Ngừng xem phòng
+                  </button>
+                  <button onClick={() => {
+                     setSelectedItem({ ...selectedItem, status: 'Đang xử lý' });
+                  }} className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors">
+                     <Clock className="w-4 h-4 mr-2" /> Xếp lịch mới
+                  </button>
+                  <button onClick={() => {
+                     setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đã xử lý' } : i));
+                     alert('Chuyển sang Đã xử lý! Dữ liệu đã sẵn sàng ở phần Lập phiếu đặt cọc.');
+                     if (onNavigate) onNavigate('initial_payments');
                   }} className="py-3 px-4 bg-[#B7705F] text-white rounded-xl font-bold hover:bg-[#a06050] flex items-center justify-center transition-colors shadow-sm">
-                     <Save className="w-4 h-4 mr-2" /> Lưu & Hoàn tất (Đặt cọc)
+                     <User className="w-4 h-4 mr-2" /> Đồng ý đặt cọc
                   </button>
                </div>
             </div>
@@ -249,21 +273,12 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
             <div className="bg-white rounded-2xl shadow-sm border border-[#EAD3CC] overflow-hidden p-6">
                <h2 className="text-lg font-bold text-[#222222] mb-4">Kết quả xem phòng</h2>
                <div className="space-y-4 mb-6 text-sm text-[#666666]">
-                  <p>Lịch hẹn: <strong>{selectedItem.time || '09:00'} - {selectedItem.date || '21/10/2023'}</strong></p>
+                  <p>Lịch hẹn: <strong>{selectedItem.time || appointmentTime || '--:--'} - {selectedItem.date || appointmentDate || 'dd/mm/yyyy'}</strong></p>
                </div>
-               
+
                <div className="p-4 bg-green-50 text-green-700 rounded-lg text-sm text-center font-medium">
                   Phiếu đăng ký đã được xử lý hoàn tất
                </div>
-               
-               <button
-                  onClick={() => {
-                     if (onNavigate) onNavigate('initial_payments');
-                  }}
-                  className="w-full mt-4 py-3 px-4 bg-white border border-[#B7705F] text-[#B7705F] rounded-xl font-bold hover:bg-orange-50 transition-colors shadow-sm"
-               >
-                  Chuyển đến Phiếu đặt cọc
-               </button>
             </div>
          )}
       </div>

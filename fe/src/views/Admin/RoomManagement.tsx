@@ -126,9 +126,10 @@ export default function RoomManagement() {
 
    const handleOpenAdd = () => {
       const roomIds = rooms.map(r => parseInt(r.id.replace(/\D/g, ''))).filter(n => !isNaN(n));
-      const maxId = roomIds.length > 0 ? Math.max(...roomIds) : 100;
-      const nextRoomId = `P.${maxId + 1}`;
-      setFormData({ id: nextRoomId, name: `Phòng ${maxId + 1}`, type: 'Phòng 4 người', floor: '1', maxCount: 4, status: 'TRỐNG', branch: 'Chi nhánh 1' });
+      const maxId = roomIds.length > 0 ? Math.max(...roomIds) : 0;
+      const nextId = maxId + 1;
+      const nextRoomId = `PH${String(nextId).padStart(4, '0')}`;
+      setFormData({ id: nextRoomId, name: `Phòng ${nextId}`, type: 'Phòng 4 người', floor: '1', maxCount: 4, status: 'TRỐNG', branch: 'Chi nhánh 1' });
       setErrorMsg('');
       setShowAdd(true);
    };
@@ -576,7 +577,7 @@ export default function RoomManagement() {
 
             {/* Pagination mockup */}
             <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-               <div>Hiển thị 1 - 3 trên tổng số 24 phòng</div>
+               <div>Hiển thị {filteredRooms.length > 0 ? 1 : 0} - {filteredRooms.length} trên tổng số {rooms.length} phòng</div>
                <div className="flex space-x-1">
                   <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 bg-white">&lt;</button>
                   <button className="w-8 h-8 flex items-center justify-center rounded bg-[#8C4A3A] text-white">1</button>

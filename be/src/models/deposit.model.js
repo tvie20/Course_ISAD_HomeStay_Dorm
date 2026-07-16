@@ -1,6 +1,24 @@
 const { sql } = require('../config/database')
 const { generateNextId } = require('../utils/generateId')
 
+const syncOverdueDeposits = async (pool) => {
+    try {
+        const request = pool.request()
+        const query = `
+            UPDATE PHIEU_COC
+            SET TrangThai = N'Quá hạn thanh toán'
+            WHERE TrangThai = N'Chờ thanh toán'
+              AND DATEADD(hour, HanThanhToan, NgayDatCoc) < GETDATE();
+        `
+
+        await request.query(query)
+        return true
+    } catch (error) {
+        console.error('Error in deposit model (syncOverdueDeposits):', error)
+        throw error
+    }
+}
+
 // Tao bien lai thu tien coc giu cho
 exports.create = async (data) => {
     try {
@@ -42,8 +60,13 @@ exports.create = async (data) => {
         await request.query(query)
         
         // Insert từng giường
-        if (data.Beds && Array.isArray(data.Beds)) {
-            for (let bed of data.Beds) {
+        let bedsArray = data.Beds;
+        if (bedsArray && !Array.isArray(bedsArray)) {
+            bedsArray = [bedsArray]; // Nếu FE gửi chuỗi, tự bọc nó vào mảng
+        }
+
+        if (bedsArray && bedsArray.length > 0) {
+            for (let bed of bedsArray) {
                 const bedRequest = pool.request()
                 bedRequest.input('MaPhieuCoc', sql.VarChar, maPhieuCoc)
                 bedRequest.input('MaPhong', sql.VarChar, data.RoomID)
@@ -84,6 +107,7 @@ exports.print = async (data) => {
 exports.getAll = async (data) => {
     try {
         const pool = await sql.connect()
+        await syncOverdueDeposits(pool)
         const request = pool.request()
 
         // Lay danh sach cac khach hang dang trong giai doan cho nhan phong (bao gom ca cho thanh toan)
@@ -98,7 +122,11 @@ exports.getAll = async (data) => {
                 kh.CCCD AS cccd,
                 kh.Email AS email,
                 kh.DiaChiThuongTru AS address,
-                COALESCE(lnp.TrangThai, d.TrangThai) AS status,
+                CASE
+                    WHEN d.TrangThai = N'Đã thanh toán' THEN N'Đã thanh toán'
+                    WHEN d.TrangThai = N'Quá hạn thanh toán' THEN N'Quá hạn thanh toán'
+                    ELSE COALESCE(lnp.TrangThai, d.TrangThai)
+                END AS status,
                 lnp.NgayGioHen AS expectedDate,
                 lnp.NgayGioHen AS expectedTime,
                 d.SoTienCoc AS amount,
@@ -113,7 +141,7 @@ exports.getAll = async (data) => {
             LEFT JOIN PHIEU_DANG_KY pdk ON d.MaPhieuDangKy = pdk.MaPhieuDangKy
             LEFT JOIN KHACH_HANG kh ON pdk.MaKhachHang = kh.MaKhachHang
             LEFT JOIN LICH_NHAN_PHONG lnp ON d.MaPhieuCoc = lnp.MaPhieuCoc
-            WHERE d.TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Chờ xếp lịch', N'Sắp nhận phòng')
+            WHERE d.TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Quá hạn thanh toán')
             ORDER BY d.NgayDatCoc DESC
         `
 
@@ -207,6 +235,7 @@ exports.updateCheckinSchedule = async (data) => {
 exports.getPendingPayments = async (data) => {
     try {
         const pool = await sql.connect()
+        await syncOverdueDeposits(pool)
         const request = pool.request()
 
         const query = `
@@ -222,7 +251,7 @@ exports.getPendingPayments = async (data) => {
             LEFT JOIN PHONG r ON pc_p.MaPhong = r.MaPhong
             LEFT JOIN PHIEU_DANG_KY pdk ON d.MaPhieuDangKy = pdk.MaPhieuDangKy
             LEFT JOIN KHACH_HANG kh ON pdk.MaKhachHang = kh.MaKhachHang
-            WHERE d.TrangThai = N'Chờ thanh toán'
+            WHERE d.TrangThai IN (N'Chờ thanh toán', N'Quá hạn thanh toán')
             ORDER BY d.NgayDatCoc DESC
         `
 

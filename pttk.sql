@@ -1,17 +1,17 @@
 USE master;
 GO
 
-IF DB_ID('HomeStayDorm') IS NOT NULL
+IF DB_ID('Course_Homestay_Dorm') IS NOT NULL
 BEGIN
-    ALTER DATABASE HomeStayDorm SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE HomeStayDorm;
+    ALTER DATABASE Course_Homestay_Dorm SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE Course_Homestay_Dorm;
 END
 GO
 
-CREATE DATABASE HomeStayDorm;
+CREATE DATABASE Course_Homestay_Dorm;
 GO
 
-USE HomeStayDorm;
+USE Course_Homestay_Dorm;
 GO
 
 CREATE TABLE PHIEU_DANG_KY (
@@ -40,7 +40,7 @@ CREATE TABLE LICH_XEM_PHONG (
 CREATE TABLE PHIEU_COC (
 	MaPhieuCoc        CHAR(6)        PRIMARY KEY,
 	SoTienCoc         INT,
-	NgayDatCoc        DATE,
+	NgayDatCoc        DATETIME,
 	HanThanhToan      INT,
 	HinhThucThanhToan NVARCHAR(100),
 	TrangThai         NVARCHAR(100)  CHECK(TrangThai IN(N'Chờ thanh toán', N'Đã thanh toán', N'Quá hạn thanh toán')),
@@ -287,6 +287,15 @@ CREATE TABLE HOAN_COC (
 CREATE TABLE HOP_DONG (
 	MaPhieuThanhToan CHAR(6) PRIMARY KEY,
 	MaHopDong        CHAR(6)
+);
+
+CREATE TABLE ChiTiet_HopDong (
+	MaHopDong   CHAR(6),
+	MaKhachHang CHAR(6),
+	MaPhong     CHAR(6),
+	SoThuTu     INT,
+
+	PRIMARY KEY (MaHopDong, MaKhachHang, MaPhong, SoThuTu)
 );
 
 CREATE TABLE DIEN_NUOC (
@@ -780,13 +789,13 @@ INSERT INTO LICH_XEM_PHONG (MaPhieuDangKy, NgayGioHen, KetQua) VALUES
 
 -- 13. PHIEU_COC
 INSERT INTO PHIEU_COC (MaPhieuCoc, SoTienCoc, NgayDatCoc, HanThanhToan, HinhThucThanhToan, TrangThai, MaPhieuDangKy) VALUES
-('PC0001', 500000,  '2026-06-04', 24, N'Chuyển khoản', N'Đã thanh toán',   'PDK001'),
-('PC0002', 1000000, '2026-06-09', 24, N'Tiền mặt',     N'Đã thanh toán',   'PDK002'),
-('PC0003', 400000,  '2026-06-14', 24, N'Chuyển khoản', N'Đã thanh toán',   'PDK003'),
-('PC0004', 500000,  '2026-06-21', 24, N'Ví điện tử',   N'Đã thanh toán',   'PDK004'),
-('PC0005', 1000000, '2026-06-26', 48, N'Chuyển khoản', N'Đã thanh toán',   'PDK005'),
-('PC0006', 500000,  '2026-07-06', 24, N'Tiền mặt',     N'Chờ thanh toán',  'PDK007'),
-('PC0007', 500000,  '2026-07-11', 12, N'Chuyển khoản', N'Đã thanh toán',   'PDK009');
+('PC0001', 500000,  '2026-06-04 09:00:00', 24, N'Chuyển khoản', N'Đã thanh toán',   'PDK001'),
+('PC0002', 1000000, '2026-06-09 14:30:00', 24, N'Tiền mặt',     N'Đã thanh toán',   'PDK002'),
+('PC0003', 400000,  '2026-06-14 10:00:00', 24, N'Chuyển khoản', N'Đã thanh toán',   'PDK003'),
+('PC0004', 500000,  '2026-06-21 16:15:00', 24, N'Ví điện tử',   N'Đã thanh toán',   'PDK004'),
+('PC0005', 1000000, '2026-06-26 11:45:00', 48, N'Chuyển khoản', N'Đã thanh toán',   'PDK005'),
+('PC0006', 500000,  '2026-07-06 08:00:00', 24, N'Tiền mặt',     N'Chờ thanh toán',  'PDK007'),
+('PC0007', 500000,  '2026-07-11 13:30:00', 12, N'Chuyển khoản', N'Đã thanh toán',   'PDK009');
 
 -- 14. LICH_NHAN_PHONG
 INSERT INTO LICH_NHAN_PHONG (MaPhieuCoc, NgayGioHen, GhiChu, TrangThai) VALUES

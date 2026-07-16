@@ -9,10 +9,13 @@ const createTransporter = async () => {
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
+            },
+            tls: {
+                rejectUnauthorized: false
             }
         })
     }
-    
+
     // Otherwise, create an Ethereal test account (dev only)
     console.log("No EMAIL_USER found in .env, generating Ethereal test account...")
     const testAccount = await nodemailer.createTestAccount()
@@ -24,16 +27,19 @@ const createTransporter = async () => {
             user: testAccount.user, // generated ethereal user
             pass: testAccount.pass, // generated ethereal password
         },
+        tls: {
+            rejectUnauthorized: false
+        }
     })
 }
 
 exports.sendAccountInfoEmail = async (email, hoTen, username, password) => {
     try {
         const transporter = await createTransporter()
-        
+
         // If email is missing or empty, fallback to a dummy email for demo purposes
         const targetEmail = email || "khachhang_demo@example.com"
-        
+
         const mailOptions = {
             from: '"Ban Quản Lý Ký Túc Xá" <noreply.homestaydorm@gmail.com>',
             to: targetEmail,
@@ -55,15 +61,15 @@ exports.sendAccountInfoEmail = async (email, hoTen, username, password) => {
         }
 
         const info = await transporter.sendMail(mailOptions)
-        
+
         console.log("Message sent: %s", info.messageId)
-        
+
         // Preview only available when sending through an Ethereal account
         const previewUrl = nodemailer.getTestMessageUrl(info)
         if (previewUrl) {
             console.log("Preview URL: %s", previewUrl)
         }
-        
+
         return info
     } catch (error) {
         console.error("Error sending email:", error)

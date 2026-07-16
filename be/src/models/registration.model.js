@@ -24,19 +24,19 @@ exports.create = async (data) => {
         request.input('ExpectedPrice', sql.Int, data.ExpectedPrice)
         request.input('ExpectedOccupants', sql.Int, data.ExpectedOccupants)
         request.input('ExpectedMoveInDate', sql.Date, data.ExpectedMoveInDate)
-        
+
         // ThoiHanThue la INT (so thang)
         let thoiHan = parseInt(data.ExpectedDuration)
         if (isNaN(thoiHan)) thoiHan = 6
         request.input('ExpectedDuration', sql.Int, thoiHan)
-        
+
         request.input('Notes', sql.NVarChar, data.Notes || '')
         request.input('Status', sql.NVarChar, 'Đang xử lý')
 
         // Generate IDs
         const maKhachHang = await generateNextId('KHACH_HANG', 'MaKhachHang', 'KH')
         request.input('MaKhachHang', sql.VarChar, maKhachHang)
-        
+
         const maPhieuDangKy = await generateNextId('PHIEU_DANG_KY', 'MaPhieuDangKy', 'PDK')
         request.input('MaPhieuDangKy', sql.VarChar, maPhieuDangKy)
 
@@ -103,12 +103,12 @@ exports.getAll = async (data) => {
             ${data.employeeId ? "AND (reg.MaNhanVien IS NULL OR reg.MaNhanVien = @EmployeeID)" : ""}
             ORDER BY reg.MaPhieuDangKy DESC
         `
-        
+
         if (data.branchId) request.input('BranchID', sql.VarChar, data.branchId)
         if (data.employeeId) request.input('EmployeeID', sql.VarChar, data.employeeId)
 
         const result = await request.query(query)
-        
+
         return result.recordset
     } catch (error) {
         console.error("Error in registration model (getAll):", error)

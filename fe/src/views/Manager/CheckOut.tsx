@@ -1,37 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { Printer, CheckCircle, ArrowLeft, Search, Check, FileText } from 'lucide-react';
 
-const MOCK_LIST = [
-   { id: '1', room: 'P.102', bed: 'Giường 01', customer: 'Trần Văn B', cccd: '012345678901', date: '21/10/2023', status: 'Đang xử lý' },
-];
+import API_URL from '../../api';
 
 export default function CheckOut() {
    const [selected, setSelected] = useState<any>(null);
    const [isCreatingRecord, setIsCreatingRecord] = useState(false);
    const [searchTerm, setSearchTerm] = useState('');
    const [statusFilter, setStatusFilter] = useState('');
-   const [checkoutList, setCheckoutList] = useState<any[]>(MOCK_LIST);
+   const [checkoutList, setCheckoutList] = useState<any[]>([]);
    const [reconData, setReconData] = useState<any>(null);
 
-   // Load from localStorage
+   const fetchCheckoutRequests = () => {
+      fetch(`${API_URL}/api/v1/checkout-requests`)
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               // Chuyển đổi định dạng ngày cho khớp với UI (nếu cần) hoặc chỉ giữ nguyên
+               const formatted = data.data.map((item: any) => ({
+                  ...item,
+                  date: new Date(item.date).toLocaleDateString('vi-VN'),
+                  bed: `Giường 0${item.bed}`
+               }));
+               setCheckoutList(formatted);
+            }
+         })
+         .catch(err => console.error('Failed to fetch checkout requests', err));
+   };
+
+   // Load from API and localStorage
    useEffect(() => {
+      fetchCheckoutRequests();
+
       const saved = localStorage.getItem('checkout_flow_request');
       if (saved) {
          const data = JSON.parse(saved);
          setReconData(data);
-         const flowItem = {
-            id: 'flow_req_1',
-            room: data.room || 'P.302',
-            bed: data.bed || 'Giường 01',
-            customer: data.customer || 'Trần Thị Sinh Viên',
-            cccd: data.cccd || '079123456789',
-            date: data.date || '25/10/2023',
-            status: data.status || 'Đang xử lý',
-            isFlowRequest: true
-         };
-         setCheckoutList([flowItem, ...MOCK_LIST]);
       } else {
-         setCheckoutList(MOCK_LIST);
          setReconData(null);
       }
    }, [isCreatingRecord, selected]);
@@ -52,37 +57,50 @@ export default function CheckOut() {
    };
 
    const handleFinalizeLiquidation = () => {
-      const saved = localStorage.getItem('checkout_flow_request');
-      if (saved) {
-         const data = JSON.parse(saved);
-         data.status = 'Đã xử lý';
-         localStorage.setItem('checkout_flow_request', JSON.stringify(data));
-      }
-
-      if (selected) {
-         setSelected({ ...selected, status: 'Đã xử lý' });
-         setCheckoutList(prev => prev.map(item => {
-            if (item.id === selected.id) {
-               return { ...item, status: 'Đã xử lý' };
+      fetch(`${API_URL}/api/v1/checkout-requests/${selected.id}/status`, {
+         method: 'PUT',
+         headers: {
+            'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({ status: 'Đã xử lý' })
+      })
+      .then(res => res.json())
+      .then(data => {
+         if (data.status === 'success') {
+            if (selected) {
+               setSelected({ ...selected, status: 'Đã xử lý' });
+               setCheckoutList(prev => prev.map(item => {
+                  if (item.id === selected.id) {
+                     return { ...item, status: 'Đã xử lý' };
+                  }
+                  return item;
+               }));
             }
-            return item;
-         }));
-      }
-
-      alert('Đã xử lý yêu cầu trả phòng thành công!');
-      setIsCreatingRecord(false);
-      setSelected(null);
+            alert('Đã xử lý yêu cầu trả phòng thành công!');
+            setIsCreatingRecord(false);
+            setSelected(null);
+            fetchCheckoutRequests();
+         } else {
+            alert('Lỗi: ' + (data.message || 'Không thể cập nhật trạng thái'));
+         }
+      })
+      .catch(err => {
+         console.error('Failed to update status', err);
+         alert('Lỗi kết nối máy chủ');
+      });
    };
 
    if (isCreatingRecord && selected) {
       // Dynamic values from accountant's reconciliation calculations
       const isFlow = selected.isFlowRequest;
-      const depositVal = (isFlow && reconData?.deposit !== undefined) ? reconData.deposit : 6500000;
-      const utilityVal = (isFlow && reconData?.utilityFee !== undefined) ? reconData.utilityFee : 175000;
-      const cleaningVal = (isFlow && reconData?.cleaningFee !== undefined) ? reconData.cleaningFee : 150000;
-      const damageVal = (isFlow && reconData?.damagedAssetFee !== undefined) ? reconData.damagedAssetFee : 150000;
-      const liabilityVal = (isFlow && reconData?.rentLiability !== undefined) ? reconData.rentLiability : 0;
-      const otherVal = (isFlow && reconData?.otherFee !== undefined) ? reconData.otherFee : 0;
+      const depositVal = selected.deposit ?? ((isFlow && reconData?.deposit !== undefined) ? reconData.deposit : 6500000);
+      const utilityVal = selected.utilityFee ?? ((isFlow && reconData?.utilityFee !== undefined) ? reconData.utilityFee : 0);
+      const cleaningVal = selected.cleaningFee ?? ((isFlow && reconData?.cleaningFee !== undefined) ? reconData.cleaningFee : 0);
+      const damageVal = selected.damagedAssetFee ?? ((isFlow && reconData?.damagedAssetFee !== undefined) ? reconData.damagedAssetFee : 0);
+      const liabilityVal = selected.rentLiability ?? ((isFlow && reconData?.rentLiability !== undefined) ? reconData.rentLiability : 0);
+      const otherVal = selected.otherFee ?? ((isFlow && reconData?.otherFee !== undefined) ? reconData.otherFee : 0);
+
+      const monthsStayed = selected.monthsStayed ?? 0;
 
       const totalDeductions = utilityVal + cleaningVal + damageVal + liabilityVal + otherVal;
       const netAmount = depositVal - totalDeductions;
@@ -101,9 +119,9 @@ export default function CheckOut() {
                      <p className="text-[#666666]">Phòng {selected.room} - {selected.bed} • Khách hàng: {selected.customer}</p>
                   </div>
                   <div>
-                     {selected.status === 'Đang xử lý' && (
+                     {(selected.status === 'Đang xử lý' || selected.status === 'Chờ thanh lý') && (
                         <span className="px-3 py-1 bg-[#FAF5F3] text-[#8C4A3A] border border-[#EAD3CC] rounded-full text-xs font-semibold flex items-center shadow-sm">
-                           <Check className="w-4 h-4 mr-1" /> Đang xử lý
+                           <Check className="w-4 h-4 mr-1" /> {selected.status}
                         </span>
                      )}
                      {selected.status === 'Đã xử lý' && (
@@ -131,7 +149,7 @@ export default function CheckOut() {
                         </div>
                         <div className="flex justify-between text-sm">
                            <span className="text-[#666666]">Số tháng đã ở thực tế</span>
-                           <span className="font-bold text-[#B7705F]">10 tháng</span>
+                           <span className="font-bold text-[#B7705F]">{monthsStayed} tháng</span>
                         </div>
                         <div className="flex justify-between text-sm text-red-600 border-b border-gray-200 pb-2">
                            <span className="text-red-500">Trừ tiền điện phát sinh cuối</span>
@@ -169,7 +187,7 @@ export default function CheckOut() {
                   </div>
 
                   <div className="w-full mt-6 flex flex-row gap-4">
-                     {selected.status === 'Đang xử lý' && (
+                     {(selected.status === 'Đang xử lý' || selected.status === 'Chờ thanh lý') && (
                         <button
                            onClick={handleFinalizeLiquidation}
                            className="flex-1 px-4 py-2.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer"
@@ -215,7 +233,7 @@ export default function CheckOut() {
                               BIÊN BẢN THANH LÝ HỢP ĐỒNG THUÊ PHÒNG
                            </div>
                            <div className="mb-2">
-                              Hôm nay, ngày 25 tháng 10 năm 2023, tại HomeStay Dorm, chúng tôi gồm:
+                              Hôm nay, {new Date().toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' })}, tại HomeStay Dorm, chúng tôi gồm:
                            </div>
                            <div className="mb-2">
                               <p><strong>Bên A (Bên cho thuê):</strong> HomeStay Dorm</p>
@@ -226,7 +244,7 @@ export default function CheckOut() {
                            </div>
                            <ol className="list-decimal pl-4 mb-4 space-y-1 text-justify">
                               <li>Chấm dứt hợp đồng thuê phòng kể từ ngày {selected.date}.</li>
-                              <li>Bên B đã lưu trú thực tế: <strong>10 tháng</strong>.</li>
+                              <li>Bên B đã lưu trú thực tế: <strong>{monthsStayed} tháng</strong>.</li>
                               <li>Bên B đã bàn giao lại phòng và tài sản đi kèm đầy đủ.</li>
                               <li>Bên A hoàn trả lại số tiền cọc (sau khi trừ các khoản phí đối soát) là: <strong className="text-green-700">{absNet.toLocaleString()} VNĐ</strong>.</li>
                            </ol>

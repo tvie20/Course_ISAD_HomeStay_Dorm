@@ -18,3 +18,13 @@ exports.create = async (data) => {
     return result
 }
 
+// Lấy danh sách tất cả yêu cầu trả phòng (dành cho quản lý)
+exports.getAll = async (data) => {
+    const result = await checkoutModel.getAll(data)
+    return result
+}
+
+exports.updateStatus = async (data) => {
+    const result = await checkoutModel.updateStatus(data)
+    return result
+}

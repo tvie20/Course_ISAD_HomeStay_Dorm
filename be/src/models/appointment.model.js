@@ -22,7 +22,7 @@ exports.create = async (data) => {
                 MaPhieuDangKy, NgayGioHen, KetQua
             )
             VALUES (
-                @RegistrationID, @NgayGioHen, @Note
+                @RegistrationID, @NgayGioHen, N'Chờ phản hồi'
             );
 
             IF @EmployeeID <> ''

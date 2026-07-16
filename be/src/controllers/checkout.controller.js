@@ -34,4 +34,33 @@ exports.create = catchAsync(async (req, res, next) => {
         data: result
     })
 })
+// Quản lý lấy danh sách tất cả yêu cầu trả phòng
+exports.getAll = catchAsync(async (req, res, next) => {
+    const payload = {
+        ...req.params,
+        ...req.query,
+        ...req.body
+    }
 
+    const result = await checkoutService.getAll(payload)
+
+    res.status(200).json({
+        status: 'success',
+        data: result
+    })
+})
+
+exports.updateStatus = catchAsync(async (req, res, next) => {
+    const payload = {
+        ...req.params,
+        ...req.query,
+        ...req.body
+    }
+
+    const result = await checkoutService.updateStatus(payload)
+
+    res.status(200).json({
+        status: 'success',
+        data: result
+    })
+})

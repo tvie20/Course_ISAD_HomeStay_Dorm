@@ -9,7 +9,8 @@ const dbConfig = {
     port: parseInt(process.env.DB_PORT),
     options: {
         encrypt: true,
-        trustServerCertificate: true
+        trustServerCertificate: true,
+        useUTC: false
     },
     pool: {
         max: 10,
@@ -22,6 +23,12 @@ const connectDatabase = async () => {
     try {
         const pool = await sql.connect(dbConfig)
         console.log('--> SQL Server connected successfully')
+
+        // Bắt lỗi connection pool để tránh việc ứng dụng tự động crash khi mất kết nối
+        pool.on('error', err => {
+            console.error('--> SQL Server Pool Error: ', err.message)
+        })
+
         return pool
     } catch (error) {
         console.error('--> Database connection failed: ', error.message)

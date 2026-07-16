@@ -1,75 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { CreditCard, AlertCircle, Smartphone, FileText, CheckCircle2, ChevronRight, Upload, Wallet, Eye, ArrowLeft, Printer } from 'lucide-react';
 
-export default function ServicePayment({ onNavigate }: { onNavigate?: (id: string) => void }) {
-  // Mock state with all invoices (unpaid & paid history merged)
-  const [invoices, setInvoices] = useState([
-    {
-      id: 'HD-10-23',
-      month: 'Tháng 10/2023',
-      room: 'Phòng P.102',
-      total: 5230000,
-      status: 'Chưa thanh toán',
-      dueDate: '05/11/2023',
-      base: 4500000,
-      electricity: 420000,
-      water: 160000,
-      service: 150000,
-      paymentDate: '-'
-    },
-    {
-      id: 'HD-09-23',
-      month: 'Tháng 09/2023',
-      room: 'Phòng P.102',
-      total: 5180000,
-      status: 'Đã thanh toán',
-      dueDate: '05/10/2023',
-      base: 4500000,
-      electricity: 390000,
-      water: 140000,
-      service: 150000,
-      paymentDate: '04/09/2023'
-    },
-    {
-      id: 'HD-08-23',
-      month: 'Tháng 08/2023',
-      room: 'Phòng P.102',
-      total: 4980000,
-      status: 'Đã thanh toán',
-      dueDate: '05/09/2023',
-      base: 4500000,
-      electricity: 210000,
-      water: 120000,
-      service: 150000,
-      paymentDate: '05/08/2023'
-    },
-    {
-      id: 'HD-07-23',
-      month: 'Tháng 07/2023',
-      room: 'Phòng P.102',
-      total: 5050000,
-      status: 'Đã thanh toán',
-      dueDate: '05/08/2023',
-      base: 4500000,
-      electricity: 260000,
-      water: 140000,
-      service: 150000,
-      paymentDate: '02/07/2023'
-    },
-    {
-      id: 'HD-06-23',
-      month: 'Tháng 06/2023',
-      room: 'Phòng P.102',
-      total: 4900000,
-      status: 'Đã thanh toán',
-      dueDate: '05/07/2023',
-      base: 4500000,
-      electricity: 180000,
-      water: 70000,
-      service: 150000,
-      paymentDate: '03/06/2023'
+export default function ServicePayment({ onNavigate, customerId }: { onNavigate?: (id: string) => void, customerId?: string }) {
+  const [invoices, setInvoices] = useState<any[]>([]);
+
+  const fetchInvoices = async () => {
+    try {
+      const id = customerId || 'KH0001';
+      const res = await fetch(`${API_URL}/api/v1/invoices?CustomerID=${id}`);
+      const data = await res.json();
+      if (data.status === 'success') {
+        setInvoices(data.data);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách hóa đơn:', error);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [customerId]);
 
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showPaymentArea, setShowPaymentArea] = useState(false);
@@ -92,7 +43,7 @@ export default function ServicePayment({ onNavigate }: { onNavigate?: (id: strin
     setReceiptFile(null);
   };
 
-  const triggerPaymentDemo = () => {
+  const triggerPaymentDemo = async () => {
     if (paymentMethod === 'bank' && !receiptFile) {
       alert('Vui lòng tải lên ảnh chụp Ủy nhiệm chi / Biên lai chuyển khoản để tiếp tục thanh toán.');
       return;
@@ -101,16 +52,38 @@ export default function ServicePayment({ onNavigate }: { onNavigate?: (id: strin
     setIsProcessing(true);
     setPaymentStep('processing');
 
-    // Simulate Payment Connection Gateway
-    setTimeout(() => {
-      setIsProcessing(false);
-      setPaymentStep('done');
+    try {
+      const payload = {
+        InvoiceID: selectedInvoice.id,
+        Amount: selectedInvoice.total,
+        PaymentMethod: paymentMethod === 'bank' ? 'Chuyển khoản' : 'Ví điện tử',
+        PaymentDate: new Date().toISOString()
+      };
 
-      const nowStr = new Date().toLocaleDateString('vi-VN');
-      // Update invoice list state
-      setInvoices(prev => prev.map(inv => inv.id === selectedInvoice.id ? { ...inv, status: 'Đã thanh toán', paymentDate: nowStr } : inv));
-      setSelectedInvoice(prev => ({ ...prev, status: 'Đã thanh toán', paymentDate: nowStr }));
-    }, 2000);
+      const response = await fetch(`${API_URL}/api/v1/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        setPaymentStep('done');
+        // Update local state temporarily for fast UI, then refetch
+        const nowStr = new Date().toLocaleDateString('vi-VN');
+        setSelectedInvoice((prev: any) => ({ ...prev, status: 'Đã thanh toán', paymentDate: nowStr }));
+        await fetchInvoices();
+      } else {
+        alert('Có lỗi xảy ra: ' + data.message);
+        setPaymentStep('idle');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Lỗi kết nối máy chủ');
+      setPaymentStep('idle');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSimulateUpload = () => {
@@ -169,7 +142,7 @@ export default function ServicePayment({ onNavigate }: { onNavigate?: (id: strin
               Chi tiết hóa đơn {selectedInvoice.month}
             </h1>
             <p className="text-sm text-[#666666]">
-              Xem bảng kê chi tiết phòng &amp; dịch vụ. {selectedInvoice.status === 'Chưa thanh toán' && 'Vui lòng thực hiện thanh toán đúng hạn.'}
+              Xem bảng kê chi tiết phòng &amp; dịch vụ. {selectedInvoice.status === 'Chờ thanh toán' && 'Vui lòng thực hiện thanh toán đúng hạn.'}
             </p>
           </div>
 
@@ -193,7 +166,7 @@ export default function ServicePayment({ onNavigate }: { onNavigate?: (id: strin
                   <div className="text-center mb-6">
                     <p className="text-xs font-semibold text-[#666666] mb-1">Tổng tiền thanh toán</p>
                     <p className="text-4xl font-bold text-[#8C4A3A]">{selectedInvoice.total.toLocaleString()} <span className="text-xl font-medium text-gray-400">₫</span></p>
-                    {selectedInvoice.status === 'Chưa thanh toán' ? (
+                    {selectedInvoice.status === 'Chờ thanh toán' ? (
                       <p className="text-xs text-red-500 font-semibold mt-1.5 flex items-center justify-center">
                         <AlertCircle className="w-4 h-4 mr-1" /> Hạn thanh toán: {selectedInvoice.dueDate}
                       </p>
@@ -207,24 +180,24 @@ export default function ServicePayment({ onNavigate }: { onNavigate?: (id: strin
                   <div className="space-y-3 mb-6 bg-[#FAF5F3] p-5 rounded-xl border border-[#EAD3CC]/50 text-sm">
                     <div className="flex justify-between items-center pb-3 border-b border-[#EAD3CC]">
                       <span className="font-semibold text-[#666666]">Tiền phòng cơ bản</span>
-                      <span className="font-bold text-[#222222]">{selectedInvoice.base.toLocaleString()} ₫</span>
+                      <span className="font-bold text-[#222222]">{(selectedInvoice.base || selectedInvoice.total).toLocaleString()} ₫</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-gray-100 border-dashed">
                       <span className="text-xs text-[#666666]">Tiền điện tiêu dùng</span>
-                      <span className="text-xs font-semibold text-[#222222]">{selectedInvoice.electricity.toLocaleString()} ₫</span>
+                      <span className="text-xs font-semibold text-[#222222]">{(selectedInvoice.electricity || 0).toLocaleString()} ₫</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-gray-100 border-dashed">
                       <span className="text-xs text-[#666666]">Tiền nước sinh hoạt</span>
-                      <span className="text-xs font-semibold text-[#222222]">{selectedInvoice.water.toLocaleString()} ₫</span>
+                      <span className="text-xs font-semibold text-[#222222]">{(selectedInvoice.water || 0).toLocaleString()} ₫</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span className="text-xs text-[#666666]">Phí dịch vụ chung &amp; tiện ích</span>
-                      <span className="text-xs font-semibold text-[#222222]">{selectedInvoice.service.toLocaleString()} ₫</span>
+                      <span className="text-xs font-semibold text-[#222222]">{(selectedInvoice.service || 0).toLocaleString()} ₫</span>
                     </div>
                   </div>
 
                   {/* BUTTON THANH TOÁN NGAY -> ONLY IF UNPAID AND PAYMENT AREA IS NOT YET SHOWN */}
-                  {selectedInvoice.status === 'Chưa thanh toán' && !showPaymentArea && (
+                  {selectedInvoice.status === 'Chờ thanh toán' && !showPaymentArea && (
                     <button
                       onClick={() => setShowPaymentArea(true)}
                       className="w-full bg-[#8C4A3A] hover:bg-[#723a2d] text-white py-3.5 px-6 rounded-xl font-bold text-base shadow-md transition-all transform hover:-translate-y-0.5 flex items-center justify-center"
@@ -234,7 +207,7 @@ export default function ServicePayment({ onNavigate }: { onNavigate?: (id: strin
                   )}
 
                   {/* PAYMENT AREA: QR OR BANK TRANSFER, EXPANDS ONLY AFTER "THANH TOÁN NGAY" IS CLICKED */}
-                  {showPaymentArea && selectedInvoice.status === 'Chưa thanh toán' && (
+                  {showPaymentArea && selectedInvoice.status === 'Chờ thanh toán' && (
                     <div className="border-t border-gray-200 pt-6 mt-6 space-y-6">
                       <h3 className="text-sm font-bold text-[#222222] mb-4">Chọn phương thức thanh toán:</h3>
 

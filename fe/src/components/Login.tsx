@@ -1,25 +1,23 @@
 import React, { useState } from 'react';
-import { Home, Eye, HelpCircle } from 'lucide-react';
+import { Home, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface LoginProps {
-  onLogin: (username: string) => void;
+  onLogin: (username: string, password?: string, userType?: string) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState<'guest' | 'staff'>('staff');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim()) {
-      let finalUsername = username.trim();
-      // Prefix with 'guest' if customer is selected and doesn't already have a valid prefix to satisfy App.tsx logic for mockup
-      if (userType === 'guest' && !finalUsername.toLowerCase().startsWith('guest')) {
-        finalUsername = 'guest_' + finalUsername;
-      }
-      onLogin(finalUsername);
+    if (username.trim() && password.trim()) {
+      onLogin(username.trim(), password.trim(), userType);
+    } else {
+      alert("Vui lòng nhập tên đăng nhập và mật khẩu.");
     }
   };
 
@@ -27,7 +25,7 @@ export default function Login({ onLogin }: LoginProps) {
     <div className="min-h-screen flex items-center justify-center bg-[#FAF5F3] p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Header */}
-        <div className="pt-10 pb-6 text-center text-center">
+        <div className="pt-10 pb-6 text-center">
           <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-[#EAD3CC] overflow-hidden shadow-sm">
             <img src="/logo.jpg" alt="Logo" className="w-full h-full object-contain p-2" />
           </div>
@@ -73,14 +71,17 @@ export default function Login({ onLogin }: LoginProps) {
                   </svg>
                 </div>
                 <input
-                  type={password ? "text" : "password"} // Just for visual in mockup
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Nhập mật khẩu"
                   className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm transition-colors"
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400 hover:text-gray-600">
-                  <Eye className="w-4 h-4" />
+                <div 
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </div>
               </div>
             </div>

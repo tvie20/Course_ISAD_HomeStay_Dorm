@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import API_URL from '../../api';
 import { Filter, Plus, TrendingUp, Search, Trash2, CheckCircle2, ChevronLeft, ChevronRight, PenSquare, Eye, Building2, AlertCircle } from 'lucide-react';
 
 // ── Schema CHINHANH ───────────────────────────────────────────────────────────
@@ -51,12 +52,20 @@ function getInitials(name: string) {
   return parts.map(p => p[0]).join('').toUpperCase().substring(Math.max(0, parts.length - 2));
 }
 
+function generateBranchId(existingBranches: Branch[]) {
+  const numbers = existingBranches
+    .map(b => b.id?.match(/^CN(\d+)$/i)?.[1])
+    .filter((v): v is string => Boolean(v))
+    .map(v => Number(v));
+
+  const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+  return `CN${String(next).padStart(4, '0')}`;
+}
+
 export default function BranchManagement() {
   // ── Data: từ localStorage, đồng bộ với UserManagement ──────────────────
   const loadBranches = (): Branch[] => {
-    const s = localStorage.getItem('branch_list_v2');
-    if (s) try { return JSON.parse(s); } catch { }
-    return DEFAULT_BRANCHES;
+    return [];
   };
 
   const loadUsers = (): UserRecord[] => {
@@ -73,29 +82,25 @@ export default function BranchManagement() {
 
   // ── Sync khi UserManagement cập nhật ──────────────────────────────────
   useEffect(() => {
+    // Load branches from DB
+    fetch(`${API_URL}/api/v1/branches`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          const mappedBranches = data.data.map((b: any) => ({
+            ...b,
+            avatar: b.manager ? getInitials(b.manager) : '--'
+          }));
+          setBranches(mappedBranches);
+        }
+      })
+      .catch(err => console.error(err));
+
     const sync = () => {
       const s = localStorage.getItem('user_list_v2');
       if (s) try {
         const updatedUsers: UserRecord[] = JSON.parse(s);
         setUsers(updatedUsers);
-        // Tự động cập nhật thông tin quản lý trong branch list
-        setBranches(prev => {
-          const updated = prev.map(b => {
-            // Nếu branch đang có managerId, cập nhật tên theo user mới nhất
-            if (b.managerId) {
-              const user = updatedUsers.find(u => u.id === b.managerId);
-              if (user) {
-                return { ...b, manager: user.name, avatar: getInitials(user.name) };
-              } else {
-                // User bị xóa hoặc đổi role → reset manager
-                return { ...b, manager: '', managerId: '', avatar: '--' };
-              }
-            }
-            return b;
-          });
-          localStorage.setItem('branch_list_v2', JSON.stringify(updated));
-          return updated;
-        });
       } catch { }
     };
     window.addEventListener('storage', sync);
@@ -112,7 +117,7 @@ export default function BranchManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('Tất cả');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
@@ -129,7 +134,7 @@ export default function BranchManagement() {
   const [form, setForm] = useState(emptyForm());
 
   const handleOpenAdd = () => {
-    setForm(emptyForm());
+    setForm({ ...emptyForm(), id: generateBranchId(branches) });
     setErrorMsg('');
     setSuccessMsg('');
     setModalMode('add');
@@ -160,8 +165,9 @@ export default function BranchManagement() {
     }
 
     const selectedManager = managerOptions.find(u => u.id === form.managerId);
+    const generatedId = (form.id || generateBranchId(branches)).trim().toUpperCase();
     const newBranch: Branch = {
-      id: form.id.toUpperCase(),
+      id: generatedId,
       name: form.name,
       address: form.address,
       hotline: form.hotline,
@@ -263,11 +269,9 @@ export default function BranchManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Mã chi nhánh */}
           <div>
-            <label className={labelCls}>Mã chi nhánh {!isEdit && '*'}</label>
-            {isEdit
-              ? <input value={form.id} disabled className={readonlyCls} />
-              : <input type="text" required value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} className={inputCls} placeholder="VD: CN004" />
-            }
+            <label className={labelCls}>{isEdit ? 'Mã chi nhánh' : 'Mã chi nhánh'}</label>
+            <input value={form.id} disabled className={`${readonlyCls} cursor-not-allowed`} />
+            {!isEdit && <p className="text-[11px] text-[#888] mt-1">Mã chi nhánh được tạo tự động theo định dạng CN0001.</p>}
           </div>
 
           {/* Tên chi nhánh */}

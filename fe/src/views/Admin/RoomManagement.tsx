@@ -1,35 +1,72 @@
 import React, { useState } from 'react';
+import API_URL from '../../api';
 import { Search, Bell, MessageSquare, Plus, Edit2, Trash2, ArrowLeft, Eye } from 'lucide-react';
 
 const INITIAL_ROOMS = [
-   { id: 'P.101', name: 'Phòng 101', type: 'Phòng 2 người', floor: '1', currentCount: 2, maxCount: 2, status: 'Đã thuê', branch: 'Chi nhánh 1' },
-   { id: 'P.102', name: 'Phòng 102', type: 'Phòng 4 người', floor: '1', currentCount: 2, maxCount: 4, status: 'Đã thuê', branch: 'Chi nhánh 1' },
-   { id: 'P.103', name: 'Phòng 103', type: 'Phòng 2 người', floor: '1', currentCount: 1, maxCount: 2, status: 'Đã thuê', branch: 'Chi nhánh 1' },
-   { id: 'P.301', name: 'Phòng 301', type: 'Phòng 4 người', floor: '3', currentCount: 4, maxCount: 4, status: 'Đã thuê', branch: 'Chi nhánh 1' },
-   { id: 'P.302', name: 'Phòng 302', type: 'Phòng 2 người', floor: '3', currentCount: 0, maxCount: 2, status: 'Trống', branch: 'Chi nhánh 1' },
+   { id: 'PH0101', name: 'Phòng 101', type: 'Phòng 2 người', floor: '1', currentCount: 2, maxCount: 2, status: 'Đã thuê', branch: 'Chi nhánh 1' },
+   { id: 'PH0102', name: 'Phòng 102', type: 'Phòng 4 người', floor: '1', currentCount: 2, maxCount: 4, status: 'Đã thuê', branch: 'Chi nhánh 1' },
+   { id: 'PH0103', name: 'Phòng 103', type: 'Phòng 2 người', floor: '1', currentCount: 1, maxCount: 2, status: 'Đã thuê', branch: 'Chi nhánh 1' },
+   { id: 'PH0301', name: 'Phòng 301', type: 'Phòng 4 người', floor: '3', currentCount: 4, maxCount: 4, status: 'Đã thuê', branch: 'Chi nhánh 1' },
+   { id: 'PH0302', name: 'Phòng 302', type: 'Phòng 2 người', floor: '3', currentCount: 0, maxCount: 2, status: 'Trống', branch: 'Chi nhánh 1' },
 ];
 
+function generateRoomId(existingRooms: any[]) {
+   const numbers = existingRooms
+      .map((room) => String(room.id))
+      .map((id) => {
+         const match = id.match(/PH(\d{4})$/i);
+         if (match) return Number(match[1]);
+         const fallback = id.match(/P\.(\d+)$/i);
+         return fallback ? Number(fallback[1]) : null;
+      })
+      .filter((value): value is number => typeof value === 'number');
+
+   const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+   return `PH${String(next).padStart(4, '0')}`;
+}
+
 export default function RoomManagement() {
-   const [rooms, setRooms] = useState(INITIAL_ROOMS);
-   const [bedsData, setBedsData] = useState<Record<string, { bedId: string, price: string, status: string, note: string }[]>>({
-      'P.101': [
-         { bedId: '01', price: '1.500.000', status: 'Đã thuê', note: 'Giường dưới' },
-         { bedId: '02', price: '1.500.000', status: 'Đã thuê', note: 'Giường trên' },
-      ],
-      'P.102': [
-         { bedId: '01', price: '1.500.000', status: 'Đã thuê', note: 'Giường dưới' },
-         { bedId: '02', price: '1.500.000', status: 'Đã thuê', note: 'Giường trên' },
-         { bedId: '03', price: '1.500.000', status: 'Trống', note: 'Giường dưới' },
-         { bedId: '04', price: '1.500.000', status: 'Trống', note: 'Giường trên' },
-      ],
-      'P.301': [
-         { bedId: '01', price: '1.500.000', status: 'Đã thuê', note: 'Giường dưới' },
-         { bedId: '02', price: '1.500.000', status: 'Đã thuê', note: 'Giường trên' },
-         { bedId: '03', price: '1.500.000', status: 'Đã thuê', note: 'Giường dưới' },
-         { bedId: '04', price: '1.500.000', status: 'Đã thuê', note: 'Giường trên' },
-      ]
-   });
+   const [rooms, setRooms] = useState<any[]>([]);
+   const [bedsData, setBedsData] = useState<Record<string, { bedId: string, price: string, status: string, note: string }[]>>({});
    const [selectedRoom, setSelectedRoom] = useState<any>(null);
+
+   React.useEffect(() => {
+      fetch(`${API_URL}/api/v1/rooms/status`)
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               const mappedRooms: any[] = [];
+               const mappedBeds: Record<string, any> = {};
+               
+               data.data.forEach((r: any) => {
+                  const beds = r.beds || [];
+                  const rentedCount = beds.filter((b: any) => b.status && b.status !== 'Trống').length;
+                  
+                  mappedRooms.push({
+                     id: r.id,
+                     name: r.name,
+                     type: r.type,
+                     floor: r.floor,
+                     currentCount: rentedCount,
+                     maxCount: r.capacity,
+                     status: r.status || 'TRỐNG',
+                     branch: r.fullBranchName || r.branch
+                  });
+
+                  mappedBeds[r.id] = beds.map((b: any) => ({
+                     bedId: b.bedId.toString(),
+                     price: new Intl.NumberFormat('vi-VN').format(b.price || 1500000),
+                     status: b.status || 'Trống',
+                     note: b.note || ''
+                  }));
+               });
+
+               setRooms(mappedRooms);
+               setBedsData(mappedBeds);
+            }
+         })
+         .catch(err => console.error(err));
+   }, []);
 
    const [showAddBed, setShowAddBed] = useState(false);
    const [isEditBed, setIsEditBed] = useState(false);
@@ -100,14 +137,18 @@ export default function RoomManagement() {
    const [filterType, setFilterType] = useState('Tất cả loại');
    const [searchTerm, setSearchTerm] = useState('');
    const [errorMsg, setErrorMsg] = useState('');
+   const [currentPage, setCurrentPage] = useState(1);
+   const ITEMS_PER_PAGE = 10;
+   
+   React.useEffect(() => { setCurrentPage(1); }, [searchTerm, filterType]);
 
    const [formData, setFormData] = useState({ id: '', name: '', type: 'Phòng 4 người', floor: '1', maxCount: 4, status: 'TRỐNG', branch: 'Homestay Central Park' });
 
+
    const handleOpenAdd = () => {
-      const roomIds = rooms.map(r => parseInt(r.id.replace(/\D/g, ''))).filter(n => !isNaN(n));
-      const maxId = roomIds.length > 0 ? Math.max(...roomIds) : 100;
-      const nextRoomId = `P.${maxId + 1}`;
-      setFormData({ id: nextRoomId, name: `Phòng ${maxId + 1}`, type: 'Phòng 4 người', floor: '1', maxCount: 4, status: 'TRỐNG', branch: 'Chi nhánh 1' });
+      const nextRoomId = generateRoomId(rooms);
+      const roomNumber = nextRoomId.replace(/^PH0*/, '');
+      setFormData({ id: nextRoomId, name: `Phòng ${roomNumber}`, type: 'Phòng 4 người - Nam', floor: '1', maxCount: 4, status: 'TRỐNG', branch: 'Chi nhánh 1' });
       setErrorMsg('');
       setShowAdd(true);
    };
@@ -334,6 +375,11 @@ export default function RoomManagement() {
       (r.name.toLowerCase().includes(searchTerm.toLowerCase()) || r.id.toLowerCase().includes(searchTerm.toLowerCase()))
    );
 
+   const totalPages = Math.max(1, Math.ceil(filteredRooms.length / ITEMS_PER_PAGE));
+   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredRooms.length);
+   const pagedRooms = filteredRooms.slice(startIndex, endIndex);
+
    return (
       <div className="p-8 h-full max-w-7xl mx-auto">
          <div className="flex justify-between items-end mb-8">
@@ -369,9 +415,12 @@ export default function RoomManagement() {
                   onChange={(e) => setFilterType(e.target.value)}
                >
                   <option value="Tất cả loại">Tất cả loại phòng</option>
-                  <option value="Phòng 2 người">Phòng 2 người</option>
-                  <option value="Phòng 4 người">Phòng 4 người</option>
-                  <option value="Phòng 8 người">Phòng 8 người</option>
+                  <option value="Phòng 2 người - Nam">Phòng 2 người - Nam</option>
+                  <option value="Phòng 2 người - Nữ">Phòng 2 người - Nữ</option>
+                  <option value="Phòng 4 người - Nam">Phòng 4 người - Nam</option>
+                  <option value="Phòng 4 người - Nữ">Phòng 4 người - Nữ</option>
+                  <option value="Phòng 8 người - Nam">Phòng 8 người - Nam</option>
+                  <option value="Phòng 8 người - Nữ">Phòng 8 người - Nữ</option>
                </select>
             </div>
             <div className="w-[200px]">
@@ -410,9 +459,12 @@ export default function RoomManagement() {
                         <div className="md:col-span-2">
                            <label className="block text-sm font-semibold text-[#666666] mb-2">Loại phòng</label>
                            <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:bg-white focus:border-[#B7705F]">
-                              <option>Phòng 2 người</option>
-                              <option>Phòng 4 người</option>
-                              <option>Phòng 8 người</option>
+                              <option>Phòng 2 người - Nam</option>
+                              <option>Phòng 2 người - Nữ</option>
+                              <option>Phòng 4 người - Nam</option>
+                              <option>Phòng 4 người - Nữ</option>
+                              <option>Phòng 8 người - Nam</option>
+                              <option>Phòng 8 người - Nữ</option>
                            </select>
                         </div>
                         <div className="md:col-span-1">
@@ -470,9 +522,12 @@ export default function RoomManagement() {
                         <div className="md:col-span-2">
                            <label className="block text-sm font-semibold text-[#666666] mb-2">Loại phòng</label>
                            <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:bg-white focus:border-[#B7705F]">
-                              <option>Phòng 2 người</option>
-                              <option>Phòng 4 người</option>
-                              <option>Phòng 8 người</option>
+                              <option>Phòng 2 người - Nam</option>
+                              <option>Phòng 2 người - Nữ</option>
+                              <option>Phòng 4 người - Nam</option>
+                              <option>Phòng 4 người - Nữ</option>
+                              <option>Phòng 8 người - Nam</option>
+                              <option>Phòng 8 người - Nữ</option>
                            </select>
                         </div>
                         <div className="md:col-span-1">
@@ -517,7 +572,7 @@ export default function RoomManagement() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-100">
-                  {filteredRooms.map((r, i) => (
+                  {pagedRooms.map((r, i) => (
                      <tr key={i} className="hover:bg-gray-50/50">
                         <td className="px-6 py-5 text-gray-600">{r.id}</td>
                         <td className="px-6 py-5 font-medium text-gray-900">{r.name}</td>
@@ -553,16 +608,44 @@ export default function RoomManagement() {
                </tbody>
             </table>
 
-            {/* Pagination mockup */}
+            {/* Pagination */}
             <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-               <div>Hiển thị 1 - 3 trên tổng số 24 phòng</div>
-               <div className="flex space-x-1">
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 bg-white">&lt;</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded bg-[#8C4A3A] text-white">1</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-600 bg-white">2</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-600 bg-white">3</button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-600 bg-white">&gt;</button>
+               <div>
+                  {filteredRooms.length === 0
+                     ? 'Không có kết quả'
+                     : `Hiển thị ${startIndex + 1}–${endIndex} trên ${filteredRooms.length} phòng`}
                </div>
+               {totalPages > 1 && (
+                  <div className="flex space-x-1 items-center">
+                     <button
+                        onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                     >
+                        &lt;
+                     </button>
+                     {Array.from({ length: totalPages }).map((_, i) => (
+                        <button
+                           key={i}
+                           onClick={() => setCurrentPage(i + 1)}
+                           className={`w-8 h-8 flex items-center justify-center rounded text-sm font-semibold transition-all ${
+                              currentPage === i + 1
+                                 ? 'bg-[#8C4A3A] text-white'
+                                 : 'border border-gray-200 text-gray-600 bg-white hover:bg-gray-50'
+                           }`}
+                        >
+                           {i + 1}
+                        </button>
+                     ))}
+                     <button
+                        onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                     >
+                        &gt;
+                     </button>
+                  </div>
+               )}
             </div>
          </div>
 

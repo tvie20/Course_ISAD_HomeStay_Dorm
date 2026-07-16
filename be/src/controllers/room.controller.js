@@ -35,3 +35,19 @@ exports.getOne = catchAsync(async (req, res, next) => {
     })
 })
 
+// Lấy danh sách tài sản của một phòng
+exports.getAssets = catchAsync(async (req, res, next) => {
+    const payload = {
+        ...req.params,
+        ...req.query,
+        ...req.body
+    }
+
+    const result = await roomService.getAssets(payload)
+
+    res.status(200).json({
+        status: 'success',
+        data: result
+    })
+})
+

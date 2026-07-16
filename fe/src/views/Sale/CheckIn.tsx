@@ -1,19 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { ArrowLeft, Calendar, Clock, Save, Search, User } from 'lucide-react';
 
-const MOCK_LIST = [
-  { id: 'DC-2023-01', room: 'Phòng 102', bed: 'Giường 01', customer: 'Trần Văn B', phone: '0901234567', cccd: '079123456789', status: 'Chờ xếp lịch' },
-  { id: 'DC-2023-02', room: 'Phòng 201', bed: 'Giường 03', customer: 'Lê Thị C', phone: '0987654321', cccd: '079987654321', status: 'Sắp nhận phòng' },
-];
-
-export default function CheckIn() {
-  const [list, setList] = useState<any[]>(MOCK_LIST);
+export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?: string, employeeId?: string }) {
+  const [list, setList] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [formDate, setFormDate] = useState('');
   const [formTime, setFormTime] = useState('');
   const [formNote, setFormNote] = useState('');
+
+  const fetchDeposits = () => {
+    fetch(`${API_URL}/api/v1/deposits${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+           // Lọc các phiếu đã thanh toán hoặc sắp nhận phòng
+           const filtered = data.data.filter((d: any) => d.status === 'Đã thanh toán' || d.status === 'Sắp nhận phòng');
+           setList(filtered);
+        }
+      })
+      .catch(err => console.error(err));
+  };
+
+  useEffect(() => {
+    fetchDeposits();
+  }, []);
 
   if (!selectedItem) {
     return (
@@ -45,7 +58,7 @@ export default function CheckIn() {
                className="border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#B7705F]"
              >
                <option value="">Tất cả trạng thái</option>
-               <option value="Chờ xếp lịch">Chờ xếp lịch</option>
+               <option value="Đã thanh toán">Cần xếp lịch</option>
                <option value="Sắp nhận phòng">Sắp nhận phòng</option>
              </select>
            </div>
@@ -70,9 +83,9 @@ export default function CheckIn() {
                     .filter((item: any) => {
                        const matchStatus = !statusFilter || item.status === statusFilter;
                        const matchSearch = !searchTerm || 
-                          (item.customer && item.customer.toLowerCase().includes(searchTerm.toLowerCase())) || 
-                          (item.id && item.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (item.cccd && item.cccd.includes(searchTerm));
+                          (item.customer && String(item.customer).toLowerCase().includes(searchTerm.toLowerCase())) || 
+                          (item.id && String(item.id).toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (item.cccd && String(item.cccd).toLowerCase().includes(searchTerm.toLowerCase()));
                        return matchStatus && matchSearch;
                     })
                     .map((item: any, idx) => (
@@ -82,27 +95,31 @@ export default function CheckIn() {
                        <td className="px-6 py-4 text-[#666666]">{item.cccd}</td>
                        <td className="px-6 py-4 text-[#666666]">{item.phone}</td>
                        <td className="px-6 py-4 text-[#222222] font-semibold">{item.room}</td>
-                       <td className="px-6 py-4 text-[#B7705F] font-bold">{item.bed}</td>
+                       <td className="px-6 py-4 text-[#B7705F] font-bold">{item.beds ? item.beds.join(', ') : ''}</td>
                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-md ${item.status === 'Chờ xếp lịch' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'}`}>
-                             {item.status}
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-md ${item.status === 'Đã thanh toán' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'}`}>
+                             {item.status === 'Đã thanh toán' ? 'Cần xếp lịch' : item.status}
                           </span>
                        </td>
                        <td className="px-6 py-4 text-right">
                           {item.status !== 'Sắp nhận phòng' ? (
                              <button onClick={() => {
                                 setSelectedItem(item);
-                                setFormDate(item.date || '');
-                                setFormTime(item.time || '');
-                                setFormNote(item.note || '');
+                                setFormDate('');
+                                setFormTime('');
+                                setFormNote('');
                              }} className="px-4 py-2 text-sm font-semibold text-white bg-[#B7705F] hover:bg-[#a06050] rounded-xl transition-colors inline-block shadow-sm">
                                 Xếp lịch
                              </button>
                           ) : (
                              <button onClick={() => {
                                 setSelectedItem(item);
-                                setFormDate(item.date || '');
-                                setFormTime(item.time || '');
+                                if (item.expectedDate) {
+                                   try {
+                                      setFormDate(new Date(item.expectedDate).toISOString().split('T')[0]);
+                                      setFormTime(new Date(item.expectedTime).toTimeString().slice(0, 5));
+                                   } catch (e) {}
+                                }
                                 setFormNote(item.note || '');
                              }} className="px-4 py-2 text-sm font-semibold text-[#B7705F] bg-[#FAF5F3] border border-[#EAD3CC] hover:bg-[#EAD3CC] rounded-xl transition-colors inline-block shadow-sm">
                                 Xem lịch
@@ -128,7 +145,7 @@ export default function CheckIn() {
                </button>
             </div>
             {/* Tách rõ ràng phòng giường ở tiêu đề */}
-            <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Xếp lịch nhận phòng - {selectedItem.room} ({selectedItem.bed})</h1>
+            <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Xếp lịch nhận phòng - {selectedItem.room} ({selectedItem.beds ? selectedItem.beds.join(', ') : ''})</h1>
          </div>
       </div>
 
@@ -156,7 +173,7 @@ export default function CheckIn() {
                </div>
                <div>
                   <span className="text-[#666666] text-xs font-semibold uppercase block mb-1">Giường chỉ định</span>
-                  <span className="font-bold text-[#B7705F] text-sm">{selectedItem.bed}</span>
+                  <span className="font-bold text-[#B7705F] text-sm">{selectedItem.beds ? selectedItem.beds.join(', ') : ''}</span>
                </div>
                <div>
                   <span className="text-[#666666] text-xs font-semibold uppercase block mb-1">Mã đặt cọc</span>
@@ -190,10 +207,33 @@ export default function CheckIn() {
          </div>
          
          {selectedItem.status !== 'Sắp nhận phòng' && (
-            <button onClick={() => {
-               setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Sắp nhận phòng', date: formDate, time: formTime, note: formNote } : i));
-               setSelectedItem(null);
-               alert('Lưu lịch nhận phòng & lập hợp đồng thành công!');
+            <button onClick={async () => {
+               if (!formDate || !formTime) {
+                  return alert('Vui lòng chọn đầy đủ ngày và giờ hẹn!');
+               }
+               
+               try {
+                  const res = await fetch(`${API_URL}/api/v1/deposits/${selectedItem.id}/checkin-schedule`, {
+                     method: 'PUT',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                        expectedDate: formDate,
+                        expectedTime: formTime,
+                        note: formNote
+                     })
+                  });
+                  const data = await res.json();
+                  if (data.status === 'success') {
+                     alert('Lưu lịch nhận phòng thành công!');
+                     setSelectedItem(null);
+                     fetchDeposits();
+                  } else {
+                     alert('Lỗi: ' + data.message);
+                  }
+               } catch (err) {
+                  console.error(err);
+                  alert('Lỗi kết nối đến máy chủ');
+               }
             }} className="w-full mt-6 py-3.5 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
                <Save className="w-4 h-4 mr-2" /> Lưu lịch nhận phòng
             </button>

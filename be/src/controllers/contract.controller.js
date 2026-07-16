@@ -52,3 +52,19 @@ exports.getOne = catchAsync(async (req, res, next) => {
     })
 })
 
+// Lấy hợp đồng đang hiệu lực của khách hàng
+exports.getActiveContract = catchAsync(async (req, res, next) => {
+    const payload = {
+        ...req.params,
+        ...req.query,
+        ...req.body
+    }
+
+    const result = await contractService.getActiveContract(payload)
+
+    res.status(200).json({
+        status: 'success',
+        data: result
+    })
+})
+

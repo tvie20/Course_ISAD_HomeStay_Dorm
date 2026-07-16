@@ -18,3 +18,7 @@ exports.getAll = async (data) => {
     return result
 }
 
+// Cập nhật trạng thái
+exports.updateStatus = async (id, status) => {
+    return await registrationModel.updateStatus(id, status)
+}

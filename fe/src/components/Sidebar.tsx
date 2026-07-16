@@ -54,8 +54,8 @@ export default function Sidebar({ role, username, activeMenu, onMenuSelect, onLo
   const menuList = MENUS[role] || [];
   const titles = ROLE_TITLES[role] || ROLE_TITLES.guest;
   
-  // Format user-friendly name display
-  const displayName = username === 'guest' ? 'Trần Thị Sinh Viên' : username;
+  // username đã được truyền là HoTen thật từ App.tsx
+  const displayName = username || '---';
 
   return (
     <div className="w-[300px] bg-[#EAD3CC]/30 h-screen flex flex-col border-r border-[#EAD3CC]/50 fixed left-0 top-0">

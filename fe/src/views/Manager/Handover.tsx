@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { X, BedDouble, Camera, PenSquare, Edit3, ArrowLeft, Package, CheckCircle } from 'lucide-react';
 
 // Matches Manager's AssetRecord
@@ -30,90 +31,133 @@ interface HandoverItem {
   confirmed: boolean;
 }
 
-const MOCK_LIST = [
-  { id: '1', room: 'P.102', bed: 'Giường 01', customer: 'Trần Văn B', date: '21/10/2023', status: 'Chưa bàn giao' },
-  { id: '2', room: 'P.201', bed: 'Giường 02', customer: 'Lê Thị C', date: '20/10/2023', status: 'Đã bàn giao' },
-];
-
 export default function Handover() {
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selected, setSelected] = useState<any>(null);
 
   const [handoverItems, setHandoverItems] = useState<HandoverItem[]>([]);
+
+  const fetchContracts = () => {
+    fetch(`${API_URL}/api/v1/contracts/pending-handover`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setContracts(data.data);
+        }
+      })
+      .catch(err => console.error(err));
+  };
+
+  useEffect(() => {
+    fetchContracts();
+  }, []);
 
   // Load real assets when an item is selected
   useEffect(() => {
     if (!selected) return;
 
-    const rawRecords = localStorage.getItem('asset_records_manager_v3');
-    let records: AssetRecord[] = [];
-    if (rawRecords) {
-      try { records = JSON.parse(rawRecords); } catch { /* ignore */ }
-    }
-
     const room = selected.room;
     const bed = selected.bed;
-    const roomAssets = records.filter(r => r.room === room);
 
-    // For handover, show: bed-specific assets for this bed + room-shared assets
-    const items: HandoverItem[] = roomAssets
-      .filter(asset => {
-        if (asset.assignedTo === 'room') return true;
-        if (asset.assignedTo === 'bed' && asset.bed === bed) return true;
-        return false;
+    fetch(`${API_URL}/api/v1/rooms/${room}/assets?bed=${bed}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          let items = data.data.map((asset: any) => ({
+            assetId: asset.maTaiSan,
+            maTaiSan: asset.maTaiSan,
+            tenTaiSan: asset.tenTaiSan,
+            soLuong: asset.soLuong,
+            assignedTo: asset.assignedTo,
+            bed: asset.bed,
+            condition: asset.condition,
+            note: '',
+            confirmed: false,
+          }));
+
+          if (items.length === 0) {
+            // Tự động sinh một vài tài sản mẫu nếu phòng này chưa được nạp dữ liệu từ module Quản lý Tài sản
+            items = [
+              { assetId: 'M1', maTaiSan: 'TS0001', tenTaiSan: 'Máy lạnh Panasonic 1HP', soLuong: 1, assignedTo: 'room', condition: 'Hoạt động tốt', note: '', confirmed: false },
+              { assetId: 'M2', maTaiSan: 'TS0002', tenTaiSan: 'Tủ lạnh Aqua 90L', soLuong: 1, assignedTo: 'room', condition: 'Hoạt động tốt', note: '', confirmed: false },
+              { assetId: 'M3', maTaiSan: 'TS0003', tenTaiSan: 'Thẻ từ / Chìa khóa phòng', soLuong: 1, assignedTo: 'bed', bed: bed, condition: 'Hoạt động tốt', note: '', confirmed: false },
+              { assetId: 'M4', maTaiSan: 'TS0004', tenTaiSan: 'Nệm cao su non', soLuong: 1, assignedTo: 'bed', bed: bed, condition: 'Mới', note: '', confirmed: false },
+            ];
+          }
+
+          setHandoverItems(items);
+        }
       })
-      .map(asset => ({
-        assetId: asset.id,
-        maTaiSan: asset.maTaiSan,
-        tenTaiSan: asset.tenTaiSan,
-        soLuong: asset.soLuong,
-        assignedTo: asset.assignedTo,
-        bed: asset.bed,
-        condition: asset.condition,
-        note: asset.notes || '',
-        confirmed: false,
-      }));
-
-    setHandoverItems(items);
+      .catch(err => console.error(err));
   }, [selected]);
 
   const toggleConfirm = (idx: number) => {
+    if (selected?.status === 'Đã bàn giao') return;
     setHandoverItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, confirmed: !item.confirmed } : item
     ));
   };
 
   const updateCondition = (idx: number, condition: string) => {
+    if (selected?.status === 'Đã bàn giao') return;
     setHandoverItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, condition } : item
     ));
   };
 
   const updateNote = (idx: number, note: string) => {
+    if (selected?.status === 'Đã bàn giao') return;
     setHandoverItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, note } : item
     ));
   };
 
-  const handleCompleteHandover = () => {
-    // Save handover record
-    const handoverRecord = {
-      id: `HO-${Date.now()}`,
-      room: selected.room,
-      bed: selected.bed,
-      customer: selected.customer,
-      date: new Date().toLocaleDateString('vi-VN'),
-      items: handoverItems,
-    };
+  const handleCompleteHandover = async () => {
+    try {
+      const exceptions = handoverItems.filter(i => i.condition !== 'Hoạt động tốt' && i.condition !== 'Mới').map(i => `${i.tenTaiSan}: ${i.condition}`).join('; ');
+      let finalNote = exceptions || 'Tài sản đầy đủ, hoạt động tốt.';
+      if (finalNote.length > 100) {
+          finalNote = finalNote.substring(0, 97) + '...';
+      }
 
-    // Save to localStorage
-    const existing = localStorage.getItem('handover_records_v1');
-    let records: any[] = [];
-    if (existing) try { records = JSON.parse(existing); } catch { /* ignore */ }
-    records.push(handoverRecord);
-    localStorage.setItem('handover_records_v1', JSON.stringify(records));
+      const payload = {
+        ContractID: selected.id,
+        Note: finalNote,
+        HandoverDate: new Date().toISOString(),
+      };
+      const res = await fetch(`${API_URL}/api/v1/handovers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        // Save to localStorage for assets (if needed by other screens)
+        const handoverRecord = {
+          id: `HO-${Date.now()}`,
+          room: selected.room,
+          bed: selected.bed,
+          customer: selected.customer,
+          date: new Date().toLocaleDateString('vi-VN'),
+          items: handoverItems,
+        };
+        const existing = localStorage.getItem('handover_records_v1');
+        let records: any[] = [];
+        if (existing) try { records = JSON.parse(existing); } catch { /* ignore */ }
+        records.push(handoverRecord);
+        localStorage.setItem('handover_records_v1', JSON.stringify(records));
 
-    alert('Đã hoàn tất bàn giao phòng & tài sản thành công! Khách hàng bắt đầu lưu trú.');
-    setSelected(null);
+        alert('Đã hoàn tất bàn giao phòng & tài sản thành công! Khách hàng bắt đầu lưu trú.');
+        setSelected(null);
+        fetchContracts(); // refresh list
+      } else {
+        alert('Lỗi: ' + data.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi kết nối đến máy chủ');
+    }
   };
 
   const allConfirmed = handoverItems.length > 0 && handoverItems.every(i => i.confirmed);
@@ -134,6 +178,8 @@ export default function Handover() {
             <input
               type="text"
               placeholder="Tìm theo Tên khách hàng/CCCD/..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
             />
           </div>
@@ -151,11 +197,11 @@ export default function Handover() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {MOCK_LIST.map((item, idx) => (
+              {contracts.filter(c => !searchTerm || c.customer?.toLowerCase().includes(searchTerm.toLowerCase())).map((item, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium text-[#222222]">{item.room} - {item.bed}</td>
+                  <td className="px-6 py-4 font-medium text-[#222222]">{item.room} - Giường {item.bed}</td>
                   <td className="px-6 py-4 text-[#666666]">{item.customer}</td>
-                  <td className="px-6 py-4 text-[#666666]">{item.date}</td>
+                  <td className="px-6 py-4 text-[#666666]">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded text-xs font-semibold ${item.status === 'Đã bàn giao' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
                       {item.status}
@@ -237,7 +283,12 @@ export default function Handover() {
             </div>
             <div className="text-right bg-gray-100 px-4 py-2 rounded-lg">
               <p className="text-xs font-semibold text-gray-500 uppercase">Ngày bàn giao</p>
-              <p className="text-lg font-bold text-gray-900">{selected.date}</p>
+              <p className="text-lg font-bold text-gray-900">
+                {(() => {
+                  const d = new Date(selected.date);
+                  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                })()}
+              </p>
             </div>
           </div>
           <p className="text-sm italic text-gray-500 mt-6">* Vui lòng kiểm tra và xác nhận từng tài sản bàn giao. Tick ✓ để xác nhận tài sản đã bàn giao đúng.</p>
@@ -269,22 +320,22 @@ export default function Handover() {
                     return (
                       <div key={item.assetId} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-[#FAF5F3]/50 border border-gray-100 rounded-xl">
                         <div className="flex items-start mb-3 md:mb-0">
-                           <button onClick={() => toggleConfirm(globalIdx)} className={`w-6 h-6 rounded border-2 mr-3 mt-0.5 shrink-0 flex items-center justify-center transition-all ${item.confirmed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-[#B7705F]'}`}>
-                             {item.confirmed && <CheckCircle className="w-4 h-4" />}
-                           </button>
-                           <div>
-                              <p className="font-semibold text-gray-900 text-sm">{item.tenTaiSan} <span className="text-gray-500 font-normal ml-1">(SL: {item.soLuong})</span></p>
-                              <span className="text-[10px] font-mono text-[#B7705F] bg-[#FAF5F3] px-1.5 py-0.5 rounded border border-[#EAD3CC]/50">{item.maTaiSan}</span>
-                           </div>
+                          <button onClick={() => toggleConfirm(globalIdx)} className={`w-6 h-6 rounded border-2 mr-3 mt-0.5 shrink-0 flex items-center justify-center transition-all ${item.confirmed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-[#B7705F]'}`}>
+                            {item.confirmed && <CheckCircle className="w-4 h-4" />}
+                          </button>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">{item.tenTaiSan} <span className="text-gray-500 font-normal ml-1">(SL: {item.soLuong})</span></p>
+                            <span className="text-[10px] font-mono text-[#B7705F] bg-[#FAF5F3] px-1.5 py-0.5 rounded border border-[#EAD3CC]/50">{item.maTaiSan}</span>
+                          </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                           <div className="flex bg-gray-100 rounded-lg p-0.5">
-                              <button onClick={() => updateCondition(globalIdx, 'Tốt')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.condition === 'Tốt' ? 'bg-[#D29F91] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Tốt</button>
-                              <button onClick={() => updateCondition(globalIdx, 'Hư hỏng')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.condition === 'Hư hỏng' ? 'bg-red-100 text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Hư hỏng</button>
-                           </div>
-                           {item.condition === 'Hư hỏng' && (
-                             <input type="text" className="w-full md:w-64 border border-red-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:border-red-400 bg-white" placeholder="Ghi chú hiện trạng..." value={item.note} onChange={e => updateNote(globalIdx, e.target.value)} />
-                           )}
+                          <div className="flex bg-gray-100 rounded-lg p-0.5">
+                            <button onClick={() => updateCondition(globalIdx, 'Tốt')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.condition === 'Tốt' ? 'bg-[#D29F91] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Tốt</button>
+                            <button onClick={() => updateCondition(globalIdx, 'Hư hỏng')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.condition === 'Hư hỏng' ? 'bg-red-100 text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Hư hỏng</button>
+                          </div>
+                          {item.condition === 'Hư hỏng' && (
+                            <input type="text" className="w-full md:w-64 border border-red-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:border-red-400 bg-white" placeholder="Ghi chú hiện trạng..." value={item.note} onChange={e => updateNote(globalIdx, e.target.value)} />
+                          )}
                         </div>
                       </div>
                     );
@@ -303,22 +354,22 @@ export default function Handover() {
                     return (
                       <div key={item.assetId} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-[#FAF5F3]/50 border border-gray-100 rounded-xl">
                         <div className="flex items-start mb-3 md:mb-0">
-                           <button onClick={() => toggleConfirm(globalIdx)} className={`w-6 h-6 rounded border-2 mr-3 mt-0.5 shrink-0 flex items-center justify-center transition-all ${item.confirmed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-[#B7705F]'}`}>
-                             {item.confirmed && <CheckCircle className="w-4 h-4" />}
-                           </button>
-                           <div>
-                              <p className="font-semibold text-gray-900 text-sm">{item.tenTaiSan} <span className="text-gray-500 font-normal ml-1">(SL: {item.soLuong})</span></p>
-                              <span className="text-[10px] font-mono text-[#B7705F] bg-[#FAF5F3] px-1.5 py-0.5 rounded border border-[#EAD3CC]/50">{item.maTaiSan}</span>
-                           </div>
+                          <button onClick={() => toggleConfirm(globalIdx)} className={`w-6 h-6 rounded border-2 mr-3 mt-0.5 shrink-0 flex items-center justify-center transition-all ${item.confirmed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-[#B7705F]'}`}>
+                            {item.confirmed && <CheckCircle className="w-4 h-4" />}
+                          </button>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">{item.tenTaiSan} <span className="text-gray-500 font-normal ml-1">(SL: {item.soLuong})</span></p>
+                            <span className="text-[10px] font-mono text-[#B7705F] bg-[#FAF5F3] px-1.5 py-0.5 rounded border border-[#EAD3CC]/50">{item.maTaiSan}</span>
+                          </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                           <div className="flex bg-gray-100 rounded-lg p-0.5">
-                              <button onClick={() => updateCondition(globalIdx, 'Tốt')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.condition === 'Tốt' ? 'bg-[#D29F91] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Tốt</button>
-                              <button onClick={() => updateCondition(globalIdx, 'Hư hỏng')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.condition === 'Hư hỏng' ? 'bg-red-100 text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Hư hỏng</button>
-                           </div>
-                           {item.condition === 'Hư hỏng' && (
-                             <input type="text" className="w-full md:w-64 border border-red-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:border-red-400 bg-white" placeholder="Ghi chú hiện trạng..." value={item.note} onChange={e => updateNote(globalIdx, e.target.value)} />
-                           )}
+                          <div className="flex bg-gray-100 rounded-lg p-0.5">
+                            <button onClick={() => updateCondition(globalIdx, 'Tốt')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.condition === 'Tốt' ? 'bg-[#D29F91] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Tốt</button>
+                            <button onClick={() => updateCondition(globalIdx, 'Hư hỏng')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.condition === 'Hư hỏng' ? 'bg-red-100 text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Hư hỏng</button>
+                          </div>
+                          {item.condition === 'Hư hỏng' && (
+                            <input type="text" className="w-full md:w-64 border border-red-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:border-red-400 bg-white" placeholder="Ghi chú hiện trạng..." value={item.note} onChange={e => updateNote(globalIdx, e.target.value)} />
+                          )}
                         </div>
                       </div>
                     );
@@ -354,22 +405,26 @@ export default function Handover() {
       {/* Footer Actions */}
       <div className="bg-[#FAF5F3] px-6 py-4 border-t border-gray-100 flex items-center justify-between mt-0">
         <p className="text-sm text-gray-500 max-w-sm">
-           {allConfirmed 
-             ? <span className="text-green-600 font-medium">✓ Đã xác nhận tất cả tài sản bàn giao</span>
-             : <span>Vui lòng tick xác nhận từng tài sản trước khi hoàn tất</span>
-           }
-         </p>
+          {selected?.status === 'Đã bàn giao'
+            ? <span className="text-gray-500 font-medium">Biên bản đã chốt và không thể chỉnh sửa.</span>
+            : allConfirmed
+              ? <span className="text-green-600 font-medium">✓ Đã xác nhận tất cả tài sản bàn giao</span>
+              : <span>Vui lòng tick xác nhận từng tài sản trước khi hoàn tất</span>
+          }
+        </p>
         <div className="flex space-x-3">
           <button onClick={() => setSelected(null)} className="px-6 py-2.5 rounded-lg border border-[#B7705F] text-[#B7705F] hover:bg-[#F3E1DC]/30 font-medium text-sm transition-colors">
             Hủy bỏ
           </button>
-          <button 
+          {selected?.status !== 'Đã bàn giao' && (
+            <button
               onClick={handleCompleteHandover}
               disabled={!allConfirmed}
               className={`px-6 py-2.5 rounded-lg font-medium text-sm flex items-center shadow-sm transition-colors ${allConfirmed ? 'bg-[#B7705F] text-white hover:bg-[#a06050]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-            Hoàn tất bàn giao & Bắt đầu lưu trú
-          </button>
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              Hoàn tất bàn giao & Bắt đầu lưu trú
+            </button>
+          )}
         </div>
       </div>
     </div>

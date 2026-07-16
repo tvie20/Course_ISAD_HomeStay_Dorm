@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 import { Search, ArrowLeft, MapPin, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 
 interface Bed {
   bedId: string;
   price: number;
-  status: 'Đã thuê' | 'Trống';
+  status: 'Đã thuê' | 'Trống' | 'Đã cọc';
   note: string;
 }
 
@@ -17,114 +18,40 @@ interface Room {
   capacity: number; // e.g. 4
   branch: string; // e.g. CN Quận 1
   fullBranchName: string; // e.g. Homestay Central Park
-  status: 'Đã thuê' | 'Trống' | 'BẢO TRÌ';
+  status: 'Đang cho thuê' | 'Đang sửa chữa';
+  description?: string;
   beds: Bed[];
 }
 
-// Initial mock dataset representing rooms and their beds
-const INITIAL_ROOMS_DATA: Room[] = [
-  {
-    id: 'RM-101',
-    roomCode: 'Phòng 101',
-    name: 'Phòng Harmony A1',
-    type: 'Phòng 4 người',
-    floor: '1',
-    capacity: 4,
-    branch: 'CN Quận 1',
-    fullBranchName: 'Homestay Central Park',
-    status: 'Đã thuê',
-    beds: [
-      { bedId: 'Giường 1', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 1500000, status: 'Đã thuê', note: 'Giường trên' },
-      { bedId: 'Giường 3', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 4', price: 1500000, status: 'Đã thuê', note: 'Giường trên' },
-    ]
-  },
-  {
-    id: 'RM-102',
-    roomCode: 'Phòng 102',
-    name: 'Phòng Harmony A2',
-    type: 'Phòng 4 người',
-    floor: '1',
-    capacity: 4,
-    branch: 'CN Quận 1',
-    fullBranchName: 'Homestay Central Park',
-    status: 'Đã thuê',
-    beds: [
-      { bedId: 'Giường 1', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 1500000, status: 'Trống', note: 'Giường trên' },
-      { bedId: 'Giường 3', price: 1500000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 4', price: 1500000, status: 'Trống', note: 'Giường trên' },
-    ]
-  },
-  {
-    id: 'RM-201',
-    roomCode: 'Phòng 201',
-    name: 'Phòng Harmony B1',
-    type: 'Phòng 6 người',
-    floor: '2',
-    capacity: 6,
-    branch: 'CN Quận 3',
-    fullBranchName: 'Sunrise Riverside',
-    status: 'Trống',
-    beds: [
-      { bedId: 'Giường 1', price: 1200000, status: 'Trống', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 1200000, status: 'Trống', note: 'Giường trên' },
-      { bedId: 'Giường 3', price: 1200000, status: 'Trống', note: 'Giường dưới' },
-      { bedId: 'Giường 4', price: 1200000, status: 'Trống', note: 'Giường trên' },
-      { bedId: 'Giường 5', price: 1200000, status: 'Trống', note: 'Giường dưới' },
-      { bedId: 'Giường 6', price: 1200000, status: 'Trống', note: 'Giường trên' },
-    ]
-  },
-  {
-    id: 'RM-202',
-    roomCode: 'Phòng 202',
-    name: 'Phòng Serene B2',
-    type: 'Phòng 4 người',
-    floor: '2',
-    capacity: 4,
-    branch: 'CN Quận 3',
-    fullBranchName: 'Sunrise Riverside',
-    status: 'Đã thuê',
-    beds: [
-      { bedId: 'Giường 1', price: 1600000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 1600000, status: 'Đã thuê', note: 'Giường trên' },
-      { bedId: 'Giường 3', price: 1600000, status: 'Đã thuê', note: 'Giường dưới' },
-      { bedId: 'Giường 4', price: 1600000, status: 'Trống', note: 'Giường trên' },
-    ]
-  },
-  {
-    id: 'RM-301',
-    roomCode: 'Phòng 301',
-    name: 'Phòng Luxury C1',
-    type: 'Phòng 2 người',
-    floor: '3',
-    capacity: 2,
-    branch: 'CN Quận 1',
-    fullBranchName: 'Homestay Central Park',
-    status: 'BẢO TRÌ',
-    beds: [
-      { bedId: 'Giường 1', price: 2000000, status: 'Trống', note: 'Giường dưới' },
-      { bedId: 'Giường 2', price: 2000000, status: 'Trống', note: 'Giường trên' },
-    ]
-  }
-];
+// Mock dataset removed, fetching from API
 
-export default function RoomStatus() {
+export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
-  const [floorFilter, setFloorFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [priceFilter, setPriceFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
   // Results & UI State
-  const [results, setResults] = useState<Room[]>(INITIAL_ROOMS_DATA);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
+  const [results, setResults] = useState<Room[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/rooms/status${branchId ? `?branchId=${branchId}` : ''}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setAllRooms(data.data);
+          setResults(data.data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch rooms:', err));
+  }, [branchId]);
+
   const handleSearch = () => {
-    const filtered = INITIAL_ROOMS_DATA.filter(room => {
+    const filtered = allRooms.filter(room => {
       // 1. Search Query (matches roomCode, room ID, room name, or bed ID inside)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -138,11 +65,8 @@ export default function RoomStatus() {
       // 2. Branch Filter
       if (branchFilter && room.branch !== branchFilter) return false;
 
-      // 3. Floor Filter
-      if (floorFilter && room.floor !== floorFilter) return false;
-
-      // 4. Room Type Filter
-      if (typeFilter && room.type !== typeFilter) return false;
+      // 4. Room Type Filter (By Capacity)
+      if (typeFilter && room.capacity.toString() !== typeFilter) return false;
 
       // 5. Price Filter (check if any bed in room matches price range)
       if (priceFilter) {
@@ -157,13 +81,13 @@ export default function RoomStatus() {
 
       // 6. Status Filter
       if (statusFilter) {
-        const rentedCount = room.beds.filter(b => b.status === 'Đã thuê').length;
-        if (statusFilter === 'Trống') {
-          // Has at least one vacant bed
-          if (rentedCount === room.capacity) return false;
-        } else if (statusFilter === 'Đã thuê') {
-          // Has at least one rented bed
-          if (rentedCount === 0) return false;
+        const rentedCount = room.beds.filter(b => b.status === 'Đã thuê' || b.status === 'Đã cọc').length;
+        if (statusFilter === 'Còn giường trống') {
+          if (rentedCount >= room.capacity) return false;
+        } else if (statusFilter === 'Trống hoàn toàn') {
+          if (rentedCount > 0) return false;
+        } else if (statusFilter === 'Đã đầy') {
+          if (rentedCount < room.capacity) return false;
         }
       }
 
@@ -176,16 +100,15 @@ export default function RoomStatus() {
   const handleReset = () => {
     setSearchQuery('');
     setBranchFilter('');
-    setFloorFilter('');
     setTypeFilter('');
     setPriceFilter('');
     setStatusFilter('');
-    setResults(INITIAL_ROOMS_DATA);
+    setResults(allRooms);
   };
 
   // Helper to calculate rented beds count
   const getRentedCount = (room: Room) => {
-    return room.beds.filter(b => b.status === 'Đã thuê').length;
+    return room.beds.filter(b => b.status === 'Đã thuê' || b.status === 'Đã cọc').length;
   };
 
   // Helper to determine occupancy status badge & label
@@ -264,13 +187,18 @@ export default function RoomStatus() {
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Chi nhánh</label>
                   <p className="text-sm font-medium text-gray-700">{selectedRoom.fullBranchName}</p>
                 </div>
+                {selectedRoom.description && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Mô tả</label>
+                    <p className="text-sm font-medium text-gray-700">{selectedRoom.description}</p>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="mt-8 pt-4 border-t border-gray-100">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Trạng thái vận hành</label>
-              <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold ${selectedRoom.status === 'ĐANG Ở' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                  selectedRoom.status === 'TRỐNG' ? 'bg-green-50 text-green-700 border border-green-100' :
+              <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold ${selectedRoom.status === 'Đang cho thuê' ? 'bg-green-50 text-green-700 border border-green-100' :
                     'bg-red-50 text-red-700 border border-red-100'
                 }`}>
                 {selectedRoom.status}
@@ -309,6 +237,8 @@ export default function RoomStatus() {
                       <td className="px-4 py-4">
                         <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${bed.status === 'Đã thuê'
                             ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                            : bed.status === 'Đã cọc'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
                             : 'bg-green-50 text-green-700 border border-green-100'
                           }`}>
                           {bed.status}
@@ -375,8 +305,7 @@ export default function RoomStatus() {
           >
             <span>Bộ lọc nâng cao</span>
             <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full font-bold">
-              {['floorFilter', 'typeFilter', 'priceFilter', 'statusFilter'].filter(f => {
-                if (f === 'floorFilter') return !!floorFilter;
+              {['typeFilter', 'priceFilter', 'statusFilter'].filter(f => {
                 if (f === 'typeFilter') return !!typeFilter;
                 if (f === 'priceFilter') return !!priceFilter;
                 if (f === 'statusFilter') return !!statusFilter;
@@ -388,34 +317,19 @@ export default function RoomStatus() {
 
         {/* Advanced Filters Block */}
         {showAdvancedFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-100 animate-in slide-in-from-top-2 duration-200">
-            {/* Floor Filter */}
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Tầng</label>
-              <select
-                value={floorFilter}
-                onChange={e => setFloorFilter(e.target.value)}
-                className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:border-[#B7705F]"
-              >
-                <option value="">Tất cả tầng</option>
-                <option value="1">Tầng 1</option>
-                <option value="2">Tầng 2</option>
-                <option value="3">Tầng 3</option>
-              </select>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100 animate-in slide-in-from-top-2 duration-200">
             {/* Room Type */}
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Loại phòng</label>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Loại phòng (số giường)</label>
               <select
                 value={typeFilter}
                 onChange={e => setTypeFilter(e.target.value)}
                 className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:border-[#B7705F]"
               >
                 <option value="">Tất cả loại phòng</option>
-                <option value="Phòng 4 người">Phòng 4 người</option>
-                <option value="Phòng 6 người">Phòng 6 người</option>
-                <option value="Phòng 2 người">Phòng 2 người</option>
+                <option value="2">Phòng 2 giường</option>
+                <option value="4">Phòng 4 giường</option>
+                <option value="8">Phòng 8 giường</option>
               </select>
             </div>
 
@@ -443,8 +357,9 @@ export default function RoomStatus() {
                 className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:border-[#B7705F]"
               >
                 <option value="">Tất cả trạng thái giường</option>
-                <option value="Trống">Có giường trống</option>
-                <option value="Đã thuê">Có giường đã thuê</option>
+                <option value="Còn giường trống">Còn giường trống</option>
+                <option value="Trống hoàn toàn">Trống hoàn toàn</option>
+                <option value="Đã đầy">Đã đầy</option>
               </select>
             </div>
           </div>

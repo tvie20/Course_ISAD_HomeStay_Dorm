@@ -36,3 +36,16 @@ exports.updateCheckinSchedule = async (data) => {
     return result
 }
 
+// Xac nhan thanh toan tien coc
+exports.confirmPayment = async (data) => {
+    // Xử lý business logic ở đây (nếu có) trước khi gọi Model
+    const result = await depositModel.confirmPayment(data)
+    // Xử lý dữ liệu trả về từ Model (nếu cần) trước khi đưa lên Controller
+    
+    return result
+}
+
+
+exports.cancelDeposit = async (data) => {
+    return await depositModel.cancelDeposit(data)
+}

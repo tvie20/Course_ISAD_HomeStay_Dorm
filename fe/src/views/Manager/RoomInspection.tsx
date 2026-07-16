@@ -78,29 +78,41 @@ export default function RoomInspection() {
   const [statusFilter, setStatusFilter] = useState('');
   const [inspectionType, setInspectionType] = useState<'regular' | 'checkout'>('regular');
 
-  // Load checkout flow request
+  // Load checkout flow request and active rooms
   useEffect(() => {
-    const saved = localStorage.getItem('checkout_flow_request');
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (data.status === 'Chờ duyệt' || data.status === 'Đang kiểm tra phòng') {
-        const flowItem = {
-          id: 'flow_req_1',
-          room: data.room,
-          bed: data.bed,
-          customer: data.customer,
-          date: data.date,
-          status: 'Yêu cầu trả phòng',
-          isFlowRequest: true
-        };
-        // Update status visually if needed
-        setInspectionList([flowItem, ...MOCK_LIST]);
-      } else {
+    fetch('http://localhost:8080/api/v1/handovers/occupied')
+      .then(res => res.json())
+      .then(apiData => {
+        let baseList: any[] = [];
+        if (apiData.status === 'success') {
+          baseList = apiData.data;
+        }
+
+        const saved = localStorage.getItem('checkout_flow_request');
+        if (saved) {
+          const data = JSON.parse(saved);
+          if (data.status === 'Chờ duyệt' || data.status === 'Đang kiểm tra phòng') {
+            const flowItem = {
+              id: 'flow_req_1',
+              room: data.room,
+              bed: data.bed,
+              customer: data.customer,
+              date: data.date,
+              status: 'Yêu cầu trả phòng',
+              isFlowRequest: true
+            };
+            setInspectionList([flowItem, ...baseList]);
+          } else {
+            setInspectionList(baseList);
+          }
+        } else {
+          setInspectionList(baseList);
+        }
+      })
+      .catch(err => {
+        console.error(err);
         setInspectionList(MOCK_LIST);
-      }
-    } else {
-      setInspectionList(MOCK_LIST);
-    }
+      });
   }, [selectedItem]);
 
   // Load real assets when an item is selected

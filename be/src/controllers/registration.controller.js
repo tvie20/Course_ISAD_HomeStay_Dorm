@@ -35,3 +35,15 @@ exports.getAll = catchAsync(async (req, res, next) => {
     })
 })
 
+// Cập nhật trạng thái
+exports.updateStatus = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    const { status } = req.body
+
+    const result = await registrationService.updateStatus(id, status)
+
+    res.status(200).json({
+        status: 'success',
+        data: result
+    })
+})

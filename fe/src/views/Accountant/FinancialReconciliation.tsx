@@ -3,88 +3,9 @@ import {
    FileText, Save, Send, Printer, CheckCircle, ArrowLeft, Eye, FileDigit,
    Info, Calculator, Upload, Search, AlertTriangle, CheckCircle2, DollarSign, HelpCircle, FileCheck, ChevronDown
 } from 'lucide-react';
+import API_URL from '../../api';
 
-const MOCK_RECON = [
-   {
-      id: 'DS-2026-01',
-      room: 'P.102',
-      bed: 'Giường 01',
-      customer: 'Trần Văn B',
-      type: 'Trả phòng',
-      status: 'Chờ đối soát',
-      isFlowRequest: false,
-      hasInspection: true,
-      hasContract: true,
-      contractId: 'HD-2023-P102',
-      leaseDuration: '21/10/2023 - 21/10/2024 (12 tháng)',
-      monthsOccupied: 10,
-      deposit: 4000000,
-      rentLiability: 0,
-      damagedAssetFee: 0,
-      damagedItems: [
-         { type: 'Hỏng', desc: '1 tủ đựng đồ (Bản lề bị xệ)' },
-         { type: 'Mất', desc: 'chìa khóa phòng/thẻ từ' }
-      ],
-      notes: 'Phòng có vết bẩn trên tường khó giặt. Kế toán xem xét đối soát phạt.'
-   },
-   {
-      id: 'DS-2026-02',
-      room: 'P.301',
-      bed: 'Giường 02',
-      customer: 'Khách hàng 2',
-      type: 'Trả phòng',
-      status: 'Chờ đối soát',
-      isFlowRequest: false,
-      hasInspection: true,
-      hasContract: true,
-      contractId: 'HD-2023-P301',
-      leaseDuration: '01/01/2023 - 01/01/2024 (12 tháng)',
-      monthsOccupied: 12,
-      deposit: 3000000,
-      rentLiability: 0,
-      damagedAssetFee: 0,
-      damagedItems: [],
-      notes: 'Chưa có kết quả kiểm tra phòng từ bộ phận kỹ thuật.'
-   },
-   {
-      id: 'DS-2026-03',
-      room: 'P.410',
-      bed: 'Giường 01',
-      customer: 'Lê Hoàng Nam',
-      type: 'Trả phòng',
-      status: 'Chờ đối soát',
-      isFlowRequest: false,
-      hasInspection: true,
-      hasContract: false,
-      contractId: null,
-      leaseDuration: 'N/A',
-      monthsOccupied: 0,
-      deposit: 0,
-      rentLiability: 0,
-      damagedAssetFee: 0,
-      damagedItems: [],
-      notes: 'Hồ sơ thiếu thông tin hợp đồng gốc và tiền cọc đặt giữ giường.'
-   },
-   {
-      id: 'DS-2026-04',
-      room: 'P.505',
-      bed: 'Giường 04',
-      customer: 'Phạm Văn D',
-      type: 'Trả phòng',
-      status: 'Chờ đối soát',
-      isFlowRequest: false,
-      hasInspection: false,
-      hasContract: true,
-      contractId: 'HD-2023-P505',
-      leaseDuration: '01/05/2023 - 01/05/2024 (12 tháng)',
-      monthsOccupied: 12,
-      deposit: 2000000,
-      rentLiability: 0,
-      damagedAssetFee: 0,
-      damagedItems: [],
-      notes: 'Khách dọn đi gấp, quản lý chưa có thời gian kiểm phòng.'
-   }
-];
+const MOCK_RECON: any[] = [];
 
 const BANG_GIA_DEN_BU = [
    { MaDenBu: 'DB01', TenLoi: 'Hư hỏng nhẹ tủ đựng đồ', MucDo: 'Nhẹ', PhanTramDenBu: 10, GiaThamKhao: 150000 },
@@ -158,56 +79,50 @@ export default function FinancialReconciliation() {
    const [reconStatus, setReconStatus] = useState<string>('Chờ hoàn cọc');
    const [terminationStatus, setTerminationStatus] = useState<string>('EXPIRED');
 
-   useEffect(() => {
-      const saved = localStorage.getItem('checkout_flow_request');
-      const updatedStatusMap = JSON.parse(localStorage.getItem('reconciled_statuses') || '{}');
+   const fetchReconList = async () => {
+      try {
+         const res = await fetch(`${API_URL}/api/v1/checkout-requests`);
+         const data = await res.json();
+         if (data.status === 'success') {
+            const formatted = data.data.map((item: any) => {
+               let mappedStatus = item.status;
+               const net = (item.deposit || 0) - (item.utilityFee || 0) - (item.cleaningFee || 0) - (item.damagedAssetFee || 0) - (item.rentLiability || 0) - (item.otherFee || 0);
+               
+               if (item.status === 'Đang xử lý') {
+                  mappedStatus = 'Chờ đối soát';
+               } else if (item.status === 'Chờ thanh lý') {
+                  mappedStatus = net >= 0 ? 'Chờ hoàn cọc' : 'Chờ thu bổ sung';
+               } else if (item.status === 'Đã xử lý') {
+                  mappedStatus = 'Hoàn tất';
+               }
 
-      const applyUpdatedStatus = (item: any) => {
-         if (updatedStatusMap[item.id]) {
-            return { ...item, status: updatedStatusMap[item.id] };
+               return {
+                  id: item.id,
+                  room: item.room,
+                  bed: `Giường 0${item.bed}`,
+                  customer: item.customer,
+                  type: 'Trả phòng',
+                  status: mappedStatus,
+                  contractId: item.contractId || 'HD-UNKNOWN',
+                  leaseDuration: `${item.monthsStayed} tháng`,
+                  monthsOccupied: item.monthsStayed,
+                  deposit: item.deposit || 0,
+                  rentLiability: item.rentLiability || 0,
+                  hasInspection: true,
+                  hasContract: true,
+                  notes: item.note
+               };
+            });
+            setReconList(formatted);
          }
-         return item;
-      };
-
-      if (saved) {
-         const data = JSON.parse(saved);
-         const hasInspection = ['Đã kiểm tra phòng', 'Đã đối soát', 'Chờ hoàn cọc', 'Chờ thu bổ sung', 'Gửi khách hàng', 'Đã thanh lý'].includes(data.status);
-         const hasContract = true;
-
-         const flowItem = {
-            id: 'DS-2026-FLOW',
-            room: data.room || 'P.302',
-            bed: data.bed || 'Giường 01',
-            customer: data.customer || 'Trần Thị Sinh Viên',
-            type: 'Trả phòng',
-            status: ['Chờ đối soát', 'Đã kiểm tra phòng'].includes(data.status) ? 'Chờ đối soát' : data.status,
-            isFlowRequest: true,
-            hasInspection: hasInspection,
-            hasContract: hasContract,
-            contractId: 'HD-2023-P302',
-            leaseDuration: '15/08/2023 - 15/08/2024 (12 tháng)',
-            monthsOccupied: 10,
-            deposit: data.deposit || 6500000,
-            rentLiability: data.rentLiability || 0,
-            damagedAssetFee: 0,
-            damagedItems: data.damagedItems || [
-               { type: 'Hỏng', desc: '1 tủ đựng đồ (Cánh cửa bị nứt)' },
-               { type: 'Hỏng', desc: 'nặng máy lạnh (Không lên nguồn)' }
-            ],
-            notes: data.reconcilerNotes || data.note || 'Yêu cầu trả phòng từ ứng dụng khách hàng.'
-         };
-
-         const finalFlowItem = applyUpdatedStatus(flowItem);
-         if (updatedStatusMap['DS-2026-FLOW'] && data.status !== updatedStatusMap['DS-2026-FLOW']) {
-            data.status = updatedStatusMap['DS-2026-FLOW'];
-            localStorage.setItem('checkout_flow_request', JSON.stringify(data));
-         }
-
-         setReconList([finalFlowItem, ...MOCK_RECON.map(applyUpdatedStatus)]);
-      } else {
-         setReconList(MOCK_RECON.map(applyUpdatedStatus));
+      } catch (err) {
+         console.error('Error fetching reconciliations:', err);
       }
-   }, [selected]);
+   };
+
+   useEffect(() => {
+      fetchReconList();
+   }, []);
 
    useEffect(() => {
       if (selected) {
@@ -255,37 +170,41 @@ export default function FinancialReconciliation() {
       }
    }, [netAmount, isSurplus]);
 
-   const handleSaveAndConfirm = () => {
-      const updatedStatusMap = JSON.parse(localStorage.getItem('reconciled_statuses') || '{}');
-      updatedStatusMap[selected.id] = reconStatus;
-      localStorage.setItem('reconciled_statuses', JSON.stringify(updatedStatusMap));
-
-      setReconList(reconList.map(item => item.id === selected.id ? { ...item, status: reconStatus } : item));
-      setSelected({ ...selected, status: reconStatus });
-
-      if (selected?.isFlowRequest) {
-         const saved = localStorage.getItem('checkout_flow_request');
-         if (saved) {
-            const data = JSON.parse(saved);
-            data.status = reconStatus;
-            data.deposit = depositInput;
-            data.chiTietDoiSoat = chiTietList;
-            data.totalDeductions = totalDeductions;
-            data.netAmount = netAmount;
-            data.reconcilerNotes = notesInput;
-            localStorage.setItem('checkout_flow_request', JSON.stringify(data));
+   const handleSaveAndConfirm = async () => {
+      try {
+         const payload = {
+            contractId: selected.contractId,
+            requestId: selected.id,
+            netAmount: netAmount,
+            chiTietList: chiTietList.map(item => ({
+               maLoaiKhauTru: item.maLoaiKhauTru,
+               soTien: item.soTien,
+               lyDo: item.lyDo
+            }))
+         };
+         
+         const res = await fetch(`${API_URL}/api/v1/reconciliations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+         });
+         
+         const data = await res.json();
+         if (data.status === 'success') {
+            setIsSaved(true);
+            showSuccessModal(
+               `Đã lưu đối soát và cập nhật trạng thái yêu cầu trả phòng thành Chờ thanh lý.`,
+               'Lưu phiếu đối soát thành công!',
+               () => {
+                  fetchReconList();
+               }
+            );
+         } else {
+            showErrorModal(data.message || 'Lỗi khi lưu đối soát');
          }
+      } catch (err) {
+         showErrorModal('Lỗi kết nối máy chủ khi lưu đối soát');
       }
-
-      setIsSaved(true);
-      const targetStatus = reconStatus;
-      showSuccessModal(
-         `Trạng thái hồ sơ trả phòng của khách hàng được cập nhật sang: ${targetStatus}`,
-         'Lưu phiếu đối soát thành công!',
-         () => {
-            // Let the form remain open to show readonly view and 'Đã xong' button
-         }
-      );
    };
 
    const filteredReconList = reconList.filter(item =>

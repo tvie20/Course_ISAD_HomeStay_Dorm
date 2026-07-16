@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import API_URL from './api';
 import Login from './components/Login';
 import Sidebar, { Role, MENUS } from './components/Sidebar';
 import LandingPage from './views/Home/LandingPage';
@@ -13,7 +15,7 @@ import Handover from './views/Manager/Handover';
 import CheckOut from './views/Manager/CheckOut';
 import Liquidation from './views/Accountant/Liquidation';
 
-// New Views (Lazy or standard imports)
+// New Views
 import BranchManagement from './views/Admin/BranchManagement';
 import UserManagement from './views/Admin/UserManagement';
 import RoomManagement from './views/Admin/RoomManagement';
@@ -37,141 +39,158 @@ const ViewPlaceholder = ({ name }: { name: string }) => (
   </div>
 );
 
-export default function App() {
-  const [appState, setAppState] = useState<'landing' | 'login' | 'register' | 'dashboard'>('landing');
-  const [user, setUser] = useState<{username: string, role: Role} | null>(null);
-  const [activeMenu, setActiveMenu] = useState<string>('');
+type UserData = { username: string, name: string, role: Role, branch?: string };
 
-  const handleLogin = (username: string) => {
-    let role: Role | '' = '';
-    const u = username.toUpperCase();
-    if (u.startsWith('ADMIN')) role = 'admin';
-    else if (u.startsWith('SALE')) role = 'sale';
-    else if (u.startsWith('ACCOUNTANT')) role = 'accountant';
-    else if (u.startsWith('MANAGER')) role = 'manager';
-    else if (u.startsWith('GUEST')) role = 'guest';
-    
-    if (role) {
-      setUser({ username, role });
-      setAppState('dashboard');
+export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    // Khôi phục user từ localStorage khi tải lại trang
+    const storedUser = localStorage.getItem('user_session');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setIsInitializing(false);
+  }, []);
+
+  const handleLogin = async (username: string, password?: string, userType?: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password, userType })
+      });
+      const data = await res.json();
       
-      if (role === 'admin') setActiveMenu('branches');
-      else if (role === 'sale') setActiveMenu('schedule');
-      else if (role === 'accountant') setActiveMenu('reconciliation');
-      else if (role === 'manager') setActiveMenu('room_inspection');
-      else if (role === 'guest') setActiveMenu('view_contract');
-    } else {
-      alert("Username phải bắt đầu bằng admin, sale, accountant, manager, hoặc guest");
+      if (data.status === 'success') {
+        const { username: employeeId, name: fullName, role, branch } = data.data;
+        const userData = { username: employeeId, name: fullName || employeeId, role, branch };
+        setUser(userData);
+        localStorage.setItem('user_session', JSON.stringify(userData));
+        
+        // Điều hướng tới trang đầu tiên tương ứng role
+        if (role === 'admin') navigate('/branches');
+        else if (role === 'sale') navigate('/schedule');
+        else if (role === 'accountant') navigate('/reconciliation');
+        else if (role === 'manager') navigate('/room_inspection');
+        else if (role === 'guest') navigate('/view_contract');
+      } else {
+        alert("Đăng nhập thất bại: " + data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Lỗi kết nối đến máy chủ ");
     }
   };
 
   const handleLogout = () => {
     setUser(null);
-    setActiveMenu('');
-    setAppState('landing');
+    localStorage.removeItem('user_session');
+    navigate('/');
   };
 
-  if (appState === 'landing') {
-    return <LandingPage onNavigate={setAppState} />;
+  if (isInitializing) return null;
+
+  // Lấy customerId cho guest
+  let customerId = 'KH0001';
+  if (user?.role === 'guest') {
+     const rawUsername = user.username.toUpperCase();
+     if (rawUsername.startsWith('KH')) {
+         customerId = rawUsername;
+     } else if (rawUsername.startsWith('GUEST_KH')) {
+         customerId = rawUsername.replace('GUEST_', '');
+     }
   }
 
-  if (appState === 'login') {
+  // Dashboard Layout
+  const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+    if (!user) return <Navigate to="/login" replace />;
+
+    const currentMenuId = location.pathname.substring(1) || '';
+
     return (
-      <div className="relative">
-        <button 
-          onClick={() => setAppState('landing')}
-          className="absolute top-6 left-6 text-gray-500 hover:text-[#B7705F] font-medium z-10 flex items-center"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-        </button>
-        <Login onLogin={handleLogin} />
+      <div className="flex min-h-screen bg-[#FAF5F3]">
+        <Sidebar 
+          role={user.role} 
+          username={user.name || user.username} 
+          activeMenu={currentMenuId} 
+          onMenuSelect={(id) => navigate(`/${id}`)} 
+          onLogout={handleLogout}
+        />
+        
+        <main className="flex-1 ml-[300px] min-h-screen overflow-y-auto">
+            {children}
+        </main>
       </div>
     );
-  }
-
-  if (appState === 'register') {
-    return (
-      <div className="relative min-h-screen bg-[#F9F7F6]">
-         <div className="pt-6 pl-6 absolute top-0 left-0 z-10">
-            <button 
-              onClick={() => setAppState('landing')}
-              className="text-gray-500 hover:text-[#B7705F] font-medium flex items-center"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-            </button>
-         </div>
-         <GuestRegistration onReturn={() => setAppState('landing')} />
-      </div>
-    );
-  }
-
-  // Dashboard state
-  // For sidebars, map the menu id to the component
-  const getViewRender = () => {
-    if (user?.role === 'admin') {
-       switch (activeMenu) {
-         case 'branches': return <BranchManagement />;
-         case 'users': return <UserManagement />;
-         case 'rooms': return <RoomManagement />;
-         case 'assets_management': return <AdminAssetsManagement />;
-         default: return <ViewPlaceholder name={activeMenu} />;
-       }
-    }
-
-    if (user?.role === 'sale') {
-       switch (activeMenu) {
-         case 'schedule': return <ScheduleView />;
-         case 'initial_payments': return <InitialPayment />;
-         case 'checkin': return <CheckIn />;
-         case 'leases': return <LeaseContract />; // Mock for booking/contract
-         case 'room_status': return <RoomStatus />;
-         default: return <ViewPlaceholder name={activeMenu} />;
-       }
-    }
-
-    if (user?.role === 'accountant') {
-       switch (activeMenu) {
-         case 'reconciliation': return <FinancialReconciliation />;
-         case 'liquidation': return <Liquidation />;
-         default: return <ViewPlaceholder name={activeMenu} />;
-       }
-    }
-
-    if (user?.role === 'manager') {
-       switch (activeMenu) {
-         case 'room_inspection': return <RoomInspection />;
-         case 'room_handover': return <Handover />;
-         case 'checkout': return <CheckOut />;
-         case 'assets_management': return <AssetsManagement />;
-         default: return <ViewPlaceholder name={activeMenu} />;
-       }
-    }
-
-    if (user?.role === 'guest') {
-       switch (activeMenu) {
-         case 'view_contract': return <ViewContract />;
-         case 'checkout_request': return <CheckoutRequest />;
-         case 'service_payment': return <ServicePayment onNavigate={setActiveMenu} />;
-         default: return <ViewPlaceholder name={activeMenu} />;
-       }
-    }
-
-    return <ViewPlaceholder name={activeMenu} />;
   };
 
   return (
-    <div className="flex min-h-screen bg-[#FAF5F3]">
-      <Sidebar 
-        role={user!.role} 
-        username={user!.username} 
-        activeMenu={activeMenu} 
-        onMenuSelect={setActiveMenu} 
-        onLogout={handleLogout}
-      />
+    <Routes>
+      <Route path="/" element={
+        user ? <Navigate to={`/${MENUS[user.role][0].id}`} replace /> : <LandingPage onNavigate={(path) => navigate(`/${path}`)} />
+      } />
       
-      <main className="flex-1 ml-[300px] min-h-screen overflow-y-auto">
-          {getViewRender()}
-      </main>
-    </div>
+      <Route path="/login" element={
+        <div className="relative">
+          <button 
+            onClick={() => navigate('/')}
+            className="absolute top-6 left-6 text-gray-500 hover:text-[#B7705F] font-medium z-10 flex items-center"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+          </button>
+          <Login onLogin={handleLogin} />
+        </div>
+      } />
+
+      <Route path="/register" element={
+        <div className="relative min-h-screen bg-[#F9F7F6]">
+           <div className="pt-6 pl-6 absolute top-0 left-0 z-10">
+              <button 
+                onClick={() => navigate('/')}
+                className="text-gray-500 hover:text-[#B7705F] font-medium flex items-center"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+              </button>
+           </div>
+           <GuestRegistration onReturn={() => navigate('/')} />
+        </div>
+      } />
+
+      {/* Admin Routes */}
+      <Route path="/branches" element={<DashboardLayout><BranchManagement /></DashboardLayout>} />
+      <Route path="/users" element={<DashboardLayout><UserManagement /></DashboardLayout>} />
+      <Route path="/rooms" element={<DashboardLayout><RoomManagement /></DashboardLayout>} />
+      <Route path="/assets_management" element={<DashboardLayout>{user?.role === 'admin' ? <AdminAssetsManagement /> : <AssetsManagement />}</DashboardLayout>} />
+
+      {/* Sale Routes */}
+      <Route path="/schedule" element={<DashboardLayout><ScheduleView employeeId={user?.username || ''} branchId={user?.branch} onNavigate={(menu) => navigate(`/${menu}`)} /></DashboardLayout>} />
+      <Route path="/initial_payments" element={<DashboardLayout><InitialPayment employeeId={user?.username || ''} branchId={user?.branch} /></DashboardLayout>} />
+      <Route path="/checkin" element={<DashboardLayout><CheckIn employeeId={user?.username || ''} branchId={user?.branch} /></DashboardLayout>} />
+      <Route path="/leases" element={<DashboardLayout><LeaseContract employeeId={user?.username || ''} branchId={user?.branch} /></DashboardLayout>} />
+      <Route path="/room_status" element={<DashboardLayout><RoomStatus branchId={user?.branch} /></DashboardLayout>} />
+
+      {/* Accountant Routes */}
+      <Route path="/reconciliation" element={<DashboardLayout><FinancialReconciliation /></DashboardLayout>} />
+      <Route path="/liquidation" element={<DashboardLayout><Liquidation /></DashboardLayout>} />
+
+      {/* Manager Routes */}
+      <Route path="/room_inspection" element={<DashboardLayout><RoomInspection /></DashboardLayout>} />
+      <Route path="/room_handover" element={<DashboardLayout><Handover /></DashboardLayout>} />
+      <Route path="/checkout" element={<DashboardLayout><CheckOut /></DashboardLayout>} />
+
+      {/* Guest Routes */}
+      <Route path="/view_contract" element={<DashboardLayout><ViewContract customerId={customerId} /></DashboardLayout>} />
+      <Route path="/checkout_request" element={<DashboardLayout><CheckoutRequest customerId={customerId} /></DashboardLayout>} />
+      <Route path="/service_payment" element={<DashboardLayout><ServicePayment onNavigate={(menu) => navigate(`/${menu}`)} customerId={customerId} /></DashboardLayout>} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import API_URL from '../../api';
 import { X, Printer, Zap, Droplets, Wifi, ParkingCircle, CheckCircle } from 'lucide-react';
 
-export default function CreateLease({ onCancel, initialData }: { onCancel: () => void, initialData?: any }) {
+export default function CreateLease({ onCancel, onSuccess, initialData }: { onCancel: () => void, onSuccess?: () => void, initialData?: any }) {
    const availableBeds = initialData?.isFullRoom 
       ? Array.from({ length: initialData?.maxCount || 4 }).map((_, i) => `Giường 0${i + 1}`) 
       : (initialData?.beds && initialData.beds.length > 0 ? initialData.beds : ['Giường 01']);
@@ -14,8 +15,37 @@ export default function CreateLease({ onCancel, initialData }: { onCancel: () =>
    const roommates = initialData?.roommates || [];
    const [roommateBeds, setRoommateBeds] = useState<string[]>(roommates.map(() => ''));
 
-   const handleSaveContract = () => {
-      setShowSaveSuccess(true);
+   const handleSaveContract = async () => {
+      try {
+         const startDate = new Date();
+         const endDate = new Date();
+         endDate.setMonth(endDate.getMonth() + parseInt(leaseDuration));
+         
+         const payload = {
+            DepositID: initialData?.id,
+            CustomerID: initialData?.customerId,
+            RoomPrice: 3500000,
+            StartDate: startDate.toISOString().split('T')[0],
+            EndDate: endDate.toISOString().split('T')[0],
+            roommates: roommates
+         };
+         
+         const res = await fetch(`${API_URL}/api/v1/contracts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+         });
+         
+         const data = await res.json();
+         if (data.status === 'success') {
+            setShowSaveSuccess(true);
+         } else {
+            alert('Lỗi: ' + data.message);
+         }
+      } catch (err) {
+         console.error(err);
+         alert('Lỗi kết nối đến máy chủ');
+      }
    };
 
    return (
@@ -57,7 +87,7 @@ export default function CreateLease({ onCancel, initialData }: { onCancel: () =>
                      <div className="flex justify-center">
                         <button
                            type="button"
-                           onClick={() => setShowSaveSuccess(false)}
+                           onClick={() => { setShowSaveSuccess(false); onSuccess?.(); }}
                            className="px-6 py-2.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
                         >
                            Đóng thông báo

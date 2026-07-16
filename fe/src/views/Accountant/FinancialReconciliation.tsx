@@ -115,7 +115,7 @@ export default function FinancialReconciliation() {
                   notes: item.note
                };
             });
-            setReconList(formatted.filter((item: any) => item.rawStatus === 'Đã kiểm tra phòng'));
+            setReconList(formatted.filter((item: any) => ['Đã kiểm tra phòng', 'Chờ thanh lý', 'Đã xử lý'].includes(item.rawStatus)));
          }
       } catch (err) {
          console.error('Error fetching reconciliations:', err);
@@ -190,7 +190,7 @@ export default function FinancialReconciliation() {
             netAmount: netAmount,
             chiTietList: chiTietList.map(item => ({
                maLoaiKhauTru: item.maLoaiKhauTru,
-               soTien: item.soTien,
+               soTien: Number(item.soTien) || 0,
                lyDo: item.lyDo
             }))
          };
@@ -516,7 +516,7 @@ export default function FinancialReconciliation() {
                                  <h4 className="text-sm font-bold text-[#8C4A3A]">Thông tin chi tiết đối soát</h4>
                               </div>
                               <button
-                                 onClick={() => setChiTietList([...chiTietList, { id: Date.now().toString(), maLoaiKhauTru: 'KHAC', loaiDenBu: 'Khác', lyDo: '', soTien: '' }])}
+                                 onClick={() => setChiTietList([...chiTietList, { id: Date.now().toString(), maLoaiKhauTru: 'PHAT_VI_PHAM', loaiDenBu: 'Khác', lyDo: '', soTien: '' }])}
                                  className="px-3 py-1.5 bg-white border border-[#EAD3CC] text-[#8C4A3A] rounded shadow-sm text-xs font-bold hover:bg-[#FAF5F3] transition-colors"
                               >
                                  + Thêm khoản trừ
@@ -572,11 +572,9 @@ export default function FinancialReconciliation() {
                                        >
                                           <option value="NO_THUE">NO_THUE</option>
                                           <option value="NO_DIEN">NO_DIEN</option>
-                                          <option value="NO_NUOC">NO_NUOC</option>
                                           <option value="PHAT_TAI_SAN">PHAT_TAI_SAN</option>
                                           <option value="PHI_DON_DEP">PHI_DON_DEP</option>
                                           <option value="PHAT_VI_PHAM">PHAT_VI_PHAM</option>
-                                          <option value="KHAC">KHAC</option>
                                        </select>
                                     </div>
                                     <div className="col-span-5 relative">

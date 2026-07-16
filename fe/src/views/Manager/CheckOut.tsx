@@ -56,29 +56,31 @@ export default function CheckOut() {
       setIsCreatingRecord(true);
    };
 
-   const handleFinalizeLiquidation = () => {
+   const handleUpdateStatus = (newStatus: string) => {
       fetch(`${API_URL}/api/v1/checkout-requests/${selected.id}/status`, {
          method: 'PUT',
          headers: {
             'Content-Type': 'application/json'
          },
-         body: JSON.stringify({ status: 'Đã xử lý' })
+         body: JSON.stringify({ status: newStatus })
       })
       .then(res => res.json())
       .then(data => {
          if (data.status === 'success') {
             if (selected) {
-               setSelected({ ...selected, status: 'Đã xử lý' });
+               setSelected({ ...selected, status: newStatus });
                setCheckoutList(prev => prev.map(item => {
                   if (item.id === selected.id) {
-                     return { ...item, status: 'Đã xử lý' };
+                     return { ...item, status: newStatus };
                   }
                   return item;
                }));
             }
-            alert('Đã xử lý yêu cầu trả phòng thành công!');
-            setIsCreatingRecord(false);
-            setSelected(null);
+            alert(`Đã cập nhật trạng thái thành: ${newStatus}`);
+            if (newStatus === 'Đã xử lý' || newStatus === 'Đã thanh lý') {
+               setIsCreatingRecord(false);
+               setSelected(null);
+            }
             fetchCheckoutRequests();
          } else {
             alert('Lỗi: ' + (data.message || 'Không thể cập nhật trạng thái'));
@@ -187,22 +189,31 @@ export default function CheckOut() {
                   </div>
 
                   <div className="w-full mt-6 flex flex-row gap-4">
-                     {(selected.status === 'Đang xử lý' || selected.status === 'Chờ thanh lý') && (
+                     {selected.status === 'Đang xử lý' && (
                         <button
-                           onClick={handleFinalizeLiquidation}
+                           onClick={() => handleUpdateStatus('Chờ thanh lý')}
                            className="flex-1 px-4 py-2.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer"
                         >
                            <CheckCircle className="w-4 h-4 mr-1.5" />
-                           Hoàn tất xử lý
+                           Xác nhận tạo & gửi khách hàng
                         </button>
                      )}
-                     {selected.status === 'Đã xử lý' && (
+                     {selected.status === 'Chờ thanh lý' && (
+                        <button
+                           onClick={() => handleUpdateStatus('Đã xử lý')}
+                           className="flex-1 px-4 py-2.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer"
+                        >
+                           <CheckCircle className="w-4 h-4 mr-1.5" />
+                           Hoàn tất thanh lý hợp đồng
+                        </button>
+                     )}
+                     {(selected.status === 'Đã xử lý' || selected.status === 'Đã thanh lý') && (
                         <button
                            disabled={true}
-                           className="w-full px-6 py-2.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-lg text-sm font-bold flex items-center justify-center cursor-not-allowed"
+                           className="w-full px-6 py-2.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-bold flex items-center justify-center cursor-not-allowed"
                         >
                            <CheckCircle className="w-4 h-4 mr-2" />
-                           Yêu cầu đã được xử lý
+                           Hợp đồng đã thanh lý thành công
                         </button>
                      )}
                   </div>

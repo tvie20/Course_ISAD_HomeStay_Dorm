@@ -1,7 +1,31 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import API_URL from '../../api';
 
 // Reuse similar structure to GuestRegistration but slightly adapted for Admin view
 export default function AdminRegistration() {
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
+  const [roomTypes, setRoomTypes] = useState<{id: string, name: string}[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/branches`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setBranches(data.data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch branches', err));
+
+    fetch(`${API_URL}/api/v1/room-types`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setRoomTypes(data.data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch room types', err));
+  }, []);
+
   return (
     <div className="p-8">
       {/* Header */}
@@ -86,15 +110,21 @@ export default function AdminRegistration() {
                <input type="number" defaultValue="1" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
-               <label className="block text-sm font-medium mb-1.5 text-gray-700">Khu vực mong muốn</label>
+               <label className="block text-sm font-medium mb-1.5 text-gray-700">Khu vực / Chi nhánh mong muốn <span className="text-[#B7705F]">*</span></label>
                <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
-                  <option>Chọn chi nhánh</option>
+                  <option value="">Chọn chi nhánh</option>
+                  {branches.map(branch => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
                </select>
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Loại phòng <span className="text-[#B7705F]">*</span></label>
                <select className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
-                  <option>Chọn loại phòng</option>
+                  <option value="">Chọn loại phòng</option>
+                  {roomTypes.map(rt => (
+                    <option key={rt.id} value={rt.id}>{rt.name}</option>
+                  ))}
                </select>
             </div>
             <div>

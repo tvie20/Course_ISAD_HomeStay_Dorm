@@ -38,7 +38,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
 
    useEffect(() => {
       fetchDeposits();
-      
+
       fetch(`${API_URL}/api/v1/registrations${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}&unbookedOnly=true` : '?unbookedOnly=true'}`)
          .then(res => res.json())
          .then(data => {
@@ -86,12 +86,12 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
    const selectedRoom = rooms.find(r => r.id === selectedRoomId);
    const calculatedBeds = isFullRoom && selectedRoom ? selectedRoom.maxCount : selectedBeds.length;
    const totalRent = selectedRoom ? (
-       isFullRoom 
-       ? selectedRoom.beds.reduce((sum: number, b: any) => sum + (b.price || 0), 0)
-       : selectedBeds.reduce((sum: number, bedId: string) => {
-           const bed = selectedRoom.beds.find((b: any) => b.id === bedId);
-           return sum + (bed?.price || 0);
-       }, 0)
+      isFullRoom
+         ? selectedRoom.beds.reduce((sum: number, b: any) => sum + (b.price || 0), 0)
+         : selectedBeds.reduce((sum: number, bedId: string) => {
+            const bed = selectedRoom.beds.find((b: any) => b.id === bedId);
+            return sum + (bed?.price || 0);
+         }, 0)
    ) : 0;
    const totalDeposit = totalRent * 2;
 
@@ -239,6 +239,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
                               <thead className="bg-[#FAF5F3] text-[#666666]">
                                  <tr>
                                     <th className="px-4 py-3 font-medium">Mã Phiếu ĐK</th>
+                                    <th className="px-4 py-3 font-medium">Chi nhánh</th>
                                     <th className="px-4 py-3 font-medium">Khách Hàng</th>
                                     <th className="px-4 py-3 font-medium">CCCD</th>
                                     <th className="px-4 py-3 font-medium">SĐT</th>
@@ -278,11 +279,12 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
                            Chọn khách hàng khác
                         </button>
                      </div>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         <div><span className="block text-xs text-gray-500 uppercase">Họ và tên</span><span className="font-semibold text-gray-900">{registration.customer}</span></div>
                         <div><span className="block text-xs text-gray-500 uppercase">SĐT</span><span className="font-semibold text-gray-900">{registration.phone}</span></div>
                         <div><span className="block text-xs text-gray-500 uppercase">CCCD</span><span className="font-semibold text-gray-900">{registration.cccd}</span></div>
                         <div><span className="block text-xs text-gray-500 uppercase">Phiếu ĐK</span><span className="font-semibold text-gray-900">{registration.id}</span></div>
+                        <div><span className="block text-xs text-gray-500 uppercase">Chi nhánh</span><span className="font-semibold text-[#B7705F]">{registration.branch || 'Chưa cập nhật'}</span></div>
                      </div>
                   </div>
                )}
@@ -373,16 +375,16 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
                                  onChange={(e) => setIsFullRoom(e.target.checked)}
                                  className={`w-4 h-4 text-[#B7705F] border-gray-300 rounded focus:ring-[#B7705F] ${selectedRoom.beds.some((b: any) => b.status !== 'Trống') ? 'cursor-not-allowed' : ''}`}
                               />
-                           <span className="text-sm font-semibold text-orange-600">
-                              Khách thuê nguyên phòng ({selectedRoom.maxCount} giường)
-                              {selectedRoom.beds.some((b: any) => b.status !== 'Trống') && <span className="text-gray-500 ml-1 font-normal">(Phòng đã có khách)</span>}
-                           </span>
+                              <span className="text-sm font-semibold text-orange-600">
+                                 Khách thuê nguyên phòng ({selectedRoom.maxCount} giường)
+                                 {selectedRoom.beds.some((b: any) => b.status !== 'Trống') && <span className="text-gray-500 ml-1 font-normal">(Phòng đã có khách)</span>}
+                              </span>
                            </label>
                         </div>
 
                         {!isFullRoom && (
-                            <div className="grid grid-cols-4 gap-4">
-                               {selectedRoom.beds.map((bed: any) => {
+                           <div className="grid grid-cols-4 gap-4">
+                              {selectedRoom.beds.map((bed: any) => {
                                  const isSelected = selectedBeds.includes(bed.id);
                                  return (
                                     <div
@@ -425,7 +427,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
                               </span>
                            </div>
                         </div>
-                        
+
                         <div className="mt-4">
                            <label className="block text-sm font-semibold text-[#666666] mb-2">Hình thức thanh toán</label>
                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#B7705F]">
@@ -543,31 +545,31 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
             )}
 
             {selectedItem.status === 'Chờ thanh toán' && (
-             <button onClick={async () => {
-                try {
-                   const res = await fetch(`${API_URL}/api/v1/deposits/${selectedItem.id}/confirm`, {
-                      method: 'PUT'
-                   });
-                   const data = await res.json();
-                   if (data.status === 'success') {
-                      alert('Xác nhận đã thanh toán thành công! Sẽ tự động chuyển xếp lịch nhận phòng.');
-                      setSelectedItem({ ...selectedItem, status: 'Đã thanh toán' });
-                      // Cập nhật lại danh sách (fetch lại) để sync dữ liệu
-                      fetch(`${API_URL}/api/v1/deposits`)
-                         .then(r => r.json())
-                         .then(d => {
-                            if (d.status === 'success') setList(d.data);
-                         });
-                   } else {
-                      alert('Lỗi: ' + data.message);
-                   }
-                } catch (err) {
-                   console.error(err);
-                   alert('Không thể kết nối đến server');
-                }
-             }} className="flex-1 py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
-               <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận đã thanh toán
-            </button>
+               <button onClick={async () => {
+                  try {
+                     const res = await fetch(`${API_URL}/api/v1/deposits/${selectedItem.id}/confirm`, {
+                        method: 'PUT'
+                     });
+                     const data = await res.json();
+                     if (data.status === 'success') {
+                        alert('Xác nhận đã thanh toán thành công! Sẽ tự động chuyển xếp lịch nhận phòng.');
+                        setSelectedItem({ ...selectedItem, status: 'Đã thanh toán' });
+                        // Cập nhật lại danh sách (fetch lại) để sync dữ liệu
+                        fetch(`${API_URL}/api/v1/deposits`)
+                           .then(r => r.json())
+                           .then(d => {
+                              if (d.status === 'success') setList(d.data);
+                           });
+                     } else {
+                        alert('Lỗi: ' + data.message);
+                     }
+                  } catch (err) {
+                     console.error(err);
+                     alert('Không thể kết nối đến server');
+                  }
+               }} className="flex-1 py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận đã thanh toán
+               </button>
             )}
          </div>
       </div>

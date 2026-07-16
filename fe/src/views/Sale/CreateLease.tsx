@@ -18,14 +18,16 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
    const [managerInfo, setManagerInfo] = useState({ name: 'Đang tải...', phone: '...' });
 
    useEffect(() => {
-      if (initialData?.branchId) {
+      // Lấy branchId từ initialData (deposit có thể có branchId trực tiếp)
+      const branchId = initialData?.branchId || initialData?.branch_id;
+      if (branchId) {
          fetch(`${API_URL}/api/v1/branches`)
             .then(res => res.json())
             .then(data => {
                if (data.status === 'success') {
-                  const branch = data.data.find((b: any) => b.id === initialData.branchId);
+                  const branch = data.data.find((b: any) => b.id === branchId);
                   if (branch) {
-                     setManagerInfo({ name: branch.manager || 'Chưa cập nhật', phone: branch.managerPhone || branch.hotline });
+                     setManagerInfo({ name: branch.manager || 'Chưa cập nhật', phone: branch.managerPhone || branch.hotline || 'Chưa cập nhật' });
                   } else {
                      setManagerInfo({ name: 'Chưa cập nhật', phone: 'Chưa cập nhật' });
                   }
@@ -36,9 +38,20 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
                setManagerInfo({ name: 'Lỗi tải dữ liệu', phone: 'Lỗi' });
             });
       } else {
-          setManagerInfo({ name: 'Nguyễn Văn Quản Lý', phone: '0909 123 456' });
+         // Nếu không có branchId, thử fetch tất cả branches và lấy cái đầu tiên
+         fetch(`${API_URL}/api/v1/branches`)
+            .then(res => res.json())
+            .then(data => {
+               if (data.status === 'success' && data.data.length > 0) {
+                  const branch = data.data[0];
+                  setManagerInfo({ name: branch.manager || 'Chưa cập nhật', phone: branch.managerPhone || branch.hotline || 'Chưa cập nhật' });
+               } else {
+                  setManagerInfo({ name: 'Chưa cập nhật', phone: 'Chưa cập nhật' });
+               }
+            })
+            .catch(() => setManagerInfo({ name: 'Chưa cập nhật', phone: 'Chưa cập nhật' }));
       }
-   }, [initialData?.branchId]);
+   }, [initialData?.branchId, initialData?.branch_id]);
 
    const handleSaveContract = async () => {
       try {
@@ -304,9 +317,9 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
                      <div className="mb-4">
                         <p className="font-bold mb-1">BÊN CHO THUÊ (BÊN A):</p>
                         <p>Đơn vị quản lý: <strong>Homestay Dorm</strong></p>
-                        <p>Đại diện: Ông Nguyễn Văn Quản Lý</p>
+                        <p>Đại diện: {managerInfo.name}</p>
                         <p>Chức vụ: Giám đốc chi nhánh</p>
-                        <p>Điện thoại: 0909 123 456</p>
+                        <p>Điện thoại: {managerInfo.phone}</p>
                      </div>
 
                      <div className="mb-6">

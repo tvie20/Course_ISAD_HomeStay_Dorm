@@ -16,13 +16,13 @@ exports.getAll = async (data) => {
                 cn.TrangThai AS trangThai,
                 ISNULL(nv.HoTen, '') AS manager,
                 ISNULL(cn.MaNhanVien, '') AS managerId,
-                ISNULL(nv.SDT, '') AS managerPhone,
+                ISNULL(nv.SoDienThoai, '') AS managerPhone,
                 '--' AS avatar,
                 COUNT(p.MaPhong) AS rooms
             FROM CHI_NHANH cn
             LEFT JOIN PHONG p ON cn.MaChiNhanh = p.MaChiNhanh
             LEFT JOIN NHAN_VIEN nv ON cn.MaNhanVien = nv.MaNhanVien
-            GROUP BY cn.MaChiNhanh, cn.TenChiNhanh, cn.DiaChi, cn.SDT, cn.Email, cn.TrangThai, cn.MaNhanVien, nv.HoTen, nv.SDT
+            GROUP BY cn.MaChiNhanh, cn.TenChiNhanh, cn.DiaChi, cn.SDT, cn.Email, cn.TrangThai, cn.MaNhanVien, nv.HoTen, nv.SoDienThoai
         `
 
         const result = await request.query(query)

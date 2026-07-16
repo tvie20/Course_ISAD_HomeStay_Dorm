@@ -19,6 +19,7 @@ interface Room {
   branch: string; // e.g. CN Quận 1
   fullBranchName: string; // e.g. Homestay Central Park
   status: 'Đang cho thuê' | 'Đang sửa chữa';
+  description?: string;
   beds: Bed[];
 }
 
@@ -27,7 +28,6 @@ interface Room {
 export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
-  const [floorFilter, setFloorFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [priceFilter, setPriceFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -65,11 +65,8 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
       // 2. Branch Filter
       if (branchFilter && room.branch !== branchFilter) return false;
 
-      // 3. Floor Filter
-      if (floorFilter && room.floor !== floorFilter) return false;
-
-      // 4. Room Type Filter
-      if (typeFilter && room.type !== typeFilter) return false;
+      // 4. Room Type Filter (By Capacity)
+      if (typeFilter && room.capacity.toString() !== typeFilter) return false;
 
       // 5. Price Filter (check if any bed in room matches price range)
       if (priceFilter) {
@@ -85,12 +82,12 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
       // 6. Status Filter
       if (statusFilter) {
         const rentedCount = room.beds.filter(b => b.status === 'Đã thuê' || b.status === 'Đã cọc').length;
-        if (statusFilter === 'Trống') {
-          // Has at least one vacant bed
-          if (rentedCount === room.capacity) return false;
-        } else if (statusFilter === 'Đã thuê') {
-          // Has at least one rented bed
-          if (rentedCount === 0) return false;
+        if (statusFilter === 'Còn giường trống') {
+          if (rentedCount >= room.capacity) return false;
+        } else if (statusFilter === 'Trống hoàn toàn') {
+          if (rentedCount > 0) return false;
+        } else if (statusFilter === 'Đã đầy') {
+          if (rentedCount < room.capacity) return false;
         }
       }
 
@@ -103,7 +100,6 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
   const handleReset = () => {
     setSearchQuery('');
     setBranchFilter('');
-    setFloorFilter('');
     setTypeFilter('');
     setPriceFilter('');
     setStatusFilter('');
@@ -191,6 +187,12 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Chi nhánh</label>
                   <p className="text-sm font-medium text-gray-700">{selectedRoom.fullBranchName}</p>
                 </div>
+                {selectedRoom.description && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Mô tả</label>
+                    <p className="text-sm font-medium text-gray-700">{selectedRoom.description}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -303,8 +305,7 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
           >
             <span>Bộ lọc nâng cao</span>
             <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full font-bold">
-              {['floorFilter', 'typeFilter', 'priceFilter', 'statusFilter'].filter(f => {
-                if (f === 'floorFilter') return !!floorFilter;
+              {['typeFilter', 'priceFilter', 'statusFilter'].filter(f => {
                 if (f === 'typeFilter') return !!typeFilter;
                 if (f === 'priceFilter') return !!priceFilter;
                 if (f === 'statusFilter') return !!statusFilter;
@@ -316,34 +317,19 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
 
         {/* Advanced Filters Block */}
         {showAdvancedFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-100 animate-in slide-in-from-top-2 duration-200">
-            {/* Floor Filter */}
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Tầng</label>
-              <select
-                value={floorFilter}
-                onChange={e => setFloorFilter(e.target.value)}
-                className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:border-[#B7705F]"
-              >
-                <option value="">Tất cả tầng</option>
-                <option value="1">Tầng 1</option>
-                <option value="2">Tầng 2</option>
-                <option value="3">Tầng 3</option>
-              </select>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100 animate-in slide-in-from-top-2 duration-200">
             {/* Room Type */}
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Loại phòng</label>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Loại phòng (số giường)</label>
               <select
                 value={typeFilter}
                 onChange={e => setTypeFilter(e.target.value)}
                 className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:border-[#B7705F]"
               >
                 <option value="">Tất cả loại phòng</option>
-                <option value="Phòng 4 người">Phòng 4 người</option>
-                <option value="Phòng 6 người">Phòng 6 người</option>
-                <option value="Phòng 2 người">Phòng 2 người</option>
+                <option value="2">Phòng 2 giường</option>
+                <option value="4">Phòng 4 giường</option>
+                <option value="8">Phòng 8 giường</option>
               </select>
             </div>
 
@@ -371,8 +357,9 @@ export default function RoomStatus({ branchId = '' }: { branchId?: string }) {
                 className="w-full border border-gray-200 bg-white rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:border-[#B7705F]"
               >
                 <option value="">Tất cả trạng thái giường</option>
-                <option value="Trống">Có giường trống</option>
-                <option value="Đã thuê">Có giường đã thuê</option>
+                <option value="Còn giường trống">Còn giường trống</option>
+                <option value="Trống hoàn toàn">Trống hoàn toàn</option>
+                <option value="Đã đầy">Đã đầy</option>
               </select>
             </div>
           </div>

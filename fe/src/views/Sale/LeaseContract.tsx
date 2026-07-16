@@ -23,6 +23,17 @@ export default function LeaseContract({ branchId = '', employeeId = '' }: { bran
    const [ocrSuccess, setOcrSuccess] = useState(false);
    const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
 
+   const fetchDeposits = () => {
+      fetch(`${API_URL}/api/v1/deposits${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
+         .then(res => res.json())
+         .then(data => {
+            if (data.status === 'success') {
+               setDeposits(data.data.filter((d: any) => d.status === 'Sắp nhận phòng'));
+            }
+         })
+         .catch(err => console.error(err));
+   };
+
    const handleSelectDeposit = (deposit: any) => {
       setSelectedDeposit(deposit);
       setCustomerPhone(deposit.phone || '');
@@ -37,14 +48,7 @@ export default function LeaseContract({ branchId = '', employeeId = '' }: { bran
    };
 
    useEffect(() => {
-      fetch(`${API_URL}/api/v1/deposits${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
-         .then(res => res.json())
-         .then(data => {
-            if (data.status === 'success') {
-               setDeposits(data.data.filter((d: any) => d.status === 'Sắp nhận phòng'));
-            }
-         })
-         .catch(err => console.error(err));
+      fetchDeposits();
    }, []);
 
    const handleOcrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +72,12 @@ export default function LeaseContract({ branchId = '', employeeId = '' }: { bran
       return (
          <CreateLease
             onCancel={() => { setIsCreating(false); setIsChecking(false); setSelectedDeposit(null); }}
-            onSuccess={() => { setIsCreating(false); setIsChecking(false); setSelectedDeposit(null); setDeposits(deposits.filter(d => d.id !== selectedDeposit.id)); }}
+            onSuccess={() => {
+               setIsCreating(false);
+               setIsChecking(false);
+               setSelectedDeposit(null);
+               fetchDeposits();
+            }}
             initialData={{
                ...selectedDeposit,
                phone: customerPhone,

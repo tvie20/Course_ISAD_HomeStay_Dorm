@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import API_URL from '../../api';
 import { X, BedDouble, Camera, PenSquare, Edit3, ArrowLeft, Package, CheckCircle } from 'lucide-react';
 

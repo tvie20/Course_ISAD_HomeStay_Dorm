@@ -116,3 +116,29 @@ exports.getAll = async (data) => {
     }
 }
 
+// Cập nhật trạng thái phiếu đăng ký
+exports.updateStatus = async (id, status) => {
+    try {
+        const pool = await sql.connect()
+        const request = pool.request()
+
+        request.input('MaPhieuDangKy', sql.VarChar, id)
+        request.input('TrangThai', sql.NVarChar, status)
+
+        const query = `
+            UPDATE PHIEU_DANG_KY 
+            SET TrangThai = @TrangThai 
+            WHERE MaPhieuDangKy = @MaPhieuDangKy
+        `
+
+        const result = await request.query(query)
+
+        return {
+            success: result.rowsAffected[0] > 0,
+            message: 'Cập nhật trạng thái thành công'
+        }
+    } catch (error) {
+        console.error("Error in registration model (updateStatus):", error)
+        throw error
+    }
+}

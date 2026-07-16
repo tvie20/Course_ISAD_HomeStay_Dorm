@@ -17,9 +17,9 @@ exports.getAll = async (data) => {
         const query = `
             SELECT 
                 ptt.MaPhieuThanhToan AS id,
-                COALESCE(hdt.KyThanhToan, N'Tháng ' + CONVERT(varchar, MONTH(COALESCE(ptt.ThoiGianThanhToan, GETDATE()))) + '/' + CONVERT(varchar, YEAR(COALESCE(ptt.ThoiGianThanhToan, GETDATE())))) AS month,
+                RIGHT('0' + CONVERT(varchar, MONTH(COALESCE(ptt.ThoiGianThanhToan, GETDATE()))), 2) + '/' + CONVERT(varchar, YEAR(COALESCE(ptt.ThoiGianThanhToan, GETDATE()))) AS month,
                 COALESCE(r.TenPhong, r_hdt.TenPhong, N'Phí dịch vụ chung') AS room,
-                COALESCE(hdt.PhiDichVu, ptt.SoTien) AS base,
+                COALESCE(g.GiaGiuong, hdt.PhiDichVu, ptt.SoTien) AS base,
                 0 AS electricity,
                 0 AS water,
                 0 AS service,
@@ -34,6 +34,8 @@ exports.getAll = async (data) => {
             LEFT JOIN HOP_DONG_THUE hdt ON hd.MaHopDong = hdt.MaHopDong
             LEFT JOIN PHIEU_COC pc ON hdt.MaPhieuCoc = pc.MaPhieuCoc
             LEFT JOIN PHIEUCOC_PHONG pcp ON pc.MaPhieuCoc = pcp.MaPhieuCoc
+            LEFT JOIN PHIEUCOC_GIUONG pcg ON pc.MaPhieuCoc = pcg.MaPhieuCoc
+            LEFT JOIN GIUONG g ON pcg.MaPhong = g.MaPhong AND pcg.SoThuTu = g.SoThuTu
             LEFT JOIN PHONG r_hdt ON pcp.MaPhong = r_hdt.MaPhong
             WHERE ptt.MaKhachHang = @CustomerID
             ORDER BY ptt.MaPhieuThanhToan DESC

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import API_URL from '../../api';
 import { Filter, Plus, TrendingUp, Search, Trash2, CheckCircle2, ChevronLeft, ChevronRight, PenSquare, Eye, Building2, AlertCircle } from 'lucide-react';
 

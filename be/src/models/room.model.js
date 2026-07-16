@@ -25,6 +25,7 @@ exports.getStatus = async (data) => {
                 r.MaChiNhanh AS branch, 
                 b_r.TenChiNhanh AS fullBranchName, 
                 r.TrangThai AS status,
+                r.MoTa AS description,
                 
                 -- Thông tin giường
                 bed.SoThuTu AS bedId, 
@@ -56,6 +57,7 @@ exports.getStatus = async (data) => {
                     branch: row.branch,
                     fullBranchName: row.fullBranchName,
                     status: row.status,
+                    description: row.description,
                     beds: [] // Mang chua cac giuong
                 }
             }
@@ -147,6 +149,7 @@ exports.getOne = async (data) => {
                 r.MaChiNhanh AS branch, 
                 b_r.TenChiNhanh AS fullBranchName, 
                 r.TrangThai AS status,
+                r.MoTa AS description,
                 
                 bed.SoThuTu AS bedId, 
                 bed.GiaGiuong AS price, 
@@ -177,6 +180,7 @@ exports.getOne = async (data) => {
             branch: flatData[0].branch,
             fullBranchName: flatData[0].fullBranchName,
             status: flatData[0].status,
+            description: flatData[0].description,
             beds: [] // Mang chua cac giuong
         }
 

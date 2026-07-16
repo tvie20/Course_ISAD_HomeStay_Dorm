@@ -162,7 +162,7 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Loại phòng <span className="text-[#B7705F]">*</span></label>
                <select name="RoomTypeID" value={formData.RoomTypeID} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm appearance-none">
                   <option value="">Chọn loại phòng</option>
-                  {roomTypes.map(rt => (
+                  {roomTypes.filter(rt => !formData.Gender || rt.name.toLowerCase().includes(formData.Gender.toLowerCase())).map(rt => (
                     <option key={rt.id} value={rt.id}>{rt.name}</option>
                   ))}
                </select>

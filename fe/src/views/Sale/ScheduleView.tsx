@@ -250,9 +250,18 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button onClick={() => {
-                     setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Ngừng xem phòng' } : i));
-                     setSelectedItem(null);
+                  <button onClick={async () => {
+                     try {
+                        await fetch(`${API_URL}/api/v1/registrations/${selectedItem.id}/status`, {
+                           method: 'PUT',
+                           headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify({ status: 'Ngừng xem phòng' })
+                        });
+                        setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Ngừng xem phòng' } : i));
+                        setSelectedItem(null);
+                     } catch (err) {
+                        console.error(err);
+                     }
                   }} className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors">
                      Ngừng xem phòng
                   </button>
@@ -261,10 +270,19 @@ export default function ScheduleView({ onNavigate, employeeId, branchId = '' }: 
                   }} className="py-3 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center transition-colors">
                      <Clock className="w-4 h-4 mr-2" /> Xếp lịch mới
                   </button>
-                  <button onClick={() => {
-                     setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đã xử lý' } : i));
-                     alert('Chuyển sang Đã xử lý! Dữ liệu đã sẵn sàng ở phần Lập phiếu đặt cọc.');
-                     if (onNavigate) onNavigate('initial_payments');
+                  <button onClick={async () => {
+                     try {
+                        await fetch(`${API_URL}/api/v1/registrations/${selectedItem.id}/status`, {
+                           method: 'PUT',
+                           headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify({ status: 'Đã xử lý' })
+                        });
+                        setList(list.map(i => i.id === selectedItem.id ? { ...i, status: 'Đã xử lý' } : i));
+                        alert('Chuyển sang Đã xử lý! Dữ liệu đã sẵn sàng ở phần Lập phiếu đặt cọc.');
+                        if (onNavigate) onNavigate('initial_payments');
+                     } catch (err) {
+                        console.error(err);
+                     }
                   }} className="py-3 px-4 bg-[#B7705F] text-white rounded-xl font-bold hover:bg-[#a06050] flex items-center justify-center transition-colors shadow-sm">
                      <User className="w-4 h-4 mr-2" /> Đồng ý đặt cọc
                   </button>

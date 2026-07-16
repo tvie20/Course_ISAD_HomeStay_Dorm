@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import API_URL from '../../api';
 import { Download, Check, X, ShieldCheck } from 'lucide-react';
 

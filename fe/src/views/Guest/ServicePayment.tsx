@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import API_URL from '../../api';
 import { CreditCard, AlertCircle, Smartphone, FileText, CheckCircle2, ChevronRight, Upload, Wallet, Eye, ArrowLeft, Printer } from 'lucide-react';
 

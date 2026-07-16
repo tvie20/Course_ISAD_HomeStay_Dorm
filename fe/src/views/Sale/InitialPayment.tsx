@@ -31,7 +31,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
-               setList(data.data);
+               setList(data.data.filter((d: any) => d.checkinStatus !== 'Sắp nhận phòng'));
             }
          });
    };
@@ -39,7 +39,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
    useEffect(() => {
       fetchDeposits();
       
-      fetch(`${API_URL}/api/v1/registrations${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}` : ''}`)
+      fetch(`${API_URL}/api/v1/registrations${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&') ? `?${[branchId && `branchId=${branchId}`, employeeId && `employeeId=${employeeId}`].filter(Boolean).join('&')}&unbookedOnly=true` : '?unbookedOnly=true'}`)
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
@@ -556,7 +556,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
                       fetch(`${API_URL}/api/v1/deposits`)
                          .then(r => r.json())
                          .then(d => {
-                            if (d.status === 'success') setList(d.data);
+                            if (d.status === 'success') setList(d.data.filter((x: any) => x.checkinStatus !== 'Sắp nhận phòng'));
                          });
                    } else {
                       alert('Lỗi: ' + data.message);

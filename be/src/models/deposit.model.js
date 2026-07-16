@@ -44,7 +44,7 @@ exports.create = async (data) => {
                 SELECT TOP 1 MaPhieuCoc 
                 FROM PHIEU_COC 
                 WHERE MaPhieuDangKy = @MaPhieuDangKy 
-                  AND TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Sắp nhận phòng', N'Chờ xếp lịch')
+                  AND TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Quá hạn thanh toán')
             `
             const checkResult = await checkReq.query(checkQuery)
             if (checkResult.recordset.length > 0) {
@@ -139,10 +139,8 @@ exports.getAll = async (data) => {
                 kh.CCCD AS cccd,
                 kh.Email AS email,
                 kh.DiaChiThuongTru AS address,
-                CASE
-                    WHEN lnp.TrangThai IS NOT NULL THEN lnp.TrangThai
-                    ELSE d.TrangThai
-                END AS status,
+                d.TrangThai AS status,
+                lnp.TrangThai AS checkinStatus,
                 lnp.NgayGioHen AS expectedDate,
                 lnp.NgayGioHen AS expectedTime,
                 d.SoTienCoc AS amount,
@@ -157,7 +155,7 @@ exports.getAll = async (data) => {
             LEFT JOIN PHIEU_DANG_KY pdk ON d.MaPhieuDangKy = pdk.MaPhieuDangKy
             LEFT JOIN KHACH_HANG kh ON pdk.MaKhachHang = kh.MaKhachHang
             LEFT JOIN LICH_NHAN_PHONG lnp ON d.MaPhieuCoc = lnp.MaPhieuCoc
-            WHERE d.TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Chờ xếp lịch', N'Sắp nhận phòng', N'Quá hạn thanh toán')
+            WHERE d.TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Quá hạn thanh toán')
             ${data.branchId ? "AND r.MaChiNhanh = @BranchID" : ""}
             ${data.employeeId ? "AND pdk.MaNhanVien = @EmployeeID" : ""}
             ORDER BY d.NgayDatCoc DESC
@@ -381,7 +379,7 @@ exports.cancelDeposit = async (data) => {
         await request.query(queryHuy)
 
         let msg = 'Đã hủy phiếu cọc.';
-        if (coc.TrangThai === 'Đã thanh toán' || coc.TrangThai === 'Sắp nhận phòng') {
+        if (coc.TrangThai === 'Đã thanh toán') {
             const tienHoan = coc.SoTienCoc * 0.8;
             const maDoiSoat = await generateNextId('DOI_SOAT_HOAN_COC', 'MaDoiSoat', 'DS');
             

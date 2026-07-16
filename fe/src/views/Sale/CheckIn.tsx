@@ -17,7 +17,7 @@ export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?:
       .then(data => {
         if (data.status === 'success') {
            // Lọc các phiếu đã thanh toán hoặc sắp nhận phòng
-           const filtered = data.data.filter((d: any) => d.status === 'Đã thanh toán' || d.status === 'Sắp nhận phòng');
+           const filtered = data.data.filter((d: any) => d.status === 'Đã thanh toán');
            setList(filtered);
         }
       })
@@ -81,53 +81,56 @@ export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?:
               <tbody className="divide-y divide-gray-100">
                  {list
                     .filter((item: any) => {
-                       const matchStatus = !statusFilter || item.status === statusFilter;
+                       const statusToShow = item.checkinStatus === 'Sắp nhận phòng' ? 'Sắp nhận phòng' : 'Đã thanh toán';
+                       const matchStatus = !statusFilter || statusToShow === statusFilter;
                        const matchSearch = !searchTerm || 
                           (item.customer && String(item.customer).toLowerCase().includes(searchTerm.toLowerCase())) || 
                           (item.id && String(item.id).toLowerCase().includes(searchTerm.toLowerCase())) ||
                           (item.cccd && String(item.cccd).toLowerCase().includes(searchTerm.toLowerCase()));
                        return matchStatus && matchSearch;
                     })
-                    .map((item: any, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                       <td className="px-6 py-4 font-medium text-[#B7705F]">{item.id}</td>
-                       <td className="px-6 py-4 font-medium text-[#222222]">{item.customer}</td>
-                       <td className="px-6 py-4 text-[#666666]">{item.cccd}</td>
-                       <td className="px-6 py-4 text-[#666666]">{item.phone}</td>
-                       <td className="px-6 py-4 text-[#222222] font-semibold">{item.room}</td>
-                       <td className="px-6 py-4 text-[#B7705F] font-bold">{item.beds ? item.beds.join(', ') : ''}</td>
-                       <td className="px-6 py-4">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-md ${item.status === 'Đã thanh toán' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'}`}>
-                             {item.status === 'Đã thanh toán' ? 'Cần xếp lịch' : item.status}
-                          </span>
-                       </td>
-                       <td className="px-6 py-4 text-right">
-                          {item.status !== 'Sắp nhận phòng' ? (
-                             <button onClick={() => {
-                                setSelectedItem(item);
-                                setFormDate('');
-                                setFormTime('');
-                                setFormNote('');
-                             }} className="px-4 py-2 text-sm font-semibold text-white bg-[#B7705F] hover:bg-[#a06050] rounded-xl transition-colors inline-block shadow-sm">
-                                Xếp lịch
-                             </button>
-                          ) : (
-                             <button onClick={() => {
-                                setSelectedItem(item);
-                                if (item.expectedDate) {
-                                   try {
-                                      setFormDate(new Date(item.expectedDate).toISOString().split('T')[0]);
-                                      setFormTime(new Date(item.expectedTime).toTimeString().slice(0, 5));
-                                   } catch (e) {}
-                                }
-                                setFormNote(item.note || '');
-                             }} className="px-4 py-2 text-sm font-semibold text-[#B7705F] bg-[#FAF5F3] border border-[#EAD3CC] hover:bg-[#EAD3CC] rounded-xl transition-colors inline-block shadow-sm">
-                                Xem lịch
-                             </button>
-                          )}
-                       </td>
-                    </tr>
-                 ))}
+                    .map((item: any, idx) => {
+                        const statusToShowUI = item.checkinStatus === 'Sắp nhận phòng' ? 'Sắp nhận phòng' : 'Chưa xếp lịch';
+                        return (
+                        <tr key={idx} className="hover:bg-gray-50">
+                           <td className="px-6 py-4 font-medium text-[#B7705F]">{item.id}</td>
+                           <td className="px-6 py-4 font-medium text-[#222222]">{item.customer}</td>
+                           <td className="px-6 py-4 text-[#666666]">{item.cccd}</td>
+                           <td className="px-6 py-4 text-[#666666]">{item.phone}</td>
+                           <td className="px-6 py-4 text-[#222222] font-semibold">{item.room}</td>
+                           <td className="px-6 py-4 text-[#B7705F] font-bold">{item.beds ? item.beds.join(', ') : ''}</td>
+                           <td className="px-6 py-4">
+                              <span className={`px-2.5 py-1 rounded text-xs font-semibold ${statusToShowUI === 'Sắp nhận phòng' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                 {statusToShowUI}
+                              </span>
+                           </td>
+                           <td className="px-6 py-4 text-right">
+                              {item.checkinStatus !== 'Sắp nhận phòng' ? (
+                                 <button onClick={() => {
+                                    setSelectedItem(item);
+                                    setFormDate('');
+                                    setFormTime('');
+                                    setFormNote('');
+                                 }} className="px-4 py-2 text-sm font-semibold text-white bg-[#B7705F] hover:bg-[#a06050] rounded-xl transition-colors inline-block shadow-sm">
+                                    Xếp lịch
+                                 </button>
+                              ) : (
+                                 <button onClick={() => {
+                                    setSelectedItem(item);
+                                    if (item.expectedDate) {
+                                       try {
+                                          setFormDate(new Date(item.expectedDate).toISOString().split('T')[0]);
+                                          setFormTime(new Date(item.expectedTime).toTimeString().slice(0, 5));
+                                       } catch (e) {}
+                                    }
+                                    setFormNote(item.note || '');
+                                 }} className="px-4 py-2 text-sm font-semibold text-[#B7705F] bg-[#FAF5F3] border border-[#EAD3CC] hover:bg-[#EAD3CC] rounded-xl transition-colors inline-block shadow-sm">
+                                    Xem lịch
+                                 </button>
+                              )}
+                           </td>
+                        </tr>
+                     )})}
               </tbody>
            </table>
         </div>
@@ -144,7 +147,6 @@ export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?:
                   <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
                </button>
             </div>
-            {/* Tách rõ ràng phòng giường ở tiêu đề */}
             <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Xếp lịch nhận phòng - {selectedItem.room} ({selectedItem.beds ? selectedItem.beds.join(', ') : ''})</h1>
          </div>
       </div>
@@ -190,23 +192,23 @@ export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?:
                <label className="block text-sm font-semibold text-[#666666] mb-2 flex items-center">
                   <Calendar className="w-4 h-4 mr-1 text-[#B7705F]" /> Ngày hẹn nhận phòng
                </label>
-               <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} disabled={selectedItem.status === 'Sắp nhận phòng'} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F] disabled:opacity-70 disabled:cursor-not-allowed" />
+               <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} disabled={selectedItem.checkinStatus === 'Sắp nhận phòng'} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F] disabled:opacity-70 disabled:cursor-not-allowed" />
             </div>
             <div>
                <label className="block text-sm font-semibold text-[#666666] mb-2 flex items-center">
                   <Clock className="w-4 h-4 mr-1 text-[#B7705F]" /> Giờ hẹn nhận phòng (Dự kiến)
                </label>
-               <input type="time" value={formTime} onChange={e => setFormTime(e.target.value)} disabled={selectedItem.status === 'Sắp nhận phòng'} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F] disabled:opacity-70 disabled:cursor-not-allowed" />
+               <input type="time" value={formTime} onChange={e => setFormTime(e.target.value)} disabled={selectedItem.checkinStatus === 'Sắp nhận phòng'} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F] disabled:opacity-70 disabled:cursor-not-allowed" />
             </div>
          </div>
          <div className="mt-4">
             <label className="block text-sm font-semibold text-[#666666] mb-2 flex items-center">
                Ghi chú (Tùy chọn)
             </label>
-            <textarea rows={3} value={formNote} onChange={e => setFormNote(e.target.value)} disabled={selectedItem.status === 'Sắp nhận phòng'} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F] resize-none disabled:opacity-70 disabled:cursor-not-allowed" placeholder="Nhập ghi chú..."></textarea>
+            <textarea rows={3} value={formNote} onChange={e => setFormNote(e.target.value)} disabled={selectedItem.checkinStatus === 'Sắp nhận phòng'} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-[#B7705F] resize-none disabled:opacity-70 disabled:cursor-not-allowed" placeholder="Nhập ghi chú..."></textarea>
          </div>
          
-         {selectedItem.status !== 'Sắp nhận phòng' && (
+         {selectedItem.checkinStatus !== 'Sắp nhận phòng' && (
             <button onClick={async () => {
                if (!formDate || !formTime) {
                   return alert('Vui lòng chọn đầy đủ ngày và giờ hẹn!');

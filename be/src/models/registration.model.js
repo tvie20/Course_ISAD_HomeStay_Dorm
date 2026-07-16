@@ -99,6 +99,11 @@ exports.getAll = async (data) => {
             LEFT JOIN LICH_XEM_PHONG app ON reg.MaPhieuDangKy = app.MaPhieuDangKy
             LEFT JOIN CHI_NHANH cn ON reg.KhuVucMongMuon = cn.MaChiNhanh
             WHERE 1=1
+            ${data.unbookedOnly ? `AND NOT EXISTS (
+                SELECT 1 FROM PHIEU_COC pc 
+                WHERE pc.MaPhieuDangKy = reg.MaPhieuDangKy 
+                  AND pc.TrangThai NOT IN (N'Đã hủy')
+            )` : ""}
             ${data.branchId ? "AND cn.MaChiNhanh = @BranchID" : ""}
             ${data.employeeId ? "AND (reg.MaNhanVien IS NULL OR reg.MaNhanVien = @EmployeeID)" : ""}
             ORDER BY reg.MaPhieuDangKy DESC

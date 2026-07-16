@@ -28,7 +28,7 @@ export default function LeaseContract({ branchId = '', employeeId = '' }: { bran
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
-               setDeposits(data.data.filter((d: any) => d.status === 'Sắp nhận phòng'));
+               setDeposits(data.data.filter((d: any) => d.checkinStatus === 'Sắp nhận phòng'));
             }
          })
          .catch(err => console.error(err));

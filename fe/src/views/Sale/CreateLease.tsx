@@ -24,7 +24,7 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
          const payload = {
             DepositID: initialData?.id,
             CustomerID: initialData?.customerId,
-            RoomPrice: 3500000,
+            RoomPrice: initialData?.rentPrice || 3500000,
             StartDate: startDate.toISOString().split('T')[0],
             EndDate: endDate.toISOString().split('T')[0],
             roommates: roommates
@@ -188,14 +188,14 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
                            </select>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div className="grid grid-cols-2 gap-4">
                            <div>
-                              <label className="block text-xs text-[#666666] font-medium mb-1">Giá thuê (đ/tháng)</label>
-                              <input type="text" className="w-full bg-[#FAF5F3] border border-[#EAD3CC]/50 rounded-xl text-sm px-3 py-2.5 font-bold text-[#222222]" defaultValue="3,500,000" readOnly />
+                              <label className="block text-xs font-semibold text-[#666666] mb-2 uppercase tracking-wide">Giá thuê/tháng</label>
+                              <input type="text" className="w-full bg-[#FAF5F3] border border-[#EAD3CC]/50 rounded-xl text-sm px-3 py-2.5 font-bold text-[#222222]" defaultValue={initialData?.rentPrice ? initialData.rentPrice.toLocaleString() : "3,500,000"} readOnly />
                            </div>
                            <div>
-                              <label className="block text-xs text-[#666666] font-medium mb-1">Tiền cọc (Đã đóng)</label>
-                              <input type="text" className="w-full bg-[#FAF5F3] border border-[#EAD3CC]/50 rounded-xl text-sm px-3 py-2.5 font-bold text-[#B7705F]" defaultValue="3,500,000" readOnly />
+                              <label className="block text-xs font-semibold text-[#B7705F] mb-2 uppercase tracking-wide">Tiền cọc đã thu</label>
+                              <input type="text" className="w-full bg-[#FAF5F3] border border-[#EAD3CC]/50 rounded-xl text-sm px-3 py-2.5 font-bold text-[#B7705F]" defaultValue={initialData?.amount ? initialData.amount.toLocaleString() : "3,500,000"} readOnly />
                            </div>
                         </div>
 
@@ -307,8 +307,9 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
                      <p className="mb-2">
                         Bên A đồng ý cho Bên B thuê chỗ ở tại <strong>Phòng {initialData?.room || '302'}{initialData?.isFullRoom ? "" : ` - ${Array.from(new Set([selectedBed, ...roommateBeds.filter(Boolean)])).sort().join(', ')}`}</strong> của hệ thống ký túc xá dịch vụ Homestay Dorm.
                      </p>
-                     <p className="mb-2">Giá thuê chỗ ở/giường: <strong>3,500,000 VNĐ / tháng</strong>.</p>
-                     <p className="mb-2">Tiền cọc bảo đảm: <strong>3,500,000 VNĐ</strong> (Đã thanh toán trước và lưu trữ vào hồ sơ).</p>
+                     <p className="mb-2">Số lượng thành viên: {1 + roommates.filter((r:any) => r.name).length} người.</p>
+                     <p className="mb-2">Giá thuê chỗ ở/giường: <strong>{initialData?.rentPrice ? initialData.rentPrice.toLocaleString() : "3,500,000"} VNĐ / tháng</strong>.</p>
+                     <p className="mb-2">Tiền cọc bảo đảm: <strong>{initialData?.amount ? initialData.amount.toLocaleString() : "3,500,000"} VNĐ</strong> (Đã thanh toán trước và lưu trữ vào hồ sơ).</p>
                      <p className="mb-6">Thời hạn hợp đồng: {leaseDuration} tháng bắt đầu từ ngày nhận bàn giao phòng.</p>
 
                      <p className="font-bold mb-2">ĐIỀU 2: CHI PHÍ DỊCH VỤ VÀ THANH TOÁN</p>

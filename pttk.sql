@@ -195,6 +195,7 @@ CREATE TABLE DOI_SOAT_HOAN_COC (
 	NgayDoiSoat DATE,
 	MaHopDong   CHAR(6),
 	MaNhanVien  CHAR(6),
+	MaPhieuCoc  CHAR(6),
 	TrangThai  NVARCHAR(100) CHECK(TrangThai IN(N'Chờ đối soát', N'Chờ hoàn cọc', N'Chờ thu bổ sung', N'Đã đối soát'))
 );
 
@@ -461,6 +462,20 @@ ALTER TABLE YEU_CAU_TRA_PHONG ADD CONSTRAINT FK_YEU_CAU_TRA_PHONG_HOP_DONG_THUE 
 ALTER TABLE BIEN_BAN_TRA_PHONG ADD CONSTRAINT FK_BIEN_BAN_TRA_PHONG_YEU_CAU_TRA_PHONG FOREIGN KEY (MaYeuCau) REFERENCES YEU_CAU_TRA_PHONG(MaYeuCau);
 ALTER TABLE THONG_BAO_TAI_KHOAN ADD CONSTRAINT FK_TBTK_HOP_DONG_THUE FOREIGN KEY (MaHopDong) REFERENCES HOP_DONG_THUE(MaHopDong);
 ALTER TABLE THONG_BAO_TAI_KHOAN ADD CONSTRAINT FK_TBTK_KHACH_HANG FOREIGN KEY (MaNguoiNhan) REFERENCES KHACH_HANG(MaKhachHang);
+
+-- =========================================================
+-- UNIQUE CONSTRAINTS (CHẶN TRÙNG LẶP)
+-- =========================================================
+-- Đảm bảo mỗi phiếu đăng ký chỉ được tạo 1 phiếu cọc duy nhất (trừ khi đã bị hủy)
+CREATE UNIQUE NONCLUSTERED INDEX UQ_PHIEU_COC_Active 
+ON PHIEU_COC (MaPhieuDangKy) 
+WHERE MaPhieuDangKy IS NOT NULL AND TrangThai NOT IN (N'Đã hủy', N'Quá hạn thanh toán');
+
+-- Đảm bảo mỗi phiếu cọc chỉ được tạo 1 hợp đồng thuê duy nhất (trừ khi đã thanh lý)
+CREATE UNIQUE NONCLUSTERED INDEX UQ_HOP_DONG_THUE_Active 
+ON HOP_DONG_THUE (MaPhieuCoc) 
+WHERE MaPhieuCoc IS NOT NULL AND TrangThai NOT IN (N'Đã thanh lý');
+
 GO
 
 /* =========================================================

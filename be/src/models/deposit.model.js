@@ -36,10 +36,26 @@ exports.create = async (data) => {
         request.input('Amount', sql.Decimal, amount)
         request.input('DepositDate', sql.DateTime, data.DepositDate || new Date())
         
+        // Bổ sung logic chặn trùng lặp Phiếu Cọc
+        if (data.RegistrationID) {
+            const checkReq = pool.request()
+            checkReq.input('MaPhieuDangKy', sql.VarChar, data.RegistrationID)
+            const checkQuery = `
+                SELECT TOP 1 MaPhieuCoc 
+                FROM PHIEU_COC 
+                WHERE MaPhieuDangKy = @MaPhieuDangKy 
+                  AND TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Sắp nhận phòng', N'Chờ xếp lịch')
+            `
+            const checkResult = await checkReq.query(checkQuery)
+            if (checkResult.recordset.length > 0) {
+                throw new Error('Khách hàng này đã có phiếu cọc đang hoạt động. Vui lòng không tạo trùng lặp.')
+            }
+        }
+
         // Han thanh toan luu INT (so gio) theo cau truc DB
         request.input('HanThanhToan', sql.Int, 24)
         
-        request.input('Status', sql.NVarChar, 'Đã thanh toán')
+        request.input('Status', sql.NVarChar, 'Chờ thanh toán')
         request.input('MaPhieuDangKy', sql.VarChar, data.RegistrationID || null)
         request.input('HinhThucThanhToan', sql.NVarChar, data.PaymentMethod || null)
 
@@ -141,9 +157,7 @@ exports.getAll = async (data) => {
             LEFT JOIN PHIEU_DANG_KY pdk ON d.MaPhieuDangKy = pdk.MaPhieuDangKy
             LEFT JOIN KHACH_HANG kh ON pdk.MaKhachHang = kh.MaKhachHang
             LEFT JOIN LICH_NHAN_PHONG lnp ON d.MaPhieuCoc = lnp.MaPhieuCoc
-            LEFT JOIN HOP_DONG_THUE hdt ON d.MaPhieuCoc = hdt.MaPhieuCoc
             WHERE d.TrangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Chờ xếp lịch', N'Sắp nhận phòng', N'Quá hạn thanh toán')
-              AND hdt.MaHopDong IS NULL
             ${data.branchId ? "AND r.MaChiNhanh = @BranchID" : ""}
             ${data.employeeId ? "AND pdk.MaNhanVien = @EmployeeID" : ""}
             ORDER BY d.NgayDatCoc DESC

@@ -8,7 +8,7 @@ export default function GuestRegistration({ onReturn }: { onReturn?: () => void 
   const [roomTypes, setRoomTypes] = useState<{id: string, name: string}[]>([]);
   
   const [formData, setFormData] = useState({
-    FullName: 'Nguyễn Văn A',
+    FullName: '',
     Gender: '',
     BirthDate: '',
     IdentityCard: '',

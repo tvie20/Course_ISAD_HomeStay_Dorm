@@ -30,7 +30,7 @@ export default function AdminRegistration() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Họ và tên đầy đủ <span className="text-[#B7705F]">*</span></label>
-               <input type="text" defaultValue="Nguyễn Văn A" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
+               <input type="text" placeholder="Nhập họ và tên" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#B7705F]/20 focus:border-[#B7705F] text-sm" />
             </div>
             <div>
                <label className="block text-sm font-medium mb-1.5 text-gray-700">Giới tính <span className="text-[#B7705F]">*</span></label>

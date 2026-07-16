@@ -17,7 +17,7 @@ exports.getAll = async () => {
                 nv.TrangThai AS status,
                 nv.Email AS email,
                 nv.SoDienThoai AS phone,
-                NULL AS cccd
+                nv.CCCD AS cccd
             FROM NHAN_VIEN nv
             LEFT JOIN CHI_NHANH cn ON nv.MaChiNhanh = cn.MaChiNhanh
             

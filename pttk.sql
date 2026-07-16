@@ -213,7 +213,7 @@ CREATE TABLE NHAN_VIEN (
 	HoTen       NVARCHAR(100),
 	GioiTinh    NVARCHAR(3)    CHECK(GioiTinh IN(N'Nam', N'Nữ')),
 	NgaySinh    DATE,
-	CCCD            CHAR(12),
+	CCCD        CHAR(12),
 	SoDienThoai CHAR(12),
 	Email       VARCHAR(100),
 	DiaChi      NVARCHAR(100),
@@ -474,17 +474,17 @@ INSERT INTO TAI_KHOAN (MaTaiKhoan, TenDangNhap, MatKhau, TrangThai) VALUES
 ('TK0014', 'manager04',   'Manager@123',N'Đang hoạt động');
 
 -- 2. NHAN_VIEN
-INSERT INTO NHAN_VIEN (MaNhanVien, HoTen, GioiTinh, NgaySinh, SoDienThoai, Email, DiaChi, ChucVu, HeSoLuong, LuongCoBan, TrangThai, MaTaiKhoan) VALUES
-('NV0001', N'Nguyễn Văn An',    N'Nam', '1995-03-12', '0901234567', 'an.nguyen@homestaydorm.com',   N'Q.1, TP.HCM',    N'Kinh doanh',    2.34, 6500000, N'Đang làm', 'TK0001'),
-('NV0002', N'Trần Thị Bích',    N'Nữ',  '1997-07-25', '0912345678', 'bich.tran@homestaydorm.com',   N'Q.3, TP.HCM',    N'Kinh doanh',    2.10, 6000000, N'Đang làm', 'TK0002'),
-('NV0003', N'Lê Thị Hạnh',      N'Nữ',  '1990-11-02', '0923456789', 'hanh.le@homestaydorm.com',     N'Q.7, TP.HCM',    N'Kế toán',       2.67, 7500000, N'Đang làm', 'TK0003'),
-('NV0004', N'Phạm Văn Đức',     N'Nam', '1988-05-19', '0934567890', 'duc.pham@homestaydorm.com',    N'Bình Thạnh, TP.HCM', N'Kế toán',   2.50, 7200000, N'Đã nghỉ',  'TK0004'),
-('NV0005', N'Hoàng Văn Cường',  N'Nam', '1985-09-08', '0945678901', 'cuong.hoang@homestaydorm.com', N'Q.2, TP.HCM',    N'Quản lý',       3.00, 9000000, N'Đang làm', 'TK0005'),
-('NV0006', N'Đỗ Thị Mai',       N'Nữ',  '1992-01-30', '0956789012', 'mai.do@homestaydorm.com',      N'Q.10, TP.HCM',   N'Quản lý',       2.85, 8800000, N'Đang làm', 'TK0006'),
-('NV0007', N'Vũ Thị Ngọc',      N'Nữ',  '1993-04-17', '0967890123', 'ngoc.vu@homestaydorm.com',     N'Q.5, TP.HCM',    N'Quản trị viên', 3.20, 9500000, N'Đang làm', 'TK0007'),
-('NV0008', N'Bùi Văn Sơn',      N'Nam', '1998-12-24', '0978901234', 'son.bui@homestaydorm.com',     N'Q.4, TP.HCM',    N'Kinh doanh',    1.90, 5800000, N'Đang làm', NULL),
-('NV0009', N'Ngô Thị Thanh Trúc',N'Nữ', '1989-06-14', '0989112233', 'truc.ngo@homestaydorm.com',    N'Q.Thủ Đức, TP.HCM', N'Quản lý',    2.90, 8900000, N'Đang làm', 'TK0013'),
-('NV0010', N'Trịnh Văn Kiên',   N'Nam', '1987-02-27', '0990223344', 'kien.trinh@homestaydorm.com',  N'TP.Nha Trang, Khánh Hòa', N'Quản lý', 2.75, 8600000, N'Đang làm', 'TK0014');
+INSERT INTO NHAN_VIEN (MaNhanVien, HoTen, GioiTinh, NgaySinh, CCCD, SoDienThoai, Email, DiaChi, ChucVu, HeSoLuong, LuongCoBan, TrangThai, MaTaiKhoan) VALUES
+('NV0001', N'Nguyễn Văn An',      N'Nam', '1995-03-12', '079095123456', '0901234567', 'an.nguyen@homestaydorm.com',   N'Q.1, TP.HCM',             N'Kinh doanh',    2.34, 6500000, N'Đang làm', 'TK0001'),
+('NV0002', N'Trần Thị Bích',      N'Nữ',  '1997-07-25', '079197234567', '0912345678', 'bich.tran@homestaydorm.com',   N'Q.3, TP.HCM',             N'Kinh doanh',    2.10, 6000000, N'Đang làm', 'TK0002'),
+('NV0003', N'Lê Thị Hạnh',        N'Nữ',  '1990-11-02', '079190345678', '0923456789', 'hanh.le@homestaydorm.com',     N'Q.7, TP.HCM',             N'Kế toán',       2.67, 7500000, N'Đang làm', 'TK0003'),
+('NV0004', N'Phạm Văn Đức',       N'Nam', '1988-05-19', '079088456789', '0934567890', 'duc.pham@homestaydorm.com',    N'Bình Thạnh, TP.HCM',      N'Kế toán',       2.50, 7200000, N'Đã nghỉ',  'TK0004'),
+('NV0005', N'Hoàng Văn Cường',    N'Nam', '1985-09-08', '079085567890', '0945678901', 'cuong.hoang@homestaydorm.com', N'Q.2, TP.HCM',             N'Quản lý',       3.00, 9000000, N'Đang làm', 'TK0005'),
+('NV0006', N'Đỗ Thị Mai',         N'Nữ',  '1992-01-30', '079192678901', '0956789012', 'mai.do@homestaydorm.com',      N'Q.10, TP.HCM',            N'Quản lý',       2.85, 8800000, N'Đang làm', 'TK0006'),
+('NV0007', N'Vũ Thị Ngọc',        N'Nữ',  '1993-04-17', '079193789012', '0967890123', 'ngoc.vu@homestaydorm.com',     N'Q.5, TP.HCM',             N'Quản trị viên', 3.20, 9500000, N'Đang làm', 'TK0007'),
+('NV0008', N'Bùi Văn Sơn',        N'Nam', '1998-12-24', '079098890123', '0978901234', 'son.bui@homestaydorm.com',     N'Q.4, TP.HCM',             N'Kinh doanh',    1.90, 5800000, N'Đang làm', NULL),
+('NV0009', N'Ngô Thị Thanh Trúc', N'Nữ',  '1989-06-14', '079189901234', '0989112233', 'truc.ngo@homestaydorm.com',    N'Q.Thủ Đức, TP.HCM',       N'Quản lý',       2.90, 8900000, N'Đang làm', 'TK0013'),
+('NV0010', N'Trịnh Văn Kiên',     N'Nam', '1987-02-27', '056087012345', '0990223344', 'kien.trinh@homestaydorm.com',  N'TP.Nha Trang, Khánh Hòa', N'Quản lý',       2.75, 8600000, N'Đang làm', 'TK0014');
 
 -- 3. Vai trò nhân viên
 INSERT INTO KINH_DOANH (MaNhanVien, KPIThang, SoHopDongDaXuLy, HoaHong) VALUES

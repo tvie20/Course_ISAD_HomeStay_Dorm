@@ -148,7 +148,7 @@ export default function RoomManagement() {
    const handleOpenAdd = () => {
       const nextRoomId = generateRoomId(rooms);
       const roomNumber = nextRoomId.replace(/^PH0*/, '');
-      setFormData({ id: nextRoomId, name: `Phòng ${roomNumber}`, type: 'Phòng 4 người', floor: '1', maxCount: 4, status: 'TRỐNG', branch: 'Chi nhánh 1' });
+      setFormData({ id: nextRoomId, name: `Phòng ${roomNumber}`, type: 'Phòng 4 người - Nam', floor: '1', maxCount: 4, status: 'TRỐNG', branch: 'Chi nhánh 1' });
       setErrorMsg('');
       setShowAdd(true);
    };
@@ -415,9 +415,12 @@ export default function RoomManagement() {
                   onChange={(e) => setFilterType(e.target.value)}
                >
                   <option value="Tất cả loại">Tất cả loại phòng</option>
-                  <option value="Phòng 2 người">Phòng 2 người</option>
-                  <option value="Phòng 4 người">Phòng 4 người</option>
-                  <option value="Phòng 8 người">Phòng 8 người</option>
+                  <option value="Phòng 2 người - Nam">Phòng 2 người - Nam</option>
+                  <option value="Phòng 2 người - Nữ">Phòng 2 người - Nữ</option>
+                  <option value="Phòng 4 người - Nam">Phòng 4 người - Nam</option>
+                  <option value="Phòng 4 người - Nữ">Phòng 4 người - Nữ</option>
+                  <option value="Phòng 8 người - Nam">Phòng 8 người - Nam</option>
+                  <option value="Phòng 8 người - Nữ">Phòng 8 người - Nữ</option>
                </select>
             </div>
             <div className="w-[200px]">
@@ -456,9 +459,12 @@ export default function RoomManagement() {
                         <div className="md:col-span-2">
                            <label className="block text-sm font-semibold text-[#666666] mb-2">Loại phòng</label>
                            <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:bg-white focus:border-[#B7705F]">
-                              <option>Phòng 2 người</option>
-                              <option>Phòng 4 người</option>
-                              <option>Phòng 8 người</option>
+                              <option>Phòng 2 người - Nam</option>
+                              <option>Phòng 2 người - Nữ</option>
+                              <option>Phòng 4 người - Nam</option>
+                              <option>Phòng 4 người - Nữ</option>
+                              <option>Phòng 8 người - Nam</option>
+                              <option>Phòng 8 người - Nữ</option>
                            </select>
                         </div>
                         <div className="md:col-span-1">
@@ -516,9 +522,12 @@ export default function RoomManagement() {
                         <div className="md:col-span-2">
                            <label className="block text-sm font-semibold text-[#666666] mb-2">Loại phòng</label>
                            <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 focus:outline-none focus:bg-white focus:border-[#B7705F]">
-                              <option>Phòng 2 người</option>
-                              <option>Phòng 4 người</option>
-                              <option>Phòng 8 người</option>
+                              <option>Phòng 2 người - Nam</option>
+                              <option>Phòng 2 người - Nữ</option>
+                              <option>Phòng 4 người - Nam</option>
+                              <option>Phòng 4 người - Nữ</option>
+                              <option>Phòng 8 người - Nam</option>
+                              <option>Phòng 8 người - Nữ</option>
                            </select>
                         </div>
                         <div className="md:col-span-1">

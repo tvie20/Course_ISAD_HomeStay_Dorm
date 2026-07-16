@@ -712,16 +712,16 @@ INSERT INTO KHACHHANG_NHOM (MaKhachHang, MaNhom) VALUES
 
 -- 7. PHONG
 INSERT INTO PHONG (MaPhong, TenPhong, LoaiPhong, Tang, SucChua, TrangThai, MoTa, MaChiNhanh) VALUES
-('PH0001', N'Phòng 101', N'Phòng 8 người', 1, 8, N'Đã thuê', N'Phòng dorm 8 giường tầng, có ban công', 'CN0001'),
-('PH0002', N'Phòng 102', N'Phòng 4 người', 1, 4, N'Đã thuê', N'Phòng dorm 4 giường tầng, gần thang máy', 'CN0001'),
-('PH0003', N'Phòng 103', N'Phòng 8 người', 1, 8, N'Trống',  N'Phòng dorm hỗn hợp, có tủ khóa riêng',  'CN0001'),
-('PH0004', N'Phòng 201', N'Phòng 2 người', 2, 2, N'Đã thuê', N'Phòng đơn có cửa sổ, đầy đủ nội thất',  'CN0002'),
-('PH0005', N'Phòng 202', N'Phòng 2 người', 2, 2, N'Trống',   N'Phòng đôi view sông, có ban công riêng', 'CN0002'),
-('PH0006', N'Phòng 203', N'Phòng 4 người', 2, 4, N'Đã thuê', N'Phòng dorm nữ, có máy lạnh riêng',       'CN0002'),
-('PH0007', N'Phòng 301', N'Phòng 2 người', 3, 2, N'Đã thuê', N'Phòng đơn nhỏ gọn, giá tốt',              'CN0003'),
-('PH0008', N'Phòng 302', N'Phòng 8 người', 3, 8, N'Đã thuê', N'Phòng dorm lớn 8 giường, phù hợp nhóm bạn', 'CN0003'),
-('PH0009', N'Phòng 303', N'Phòng 2 người', 3, 2, N'Trống',   N'Phòng studio đầy đủ tiện nghi, có bếp nhỏ', 'CN0003'),
-('PH0010', N'Phòng 401', N'Phòng 2 người', 4, 2, N'Trống',   N'Phòng đôi cao cấp view biển',             'CN0004');
+('PH0001', N'Phòng 101', N'Phòng 8 người - Nam', 1, 8, N'Đã thuê', N'Phòng dorm 8 giường tầng, có ban công', 'CN0001'),
+('PH0002', N'Phòng 102', N'Phòng 4 người - Nam', 1, 4, N'Đã thuê', N'Phòng dorm 4 giường tầng, gần thang máy', 'CN0001'),
+('PH0003', N'Phòng 103', N'Phòng 8 người - Nữ', 1, 8, N'Trống',  N'Phòng dorm hỗn hợp, có tủ khóa riêng',  'CN0001'),
+('PH0004', N'Phòng 201', N'Phòng 2 người - Nữ', 2, 2, N'Đã thuê', N'Phòng đơn có cửa sổ, đầy đủ nội thất',  'CN0002'),
+('PH0005', N'Phòng 202', N'Phòng 2 người - Nữ', 2, 2, N'Trống',   N'Phòng đôi view sông, có ban công riêng', 'CN0002'),
+('PH0006', N'Phòng 203', N'Phòng 4 người - Nam', 2, 4, N'Đã thuê', N'Phòng dorm nữ, có máy lạnh riêng',       'CN0002'),
+('PH0007', N'Phòng 301', N'Phòng 2 người - Nữ', 3, 2, N'Đã thuê', N'Phòng đơn nhỏ gọn, giá tốt',              'CN0003'),
+('PH0008', N'Phòng 302', N'Phòng 8 người - Nữ', 3, 8, N'Đã thuê', N'Phòng dorm lớn 8 giường, phù hợp nhóm bạn', 'CN0003'),
+('PH0009', N'Phòng 303', N'Phòng 2 người - Nam', 3, 2, N'Trống',   N'Phòng studio đầy đủ tiện nghi, có bếp nhỏ', 'CN0003'),
+('PH0010', N'Phòng 401', N'Phòng 2 người - Nam', 4, 2, N'Trống',   N'Phòng đôi cao cấp view biển',             'CN0004');
 
 -- 8. GIUONG
 INSERT INTO GIUONG (MaPhong, SoThuTu, GiaGiuong, TrangThai, GhiChu) VALUES

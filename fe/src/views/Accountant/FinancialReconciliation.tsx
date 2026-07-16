@@ -25,6 +25,7 @@ export default function FinancialReconciliation() {
    const [isSaved, setIsSaved] = useState(false);
    const [searchTerm, setSearchTerm] = useState('');
    const [reconList, setReconList] = useState<any[]>([]);
+   const [inspectionData, setInspectionData] = useState<any>(null);
 
    const [alertModal, setAlertModal] = useState<{
       isOpen: boolean;
@@ -88,7 +89,7 @@ export default function FinancialReconciliation() {
                let mappedStatus = item.status;
                const net = (item.deposit || 0) - (item.utilityFee || 0) - (item.cleaningFee || 0) - (item.damagedAssetFee || 0) - (item.rentLiability || 0) - (item.otherFee || 0);
                
-               if (item.status === 'Đang xử lý') {
+               if (item.status === 'Đang xử lý' || item.status === 'Đã kiểm tra phòng') {
                   mappedStatus = 'Chờ đối soát';
                } else if (item.status === 'Chờ thanh lý') {
                   mappedStatus = net >= 0 ? 'Chờ hoàn cọc' : 'Chờ thu bổ sung';
@@ -99,21 +100,22 @@ export default function FinancialReconciliation() {
                return {
                   id: item.id,
                   room: item.room,
-                  bed: `Giường 0${item.bed}`,
+                  bed: typeof item.bed === 'number' ? `Giường 0${item.bed}` : (item.bed || 'N/A'),
                   customer: item.customer,
                   type: 'Trả phòng',
                   status: mappedStatus,
+                  rawStatus: item.status,
                   contractId: item.contractId || 'HD-UNKNOWN',
                   leaseDuration: `${item.monthsStayed} tháng`,
                   monthsOccupied: item.monthsStayed,
                   deposit: item.deposit || 0,
                   rentLiability: item.rentLiability || 0,
-                  hasInspection: true,
+                  hasInspection: item.status === 'Đã kiểm tra phòng' || item.status === 'Chờ thanh lý' || item.status === 'Đã xử lý',
                   hasContract: true,
                   notes: item.note
                };
             });
-            setReconList(formatted);
+            setReconList(formatted.filter((item: any) => item.rawStatus === 'Đã kiểm tra phòng'));
          }
       } catch (err) {
          console.error('Error fetching reconciliations:', err);
@@ -132,11 +134,21 @@ export default function FinancialReconciliation() {
          if (selected.rentLiability > 0) initialDetails.push({ id: '1', maLoaiKhauTru: 'NO_THUE', lyDo: 'Công nợ cũ thuê phòng', soTien: selected.rentLiability });
 
          setChiTietList(initialDetails);
-
          setNotesInput(selected.notes || '');
          setAttachmentName(null);
          setIsReconciling(['Chờ hoàn cọc', 'Chờ thu bổ sung', 'Đã đối soát'].includes(selected.status));
          setIsSaved(false);
+         setInspectionData(null);
+
+         // Load kết quả kiểm tra phòng từ DB
+         fetch(`${API_URL}/api/v1/inspections/by-request/${selected.id}`)
+            .then(r => r.json())
+            .then(d => {
+               if (d.status === 'success' && d.data) {
+                  setInspectionData(d.data);
+               }
+            })
+            .catch(() => {});
 
          const totalDeductions = (selected.rentLiability || 0) + (selected.damagedAssetFee || 0);
          const netAmount = (selected.deposit || 0) - totalDeductions;

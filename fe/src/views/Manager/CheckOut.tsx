@@ -10,6 +10,7 @@ export default function CheckOut() {
    const [statusFilter, setStatusFilter] = useState('');
    const [checkoutList, setCheckoutList] = useState<any[]>([]);
    const [reconData, setReconData] = useState<any>(null);
+   const [reconciliationDetails, setReconciliationDetails] = useState<any>(null);
 
    const fetchCheckoutRequests = () => {
       fetch(`${API_URL}/api/v1/checkout-requests`)
@@ -54,6 +55,17 @@ export default function CheckOut() {
    const handleSelectItem = (item: any) => {
       setSelected(item);
       setIsCreatingRecord(true);
+      setReconciliationDetails(null);
+
+      // Load chi tiet doi soat tu DB
+      fetch(`${API_URL}/api/v1/inspections/reconciliation-by-request/${item.id}`)
+         .then(r => r.json())
+         .then(d => {
+            if (d.status === 'success' && d.data) {
+               setReconciliationDetails(d.data);
+            }
+         })
+         .catch(() => {});
    };
 
    const handleUpdateStatus = (newStatus: string) => {
@@ -121,7 +133,7 @@ export default function CheckOut() {
                      <p className="text-[#666666]">Phòng {selected.room} - {selected.bed} • Khách hàng: {selected.customer}</p>
                   </div>
                   <div>
-                     {(selected.status === 'Đang xử lý' || selected.status === 'Chờ thanh lý') && (
+                     {(selected.status === 'Đang xử lý' || selected.status === 'Chờ thanh lý' || selected.status === 'Đã kiểm tra phòng') && (
                         <span className="px-3 py-1 bg-[#FAF5F3] text-[#8C4A3A] border border-[#EAD3CC] rounded-full text-xs font-semibold flex items-center shadow-sm">
                            <Check className="w-4 h-4 mr-1" /> {selected.status}
                         </span>
@@ -178,24 +190,49 @@ export default function CheckOut() {
                            </div>
                         )}
                      </div>
-                     <div className="bg-white rounded-xl p-4 border border-gray-200 flex justify-between items-center shadow-sm">
-                        <span className="text-sm font-bold text-[#222222]">
-                           {refundOwed ? 'SỐ TIỀN HOÀN TRẢ KHÁCH THUÊ' : 'SỐ TIỀN KHÁCH PHẢI THANH TOÁN BỔ SUNG'}
-                        </span>
-                        <span className={`text-2xl font-bold ${refundOwed ? 'text-green-600' : 'text-red-600'}`}>
-                           {absNet.toLocaleString()} đ
-                        </span>
-                     </div>
-                  </div>
+                      <div className="bg-white rounded-xl p-4 border border-gray-200 flex justify-between items-center shadow-sm">
+                         <span className="text-sm font-bold text-[#222222]">
+                            {refundOwed ? 'SỐ TIỀN HOÀN TRẢ KHÁCH THUÊ' : 'SỐ TIỀN KHÁCH PHẢI THANH TOÁN BỔ SUNG'}
+                         </span>
+                         <span className={`text-2xl font-bold ${refundOwed ? 'text-green-600' : 'text-red-600'}`}>
+                            {absNet.toLocaleString()} đ
+                         </span>
+                      </div>
+
+                      {reconciliationDetails && (
+                         <div className="mt-4 bg-white rounded-xl border border-[#EAD3CC]/60 overflow-hidden">
+                            <div className="bg-[#FAF5F3] px-4 py-3 border-b border-[#EAD3CC]/40">
+                               <h3 className="text-sm font-bold text-[#8C4A3A]">Chi tiết khấu trừ từ Kế toán</h3>
+                               <p className="text-xs text-gray-500">Phiếu đối soát #{reconciliationDetails.id} — {reconciliationDetails.ngayDoiSoat ? new Date(reconciliationDetails.ngayDoiSoat).toLocaleDateString('vi-VN') : ''}</p>
+                            </div>
+                            <div className="p-4 space-y-2">
+                               {reconciliationDetails.chiTiet && reconciliationDetails.chiTiet.length > 0 ? (
+                                  reconciliationDetails.chiTiet.map((item: any, idx: number) => (
+                                     <div key={idx} className="flex justify-between text-sm border-b border-gray-50 pb-1">
+                                        <span className="text-gray-600">[{item.maLoai}] {item.lyDo}</span>
+                                        <span className="font-semibold text-red-600">- {Number(item.soTien).toLocaleString()} đ</span>
+                                     </div>
+                                  ))
+                               ) : (
+                                  <p className="text-xs text-gray-400 italic">Không có khoản khấu trừ.</p>
+                               )}
+                               <div className="flex justify-between text-sm pt-2 font-bold border-t border-gray-200">
+                                  <span className="text-gray-700">Tổng khấu trừ:</span>
+                                  <span className="text-red-600">- {Number(reconciliationDetails.tongKhauTru || 0).toLocaleString()} đ</span>
+                               </div>
+                            </div>
+                         </div>
+                      )}
+                   </div>
 
                   <div className="w-full mt-6 flex flex-row gap-4">
-                     {selected.status === 'Đang xử lý' && (
+                     {(selected.status === 'Đang xử lý' || selected.status === 'Đã kiểm tra phòng') && (
                         <button
                            onClick={() => handleUpdateStatus('Chờ thanh lý')}
                            className="flex-1 px-4 py-2.5 bg-[#B7705F] hover:bg-[#a06050] text-white rounded-lg text-sm font-bold flex items-center justify-center transition-all shadow-sm cursor-pointer"
                         >
                            <CheckCircle className="w-4 h-4 mr-1.5" />
-                           Xác nhận tạo & gửi khách hàng
+                           Bỏ qua Kế toán, tiếp tục thanh lý
                         </button>
                      )}
                      {selected.status === 'Chờ thanh lý' && (
@@ -317,6 +354,8 @@ export default function CheckOut() {
                  >
                    <option value="">Tất cả trạng thái</option>
                    <option value="Đang xử lý">Đang xử lý</option>
+                   <option value="Đã kiểm tra phòng">Đã kiểm tra phòng</option>
+                   <option value="Chờ thanh lý">Chờ thanh lý</option>
                    <option value="Đã xử lý">Đã xử lý</option>
                  </select>
                </div>

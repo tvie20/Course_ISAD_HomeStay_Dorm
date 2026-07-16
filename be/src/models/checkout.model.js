@@ -116,11 +116,11 @@ exports.getAll = async (data) => {
             LEFT JOIN PHIEUCOC_GIUONG pc_g ON pc.MaPhieuCoc = pc_g.MaPhieuCoc
             LEFT JOIN (
                 SELECT ds.MaHopDong,
-                    SUM(CASE WHEN ct.MaLoaiKhauTru = 'DIEN_NUOC' THEN ct.SoTienKhauTru ELSE 0 END) AS utilityFee,
+                    SUM(CASE WHEN ct.MaLoaiKhauTru IN ('NO_DIEN', 'NO_NUOC') THEN ct.SoTienKhauTru ELSE 0 END) AS utilityFee,
                     SUM(CASE WHEN ct.MaLoaiKhauTru = 'PHI_DON_DEP' THEN ct.SoTienKhauTru ELSE 0 END) AS cleaningFee,
                     SUM(CASE WHEN ct.MaLoaiKhauTru = 'PHAT_TAI_SAN' THEN ct.SoTienKhauTru ELSE 0 END) AS damagedAssetFee,
-                    SUM(CASE WHEN ct.MaLoaiKhauTru = 'NO_CU' THEN ct.SoTienKhauTru ELSE 0 END) AS rentLiability,
-                    SUM(CASE WHEN ct.MaLoaiKhauTru NOT IN ('DIEN_NUOC', 'PHI_DON_DEP', 'PHAT_TAI_SAN', 'NO_CU') THEN ct.SoTienKhauTru ELSE 0 END) AS otherFee
+                    SUM(CASE WHEN ct.MaLoaiKhauTru = 'NO_THUE' THEN ct.SoTienKhauTru ELSE 0 END) AS rentLiability,
+                    SUM(CASE WHEN ct.MaLoaiKhauTru NOT IN ('NO_DIEN', 'NO_NUOC', 'PHI_DON_DEP', 'PHAT_TAI_SAN', 'NO_THUE') THEN ct.SoTienKhauTru ELSE 0 END) AS otherFee
                 FROM DOI_SOAT_HOAN_COC ds
                 INNER JOIN CHI_TIET_DOI_SOAT ct ON ds.MaDoiSoat = ct.MaDoiSoat
                 GROUP BY ds.MaHopDong

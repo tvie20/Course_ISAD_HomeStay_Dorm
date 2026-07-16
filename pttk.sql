@@ -839,7 +839,7 @@ INSERT INTO BANGGIADENBU_TAISAN (MaDenBu, MaVatDung) VALUES
 INSERT INTO PHIEU_KIEM_TRA (MaPhieuKiemTra, NgayKiemTra, LoaiKiemTra, MaPhong, MaNhanVien) VALUES
 ('PK0001', '2026-07-01', N'Định kỳ',   'PH0001', 'NV0005'),
 ('PK0002', '2026-07-01', N'Định kỳ',   'PH0004', 'NV0006'),
-('PK0003', '2026-06-28', N'Bất thường','PH0008', 'NV0009'),
+('PK0003', '2026-06-28', N'Trả phòng','PH0008', 'NV0009'),
 ('PK0004', '2026-07-05', N'Trả phòng', 'PH0002', 'NV0005'),
 ('PK0005', '2026-07-08', N'Định kỳ',   'PH0006', 'NV0006'),
 ('PK0006', '2026-06-30', N'Trả phòng', 'PH0004', 'NV0006');

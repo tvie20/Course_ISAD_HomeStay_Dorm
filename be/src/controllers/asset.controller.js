@@ -16,3 +16,11 @@ exports.getAllAllocations = catchAsync(async (req, res, next) => {
         data: result
     })
 })
+
+exports.getByRoom = catchAsync(async (req, res, next) => {
+    const result = await assetModel.getByRoom(req.params.roomName)
+    res.status(200).json({
+        status: 'success',
+        data: result
+    })
+})

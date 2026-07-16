@@ -45,3 +45,31 @@ exports.getAllAllocations = async () => {
         throw error
     }
 }
+
+// Lấy tài sản được phân bổ cho 1 phòng cụ thể (theo TenPhong)
+exports.getByRoom = async (roomName) => {
+    try {
+        const pool = await sql.connect()
+        const request = pool.request()
+        request.input('TenPhong', sql.NVarChar, roomName)
+        const query = `
+            SELECT
+                tp.MaVatDung AS maTaiSan,
+                ts.TenVatDung AS tenTaiSan,
+                tp.SoLuong AS soLuong,
+                p.TenPhong AS room,
+                p.MaPhong AS maPhong,
+                N'Tốt' AS condition,
+                'room' AS assignedTo
+            FROM TAISAN_PHONG tp
+            JOIN TAI_SAN ts ON tp.MaVatDung = ts.MaVatDung
+            JOIN PHONG p ON tp.MaPhong = p.MaPhong
+            WHERE p.TenPhong = @TenPhong
+        `
+        const result = await request.query(query)
+        return result.recordset
+    } catch (error) {
+        console.error("Error in asset.model.js getByRoom:", error)
+        throw error
+    }
+}

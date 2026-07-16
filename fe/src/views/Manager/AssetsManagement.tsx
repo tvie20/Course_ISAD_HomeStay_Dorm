@@ -19,25 +19,25 @@ interface AssetRecord {
 }
 
 const ROOM_BEDS: Record<string, string[]> = {
-  'P.101': ['Giường 01', 'Giường 02'],
-  'P.102': ['Giường 01', 'Giường 02', 'Giường 03', 'Giường 04'],
-  'P.103': ['Giường 01', 'Giường 02'],
-  'P.301': ['Giường 01', 'Giường 02', 'Giường 03', 'Giường 04'],
-  'P.302': ['Giường 01', 'Giường 02'],
+  'Phòng 101': ['Giường 01', 'Giường 02'],
+  'Phòng 102': ['Giường 01', 'Giường 02', 'Giường 03', 'Giường 04'],
+  'Phòng 103': ['Giường 01', 'Giường 02'],
+  'Phòng 301': ['Giường 01', 'Giường 02', 'Giường 03', 'Giường 04'],
+  'Phòng 302': ['Giường 01', 'Giường 02'],
 };
 
 // Manager chỉ quản lý chi nhánh của mình
 const MANAGER_BRANCH = 'Chi nhánh 1';
 
 const DEFAULT_RECORDS: AssetRecord[] = [
-   { id: 'MR-001', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', branch: 'Chi nhánh 1', room: 'P.102', soLuong: 1, occupant: 'Trần Văn B', condition: 'Tốt', lastUpdated: '15/10/2023', notes: 'Máy chạy êm, làm lạnh tốt.', assignedTo: 'room' },
-   { id: 'MR-002', maTaiSan: 'TS-002', tenTaiSan: 'Tủ lạnh Aqua 90L', branch: 'Chi nhánh 1', room: 'P.102', soLuong: 1, occupant: 'Trần Văn B', condition: 'Hư hỏng nhẹ', lastUpdated: '10/09/2023', notes: 'Bị rỉ nước nhẹ ở khay đá.', assignedTo: 'room' },
-   { id: 'MR-003', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', branch: 'Chi nhánh 1', room: 'P.103', soLuong: 1, occupant: 'Phạm Thị D', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'room' },
-   { id: 'MR-004', maTaiSan: 'TS-004', tenTaiSan: 'Bình nóng lạnh Ariston 20L', branch: 'Chi nhánh 1', room: 'P.101', soLuong: 1, occupant: 'Nguyễn Văn A', condition: 'Tốt', lastUpdated: '01/10/2023', assignedTo: 'room' },
-   { id: 'MR-005', maTaiSan: 'TS-003', tenTaiSan: 'Giường tầng gỗ', branch: 'Chi nhánh 1', room: 'P.101', soLuong: 2, occupant: 'Nguyễn Văn A', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'bed', bed: 'Giường 01' },
-   { id: 'MR-006', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', branch: 'Chi nhánh 1', room: 'P.301', soLuong: 1, occupant: '--', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'room' },
-   { id: 'MR-007', maTaiSan: 'TS-005', tenTaiSan: 'Chìa khóa thẻ từ', branch: 'Chi nhánh 1', room: 'P.301', soLuong: 1, occupant: 'Khách hàng P.301', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'bed', bed: 'Giường 01' },
-   { id: 'MR-008', maTaiSan: 'TS-003', tenTaiSan: 'Giường tầng gỗ', branch: 'Chi nhánh 1', room: 'P.301', soLuong: 1, occupant: 'Khách hàng P.301', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'bed', bed: 'Giường 01' },
+   { id: 'MR-001', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', branch: 'Chi nhánh 1', room: 'Phòng 102', soLuong: 1, occupant: 'Trần Văn B', condition: 'Tốt', lastUpdated: '15/10/2023', notes: 'Máy chạy êm, làm lạnh tốt.', assignedTo: 'room' },
+   { id: 'MR-002', maTaiSan: 'TS-002', tenTaiSan: 'Tủ lạnh Aqua 90L', branch: 'Chi nhánh 1', room: 'Phòng 102', soLuong: 1, occupant: 'Trần Văn B', condition: 'Hư hỏng nhẹ', lastUpdated: '10/09/2023', notes: 'Bị rỉ nước nhẹ ở khay đá.', assignedTo: 'room' },
+   { id: 'MR-003', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', branch: 'Chi nhánh 1', room: 'Phòng 103', soLuong: 1, occupant: 'Phạm Thị D', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'room' },
+   { id: 'MR-004', maTaiSan: 'TS-004', tenTaiSan: 'Bình nóng lạnh Ariston 20L', branch: 'Chi nhánh 1', room: 'Phòng 101', soLuong: 1, occupant: 'Nguyễn Văn A', condition: 'Tốt', lastUpdated: '01/10/2023', assignedTo: 'room' },
+   { id: 'MR-005', maTaiSan: 'TS-003', tenTaiSan: 'Giường tầng gỗ', branch: 'Chi nhánh 1', room: 'Phòng 101', soLuong: 2, occupant: 'Nguyễn Văn A', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'bed', bed: 'Giường 01' },
+   { id: 'MR-006', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', branch: 'Chi nhánh 1', room: 'Phòng 301', soLuong: 1, occupant: '--', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'room' },
+   { id: 'MR-007', maTaiSan: 'TS-005', tenTaiSan: 'Chìa khóa thẻ từ', branch: 'Chi nhánh 1', room: 'Phòng 301', soLuong: 1, occupant: 'Khách hàng P.301', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'bed', bed: 'Giường 01' },
+   { id: 'MR-008', maTaiSan: 'TS-003', tenTaiSan: 'Giường tầng gỗ', branch: 'Chi nhánh 1', room: 'Phòng 301', soLuong: 1, occupant: 'Khách hàng P.301', condition: 'Tốt', lastUpdated: '05/11/2023', assignedTo: 'bed', bed: 'Giường 01' },
 ];
 
 type ModalMode = 'view' | 'edit' | null;
@@ -55,7 +55,7 @@ const conditionCls = (cond: string) => {
 export default function AssetsManagement() {
    // ── State: data ──────────────────────────────────────────────────────────
    const [records, setRecords] = useState<AssetRecord[]>(() => {
-      const s = localStorage.getItem('asset_records_manager_v3');
+      const s = localStorage.getItem('asset_records_manager_v4');
       if (s) try { return JSON.parse(s); } catch { }
       return DEFAULT_RECORDS;
    });
@@ -87,12 +87,12 @@ export default function AssetsManagement() {
    // ── Persistence ───────────────────────────────────────────────────────────
    const saveRecords = (updated: AssetRecord[]) => {
       setRecords(updated);
-      localStorage.setItem('asset_records_manager_v3', JSON.stringify(updated));
+      localStorage.setItem('asset_records_manager_v4', JSON.stringify(updated));
    };
 
    useEffect(() => {
       const sync = () => {
-         const s = localStorage.getItem('asset_records_manager_v3');
+         const s = localStorage.getItem('asset_records_manager_v4');
          if (s) try { setRecords(JSON.parse(s)); } catch { }
          const sa = localStorage.getItem('asset_records_admin_v2');
          if (sa) try { setAdminRecords(JSON.parse(sa)); } catch { }

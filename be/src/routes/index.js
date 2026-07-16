@@ -46,4 +46,7 @@ router.use('/assets', assetRoutes)
 const reconRoutes = require('./reconciliation.routes')
 router.use('/reconciliations', reconRoutes)
 
+const inspectionRoutes = require('./inspection.routes')
+router.use('/inspections', inspectionRoutes)
+
 module.exports = router

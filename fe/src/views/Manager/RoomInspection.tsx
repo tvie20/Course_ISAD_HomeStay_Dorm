@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Send, Search, Package, AlertTriangle, CheckCircle } from 'lucide-react';
+import API_URL from '../../api';
 
 // Matches Manager's AssetRecord
 interface AssetRecord {
@@ -80,7 +81,7 @@ export default function RoomInspection() {
 
   // Load checkout flow request and active rooms
   useEffect(() => {
-    fetch('http://localhost:8080/api/v1/handovers/occupied')
+    fetch(`${API_URL}/api/v1/handovers/occupied`)
       .then(res => res.json())
       .then(apiData => {
         let baseList: any[] = [];
@@ -88,26 +89,31 @@ export default function RoomInspection() {
           baseList = apiData.data;
         }
 
-        const saved = localStorage.getItem('checkout_flow_request');
-        if (saved) {
-          const data = JSON.parse(saved);
-          if (data.status === 'Chờ duyệt' || data.status === 'Đang kiểm tra phòng') {
-            const flowItem = {
-              id: 'flow_req_1',
-              room: data.room,
-              bed: data.bed,
-              customer: data.customer,
-              date: data.date,
-              status: 'Yêu cầu trả phòng',
-              isFlowRequest: true
-            };
-            setInspectionList([flowItem, ...baseList]);
-          } else {
+        fetch(`${API_URL}/api/v1/checkout-requests`)
+          .then(res => res.json())
+          .then(reqData => {
+            if (reqData.status === 'success' && reqData.data) {
+              const flowItems = reqData.data
+                .filter((req: any) => req.status === 'Đang xử lý' || req.status === 'Chờ kiểm tra' || req.status === 'Đã kiểm tra phòng')
+                .map((req: any) => ({
+                  id: req.id,
+                  room: req.room || 'N/A',
+                  bed: req.bed || 'N/A',
+                  customer: req.customer,
+                  date: req.date ? new Date(req.date).toLocaleDateString('vi-VN') : '',
+                  status: req.status, // Use real status instead of hardcoding 'Yêu cầu trả phòng'
+                  isFlowRequest: true,
+                  contractId: req.contractId
+                }));
+              setInspectionList([...flowItems, ...baseList]);
+            } else {
+              setInspectionList(baseList);
+            }
+          })
+          .catch(err => {
+            console.error(err);
             setInspectionList(baseList);
-          }
-        } else {
-          setInspectionList(baseList);
-        }
+          });
       })
       .catch(err => {
         console.error(err);
@@ -121,103 +127,120 @@ export default function RoomInspection() {
     const isCheckout = selectedItem.isFlowRequest;
     setInspectionType(isCheckout ? 'checkout' : 'regular');
 
-    // Load Manager's asset records (fallback or for regular inspection)
-    const rawRecords = localStorage.getItem('asset_records_manager_v3');
-    let records: AssetRecord[] = [];
-    if (rawRecords) {
-      try { records = JSON.parse(rawRecords); } catch { /* ignore */ }
-    }
+    const room = selectedItem.room; // e.g. "Phòng 301" — tên phòng từ DB
+    const bed = selectedItem.bed;   // e.g. "Giường 01" hoặc số thứ tự giường
 
-    const room = selectedItem.room;
-    const bed = selectedItem.bed; // e.g. 'Giường 01'
-    
-    if (isCheckout && bed) {
-      // Checkout mode: determine if room still has other occupants
-      const occupants = ROOM_OCCUPANTS[room] || [];
-      const otherOccupants = occupants.filter(o => o.bed !== bed && o.customer);
-      const isLastPerson = otherOccupants.length === 0;
-
-      // Try to load from handover records first
-      const rawHandover = localStorage.getItem('handover_records_v1');
-      let hoRecords: any[] = [];
-      if (rawHandover) try { hoRecords = JSON.parse(rawHandover); } catch {}
-      
-      // Inject mock handover for P.301 if it doesn't exist
-      if (!hoRecords.some(r => r.room === 'P.301' && r.bed === 'Giường 01' && r.customer === 'Khách hàng P.301')) {
-        hoRecords.push({
-          id: 'HO-MOCK-301',
-          room: 'P.301',
-          bed: 'Giường 01',
-          customer: 'Khách hàng P.301',
-          date: '05/11/2023',
-          items: [
-             { assetId: 'MR-006', maTaiSan: 'TS-001', tenTaiSan: 'Máy lạnh Daikin 1.5HP', soLuong: 1, assignedTo: 'room', condition: 'Tốt', note: '', confirmed: true },
-             { assetId: 'MR-007', maTaiSan: 'TS-005', tenTaiSan: 'Chìa khóa thẻ từ', soLuong: 1, assignedTo: 'bed', bed: 'Giường 01', condition: 'Tốt', note: '', confirmed: true },
-             { assetId: 'MR-008', maTaiSan: 'TS-003', tenTaiSan: 'Giường tầng gỗ', soLuong: 1, assignedTo: 'bed', bed: 'Giường 01', condition: 'Tốt', note: '', confirmed: true },
-          ]
-        });
-        localStorage.setItem('handover_records_v1', JSON.stringify(hoRecords));
-      }
-      
-      // Find the handover record for this customer/bed
-      const hoRecord = hoRecords.reverse().find(r => r.room === room && r.bed === bed && r.customer === selectedItem.customer);
-
-      let sourceAssets = [];
-      if (hoRecord && hoRecord.items) {
-        // Convert HandoverItem back to a format similar to AssetRecord for processing
-        sourceAssets = hoRecord.items;
-      } else {
-        // Fallback to current room assets if no handover record found
-        sourceAssets = records.filter(r => r.room === room);
-      }
-
-      const items: InspectionItem[] = sourceAssets.map(asset => {
-        const isBedSpecific = asset.assignedTo === 'bed';
-        const isThisBed = isBedSpecific && asset.bed === bed;
-        const isRoomShared = asset.assignedTo === 'room';
-
-        let isDisabled = false;
-        if (isRoomShared && !isLastPerson) {
-          // Tài sản dùng chung mà phòng còn người khác → mờ, không kiểm tra
-          isDisabled = true;
-        }
-        if (isBedSpecific && !isThisBed) {
-          // Tài sản riêng giường khác → không hiển thị
-          return null;
+    // Gọi API lấy tài sản theo phòng từ DB (bảng TAISAN_PHONG)
+    fetch(`${API_URL}/api/v1/assets/by-room/${encodeURIComponent(room)}`)
+      .then(res => res.json())
+      .then(apiData => {
+        let roomAssets: any[] = [];
+        if (apiData.status === 'success' && apiData.data) {
+          roomAssets = apiData.data;
         }
 
-        return {
-          assetId: asset.assetId || asset.id,
-          maTaiSan: asset.maTaiSan,
-          tenTaiSan: asset.tenTaiSan,
-          soLuong: asset.soLuong,
-          assignedTo: asset.assignedTo,
-          bed: asset.bed,
-          conditionBefore: asset.condition,
-          conditionAfter: asset.condition,
-          note: '',
-          isDisabled,
-        };
-      }).filter(Boolean) as InspectionItem[];
+        // Fallback: nếu API không có dữ liệu, thử đọc từ localStorage
+        if (roomAssets.length === 0) {
+          const rawRecords = localStorage.getItem('asset_records_manager_v4');
+          let localRecords: AssetRecord[] = [];
+          if (rawRecords) {
+            try { localRecords = JSON.parse(rawRecords); } catch { }
+          }
+          // Tìm theo tên phòng gốc hoặc tên viết tắt (P.301 ↔ Phòng 301)
+          roomAssets = localRecords.filter(r =>
+            r.room === room ||
+            r.room === room.replace('Phòng ', 'P.')
+          ).map(r => ({
+            maTaiSan: r.maTaiSan,
+            tenTaiSan: r.tenTaiSan,
+            soLuong: r.soLuong,
+            condition: r.condition,
+            assignedTo: r.assignedTo || 'room',
+            bed: r.bed,
+          }));
+        }
 
-      setInspectionItems(items);
-    } else {
-      // Regular inspection: show all assets in the room
-      const roomAssets = records.filter(r => r.room === room);
-      const items: InspectionItem[] = roomAssets.map(asset => ({
-        assetId: asset.id,
-        maTaiSan: asset.maTaiSan,
-        tenTaiSan: asset.tenTaiSan,
-        soLuong: asset.soLuong,
-        assignedTo: asset.assignedTo,
-        bed: asset.bed,
-        conditionBefore: asset.condition,
-        conditionAfter: asset.condition,
-        note: '',
-        isDisabled: false,
-      }));
-      setInspectionItems(items);
-    }
+        if (isCheckout && bed) {
+          // Checkout mode: xác định phòng còn người ở không
+          // Gọi API lấy danh sách người ở trong phòng để tính isLastPerson
+          fetch(`${API_URL}/api/v1/checkout-requests`)
+            .then(r => r.json())
+            .then(reqData => {
+              let otherOccupants = 0;
+              if (reqData.status === 'success' && reqData.data) {
+                // Đếm số người đang ở phòng này (trừ người đang trả phòng)
+                otherOccupants = reqData.data.filter((r: any) =>
+                  r.room === room &&
+                  r.id !== selectedItem.id &&
+                  r.status !== 'Đã xử lý'
+                ).length;
+              }
+              const isLastPerson = otherOccupants === 0;
+
+              const items: InspectionItem[] = roomAssets.map(asset => {
+                const isRoomShared = asset.assignedTo === 'room';
+                const isBedSpecific = asset.assignedTo === 'bed';
+                const isThisBed = isBedSpecific && (
+                  asset.bed === bed ||
+                  asset.bed === `Giường 0${bed}` ||
+                  String(asset.bed) === String(bed)
+                );
+
+                if (isBedSpecific && !isThisBed) return null;
+
+                return {
+                  assetId: asset.maTaiSan,
+                  maTaiSan: asset.maTaiSan,
+                  tenTaiSan: asset.tenTaiSan,
+                  soLuong: asset.soLuong,
+                  assignedTo: (asset.assignedTo || 'room') as 'room' | 'bed',
+                  bed: asset.bed,
+                  conditionBefore: asset.condition || 'Tốt',
+                  conditionAfter: asset.condition || 'Tốt',
+                  note: '',
+                  isDisabled: isRoomShared && !isLastPerson,
+                };
+              }).filter(Boolean) as InspectionItem[];
+
+              setInspectionItems(items);
+            })
+            .catch(() => {
+              // Nếu lỗi, coi như last person và show tất cả tài sản
+              const items: InspectionItem[] = roomAssets.map(asset => ({
+                assetId: asset.maTaiSan,
+                maTaiSan: asset.maTaiSan,
+                tenTaiSan: asset.tenTaiSan,
+                soLuong: asset.soLuong,
+                assignedTo: (asset.assignedTo || 'room') as 'room' | 'bed',
+                bed: asset.bed,
+                conditionBefore: asset.condition || 'Tốt',
+                conditionAfter: asset.condition || 'Tốt',
+                note: '',
+                isDisabled: false,
+              }));
+              setInspectionItems(items);
+            });
+        } else {
+          // Kiểm tra định kỳ: hiển thị tất cả tài sản của phòng
+          const items: InspectionItem[] = roomAssets.map(asset => ({
+            assetId: asset.maTaiSan,
+            maTaiSan: asset.maTaiSan,
+            tenTaiSan: asset.tenTaiSan,
+            soLuong: asset.soLuong,
+            assignedTo: (asset.assignedTo || 'room') as 'room' | 'bed',
+            bed: asset.bed,
+            conditionBefore: asset.condition || 'Tốt',
+            conditionAfter: asset.condition || 'Tốt',
+            note: '',
+            isDisabled: false,
+          }));
+          setInspectionItems(items);
+        }
+      })
+      .catch(err => {
+        console.error('Error loading assets for inspection:', err);
+        setInspectionItems([]);
+      });
   }, [selectedItem]);
 
   const updateItem = (idx: number, field: keyof InspectionItem, value: string) => {
@@ -258,19 +281,57 @@ export default function RoomInspection() {
     alert('Đã lưu thông tin kiểm tra thành công!');
   };
 
-  const handleSendToAccountant = () => {
-    handleSave();
-
+  const handleSendToAccountant = async () => {
     if (selectedItem?.isFlowRequest) {
-      const saved = localStorage.getItem('checkout_flow_request');
-      if (saved) {
-        const data = JSON.parse(saved);
-        data.status = 'Đã kiểm tra phòng';
-        localStorage.setItem('checkout_flow_request', JSON.stringify(data));
+      try {
+        // Bước 1: Lưu kết quả kiểm tra vào DB
+        const inspectionPayload = {
+          requestId: selectedItem.id,
+          room: selectedItem.room,
+          bed: selectedItem.bed,
+          customer: selectedItem.customer,
+          note: inspectionItems
+            .filter(i => !i.isDisabled && (i.conditionAfter === 'Hư hỏng' || i.conditionAfter === 'Mất'))
+            .map(i => `${i.tenTaiSan}: ${i.conditionAfter}${i.note ? ' - ' + i.note : ''}`)
+            .join('; '),
+          items: inspectionItems.filter(i => !i.isDisabled).map(i => ({
+            maTaiSan: i.maTaiSan,
+            tenTaiSan: i.tenTaiSan,
+            soLuong: i.soLuong,
+            conditionAfter: i.conditionAfter,
+            note: i.note,
+          }))
+        };
+
+        const saveRes = await fetch(`${API_URL}/api/v1/inspections`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(inspectionPayload)
+        });
+        const saveData = await saveRes.json();
+        if (saveData.status !== 'success') {
+          console.warn('Lưu phiếu kiểm tra thất bại:', saveData.message);
+        }
+
+        // Bước 2: Cập nhật trạng thái yêu cầu trả phòng
+        const statusRes = await fetch(`${API_URL}/api/v1/checkout-requests/${selectedItem.id}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Đã kiểm tra phòng' })
+        });
+        const statusData = await statusRes.json();
+        if (statusData.status === 'success') {
+          alert('Đã gửi biên bản kiểm tra phòng cho Kế toán thành công!');
+          setSelectedItem(null);
+        } else {
+          alert('Có lỗi xảy ra: ' + statusData.message);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Lỗi kết nối khi cập nhật trạng thái trả phòng');
       }
-      setSelectedItem(null);
-      alert('Đã chuyển thông tin kiểm tra phòng/giường cho bộ phận Kế toán thành công!');
     } else {
+      handleSave();
       setSelectedItem(null);
       alert('Đã chuyển thông tin thành công!');
     }
@@ -292,79 +353,80 @@ export default function RoomInspection() {
     return (
       <div className="p-8 h-full max-w-7xl mx-auto">
         <div className="flex justify-between items-end mb-8">
-           <div>
-              <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Kiểm tra phòng</h1>
-              <p className="text-sm text-[#666666]">Kiểm tra tài sản bàn giao, đánh giá hiện trạng, ghi nhận phát sinh.</p>
-           </div>
+          <div>
+            <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">Kiểm tra phòng</h1>
+            <p className="text-sm text-[#666666]">Kiểm tra tài sản bàn giao, đánh giá hiện trạng, ghi nhận phát sinh.</p>
+          </div>
         </div>
 
         <div className="bg-white p-4 rounded-xl shadow-sm border border-[#EAD3CC]/50 mb-6 flex flex-wrap gap-4 items-center">
-           <div className="flex-1 min-w-[300px] relative">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Tìm theo phòng, khách hàng, giường..." 
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
-              />
-           </div>
-           
-           <div className="flex items-center space-x-2">
-             <span className="text-xs font-semibold text-gray-500 uppercase">Trạng thái:</span>
-             <select 
-               value={statusFilter}
-               onChange={(e) => setStatusFilter(e.target.value)}
-               className="border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#B7705F]"
-             >
-               <option value="">Tất cả trạng thái</option>
-               <option value="Bình thường">Bình thường</option>
-               <option value="Yêu cầu trả phòng">Yêu cầu trả phòng</option>
-             </select>
-           </div>
+          <div className="flex-1 min-w-[300px] relative">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm theo phòng, khách hàng, giường..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#B7705F]"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase">Trạng thái:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#B7705F]"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="Bình thường">Bình thường</option>
+              <option value="Đang xử lý">Yêu cầu trả phòng (Đang xử lý)</option>
+              <option value="Đã kiểm tra phòng">Đã kiểm tra phòng</option>
+            </select>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-[#EAD3CC]/50 overflow-hidden">
-            <table className="w-full text-left text-sm">
-               <thead className="bg-[#FAF5F3] text-[#666666]">
-                  <tr>
-                     <th className="px-6 py-4 font-medium">Phòng</th>
-                     <th className="px-6 py-4 font-medium">Ngày cập nhật</th>
-                     <th className="px-6 py-4 font-medium">Trạng thái</th>
-                     <th className="px-6 py-4 font-medium text-right">Thao Tác</th>
-                  </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-100">
-                  {filteredList.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                       <td className="px-6 py-4 font-medium text-[#222222]">
-                          {item.isFlowRequest ? (
-                            <div>
-                              <span>{item.room} - {item.bed}</span>
-                              <span className="block text-xs text-[#666]">{item.customer}</span>
-                            </div>
-                          ) : item.room}
-                       </td>
-                       <td className="px-6 py-4 text-[#666666]">{item.date}</td>
-                       <td className="px-6 py-4">
-                         <span className={`px-2.5 py-1 rounded text-xs font-semibold ${
-                           item.status === 'Bình thường' ? 'bg-green-50 text-green-600' :
-                           item.status === 'Yêu cầu trả phòng' ? 'bg-orange-50 text-orange-600 border border-orange-200' :
-                           'bg-[#FAF5F3] text-[#B7705F]'
-                         }`}>
-                           {item.status}
-                         </span>
-                       </td>
-                       <td className="px-6 py-4 text-right">
-                          <button onClick={() => setSelectedItem(item)} className="px-3 py-1.5 text-sm font-medium text-[#B7705F] bg-orange-50 hover:bg-[#F3E1DC] rounded-lg transition-colors inline-block">
-                             {item.isFlowRequest ? 'Kiểm tra tài sản' : 'Chi tiết'}
-                          </button>
-                       </td>
-                    </tr>
-                  ))}
-               </tbody>
-            </table>
-         </div>
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[#FAF5F3] text-[#666666]">
+              <tr>
+                <th className="px-6 py-4 font-medium">Phòng</th>
+                <th className="px-6 py-4 font-medium">Ngày cập nhật</th>
+                <th className="px-6 py-4 font-medium">Trạng thái</th>
+                <th className="px-6 py-4 font-medium text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredList.map((item, idx) => (
+                <tr key={idx} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 font-medium text-[#222222]">
+                    {item.isFlowRequest ? (
+                      <div>
+                        <span>{item.room} - {item.bed}</span>
+                        <span className="block text-xs text-[#666]">{item.customer}</span>
+                      </div>
+                    ) : item.room}
+                  </td>
+                  <td className="px-6 py-4 text-[#666666]">{item.date}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded text-xs font-semibold border ${item.status === 'Bình thường' ? 'bg-green-50 text-green-600 border-green-200' :
+                      item.status === 'Đang xử lý' || item.status === 'Yêu cầu trả phòng' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                        item.status === 'Đã kiểm tra phòng' ? 'bg-[#FAF5F3] text-[#8C4A3A] border-[#EAD3CC]' :
+                          'bg-gray-50 text-gray-600 border-gray-200'
+                      }`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button onClick={() => setSelectedItem(item)} className="px-3 py-1.5 text-sm font-medium text-[#B7705F] bg-orange-50 hover:bg-[#F3E1DC] rounded-lg transition-colors inline-block">
+                      {item.isFlowRequest ? 'Kiểm tra tài sản' : 'Chi tiết'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
@@ -378,39 +440,39 @@ export default function RoomInspection() {
     <div className="p-8 h-full max-w-5xl mx-auto">
       <div className="mb-6">
         <div className="flex items-center text-sm font-medium text-gray-500 mb-2">
-           <span>Phòng (Rooms)</span>
-           <svg className="w-4 h-4 mx-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-           <span>{selectedItem.isFlowRequest ? `${selectedItem.room} - ${selectedItem.bed}` : selectedItem.room}</span>
-           <svg className="w-4 h-4 mx-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-           <span className="text-[#B7705F]">Kiểm tra tài sản</span>
+          <span>Phòng (Rooms)</span>
+          <svg className="w-4 h-4 mx-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          <span>{selectedItem.isFlowRequest ? `${selectedItem.room} - ${selectedItem.bed}` : selectedItem.room}</span>
+          <svg className="w-4 h-4 mx-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          <span className="text-[#B7705F]">Kiểm tra tài sản</span>
         </div>
       </div>
       <div className="flex justify-between items-end mb-6">
-         <div>
-            <div className="flex items-center space-x-3 mb-2">
-               <button onClick={() => setSelectedItem(null)} className="text-[#666666] hover:text-[#B7705F] flex items-center text-sm font-medium">
-                  <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-               </button>
-            </div>
-            <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">
-               Kiểm tra - {selectedItem.isFlowRequest ? `${selectedItem.room} - ${selectedItem.bed}` : selectedItem.room}
-            </h1>
-            {selectedItem.isFlowRequest && (
-              <p className="text-sm text-[#666666]">Khách thuê: <span className="font-semibold text-gray-900">{selectedItem.customer}</span> (Yêu cầu trả phòng)</p>
-            )}
-         </div>
-         <div className="flex items-center gap-2">
-            {inspectionType === 'checkout' && (
-              <span className="px-3 py-1.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-full text-xs font-bold flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" /> Kiểm tra trả phòng
-              </span>
-            )}
-            {inspectionType === 'regular' && (
-              <span className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold flex items-center gap-1">
-                <CheckCircle className="w-3.5 h-3.5" /> Kiểm tra định kỳ
-              </span>
-            )}
-         </div>
+        <div>
+          <div className="flex items-center space-x-3 mb-2">
+            <button onClick={() => setSelectedItem(null)} className="text-[#666666] hover:text-[#B7705F] flex items-center text-sm font-medium">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+            </button>
+          </div>
+          <h1 className="text-3xl font-bold text-[#8C4A3A] mb-1">
+            Kiểm tra - {selectedItem.isFlowRequest ? `${selectedItem.room} - ${selectedItem.bed}` : selectedItem.room}
+          </h1>
+          {selectedItem.isFlowRequest && (
+            <p className="text-sm text-[#666666]">Khách thuê: <span className="font-semibold text-gray-900">{selectedItem.customer}</span> (Yêu cầu trả phòng)</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {inspectionType === 'checkout' && (
+            <span className="px-3 py-1.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-full text-xs font-bold flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5" /> Kiểm tra trả phòng
+            </span>
+          )}
+          {inspectionType === 'regular' && (
+            <span className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold flex items-center gap-1">
+              <CheckCircle className="w-3.5 h-3.5" /> Kiểm tra định kỳ
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -433,118 +495,118 @@ export default function RoomInspection() {
 
       {/* Asset Inspection List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-         <div className="p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <Package className="w-5 h-5 text-[#B7705F]" />
-              Danh sách tài sản cần kiểm tra
-            </h3>
-            <p className="text-xs text-[#666] mb-5">Đánh giá tình trạng từng tài sản đã bàn giao. Dữ liệu được lấy từ hệ thống quản lý tài sản.</p>
+        <div className="p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+            <Package className="w-5 h-5 text-[#B7705F]" />
+            Danh sách tài sản cần kiểm tra
+          </h3>
+          <p className="text-xs text-[#666] mb-5">Đánh giá tình trạng từng tài sản đã bàn giao. Dữ liệu được lấy từ hệ thống quản lý tài sản.</p>
 
-            {inspectionItems.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Không tìm thấy tài sản nào được phân bổ cho phòng/giường này.</p>
-                <p className="text-xs mt-1">Hãy phân bổ tài sản vào phòng trong mục "Quản lý tài sản" trước.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {/* Enabled items (can inspect) */}
-                {enabledItems.map((item, _idx) => {
-                  const globalIdx = inspectionItems.indexOf(item);
-                  return (
-                    <div key={item.assetId} className="flex flex-col md:flex-row md:items-start justify-between p-4 bg-[#FAF5F3]/50 border border-gray-100 rounded-xl">
-                      <div className="flex items-start mb-3 md:mb-0">
-                         <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-500 mr-3 shrink-0">
-                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                         </div>
-                         <div>
-                            <p className="font-semibold text-gray-900 text-sm">
-                              {item.tenTaiSan} <span className="text-gray-500 font-normal ml-1">(SL: {item.soLuong})</span>
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] font-mono text-[#B7705F] bg-[#FAF5F3] px-1.5 py-0.5 rounded border border-[#EAD3CC]/50">{item.maTaiSan}</span>
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${item.assignedTo === 'room' ? 'bg-gray-100 text-gray-600' : 'bg-[#FAF5F3] text-[#8C4A3A]'}`}>
-                                {item.assignedTo === 'room' ? 'Dùng chung' : `Riêng: ${item.bed}`}
-                              </span>
-                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${conditionCls(item.conditionBefore)}`}>
-                                Trước: {item.conditionBefore}
-                              </span>
-                            </div>
-                         </div>
+          {inspectionItems.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Không tìm thấy tài sản nào được phân bổ cho phòng/giường này.</p>
+              <p className="text-xs mt-1">Hãy phân bổ tài sản vào phòng trong mục "Quản lý tài sản" trước.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Enabled items (can inspect) */}
+              {enabledItems.map((item, _idx) => {
+                const globalIdx = inspectionItems.indexOf(item);
+                return (
+                  <div key={item.assetId} className="flex flex-col md:flex-row md:items-start justify-between p-4 bg-[#FAF5F3]/50 border border-gray-100 rounded-xl">
+                    <div className="flex items-start mb-3 md:mb-0">
+                      <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-500 mr-3 shrink-0">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                       </div>
-                      
-                      <div className="flex flex-col items-end gap-2 w-full md:w-auto mt-2 md:mt-0">
-                         <div className="flex items-center space-x-1">
-                            <div className="flex bg-gray-100 rounded-lg p-0.5">
-                               <button onClick={() => updateItem(globalIdx, 'conditionAfter', 'Tốt')}
-                                 className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.conditionAfter === 'Tốt' ? 'bg-green-100 text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Tốt</button>
-                               <button onClick={() => updateItem(globalIdx, 'conditionAfter', 'Hư hỏng')}
-                                 className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.conditionAfter === 'Hư hỏng' ? 'bg-red-100 text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Hư hỏng</button>
-                               <button onClick={() => updateItem(globalIdx, 'conditionAfter', 'Mất')}
-                                 className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.conditionAfter === 'Mất' ? 'bg-gray-200 text-gray-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Mất</button>
-                            </div>
-                         </div>
-                         {(item.conditionAfter === 'Hư hỏng' || item.conditionAfter === 'Mất') && (
-                           <div className="w-full md:w-80 space-y-2 mt-2">
-                             <input type="text" 
-                               className="w-full border border-red-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:border-red-400 bg-white" 
-                               placeholder="Ghi chú chi tiết hiện trạng..." 
-                               value={item.note}
-                               onChange={e => updateItem(globalIdx, 'note', e.target.value)}
-                             />
-                           </div>
-                         )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Disabled items (room-shared, room still has people) */}
-                {disabledItems.length > 0 && (
-                  <>
-                    <div className="flex items-center gap-2 mt-6 mb-2">
-                      <div className="h-px flex-1 bg-gray-200"></div>
-                      <span className="text-xs font-bold text-gray-500 px-2">Tài sản dùng chung — Chưa kiểm tra</span>
-                      <div className="h-px flex-1 bg-gray-200"></div>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                      Các tài sản dùng chung dưới đây chưa được kiểm tra vì phòng vẫn còn người ở. Tài sản này sẽ được kiểm tra khi người cuối cùng trả phòng.
-                    </p>
-                    {disabledItems.map(item => (
-                      <div key={item.assetId} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl opacity-60">
-                        <div className="flex items-start">
-                           <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-400 mr-3 shrink-0">
-                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                           </div>
-                           <div>
-                              <p className="font-semibold text-gray-500 text-sm">
-                                {item.tenTaiSan} <span className="font-normal ml-1">(SL: {item.soLuong})</span>
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{item.maTaiSan}</span>
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">Dùng chung</span>
-                              </div>
-                           </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">
+                          {item.tenTaiSan} <span className="text-gray-500 font-normal ml-1">(SL: {item.soLuong})</span>
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-mono text-[#B7705F] bg-[#FAF5F3] px-1.5 py-0.5 rounded border border-[#EAD3CC]/50">{item.maTaiSan}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${item.assignedTo === 'room' ? 'bg-gray-100 text-gray-600' : 'bg-[#FAF5F3] text-[#8C4A3A]'}`}>
+                            {item.assignedTo === 'room' ? 'Dùng chung' : `Riêng: ${item.bed}`}
+                          </span>
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${conditionCls(item.conditionBefore)}`}>
+                            Trước: {item.conditionBefore}
+                          </span>
                         </div>
-                        <span className="text-xs text-gray-400 font-medium italic">Phòng còn người ở</span>
                       </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            )}
-         </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2 w-full md:w-auto mt-2 md:mt-0">
+                      <div className="flex items-center space-x-1">
+                        <div className="flex bg-gray-100 rounded-lg p-0.5">
+                          <button onClick={() => updateItem(globalIdx, 'conditionAfter', 'Tốt')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.conditionAfter === 'Tốt' ? 'bg-green-100 text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Tốt</button>
+                          <button onClick={() => updateItem(globalIdx, 'conditionAfter', 'Hư hỏng')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.conditionAfter === 'Hư hỏng' ? 'bg-red-100 text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Hư hỏng</button>
+                          <button onClick={() => updateItem(globalIdx, 'conditionAfter', 'Mất')}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${item.conditionAfter === 'Mất' ? 'bg-gray-200 text-gray-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Mất</button>
+                        </div>
+                      </div>
+                      {(item.conditionAfter === 'Hư hỏng' || item.conditionAfter === 'Mất') && (
+                        <div className="w-full md:w-80 space-y-2 mt-2">
+                          <input type="text"
+                            className="w-full border border-red-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:border-red-400 bg-white"
+                            placeholder="Ghi chú chi tiết hiện trạng..."
+                            value={item.note}
+                            onChange={e => updateItem(globalIdx, 'note', e.target.value)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Disabled items (room-shared, room still has people) */}
+              {disabledItems.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 mt-6 mb-2">
+                    <div className="h-px flex-1 bg-gray-200"></div>
+                    <span className="text-xs font-bold text-gray-500 px-2">Tài sản dùng chung — Chưa kiểm tra</span>
+                    <div className="h-px flex-1 bg-gray-200"></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                    Các tài sản dùng chung dưới đây chưa được kiểm tra vì phòng vẫn còn người ở. Tài sản này sẽ được kiểm tra khi người cuối cùng trả phòng.
+                  </p>
+                  {disabledItems.map(item => (
+                    <div key={item.assetId} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl opacity-60">
+                      <div className="flex items-start">
+                        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-400 mr-3 shrink-0">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-500 text-sm">
+                            {item.tenTaiSan} <span className="font-normal ml-1">(SL: {item.soLuong})</span>
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{item.maTaiSan}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">Dùng chung</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-400 font-medium italic">Phòng còn người ở</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end space-x-3 mt-6">
-         <button onClick={handleSave} className="px-6 py-2.5 border border-[#B7705F] text-[#B7705F] hover:bg-[#F3E1DC]/30 rounded-lg font-medium flex items-center transition-colors text-sm">
-            <Save className="w-4 h-4 mr-2" />
-            Lưu thông tin
-         </button>
-         <button onClick={handleSendToAccountant} className="px-6 py-2.5 bg-[#B7705F] text-white hover:bg-[#A06050] rounded-lg font-medium flex items-center shadow-sm transition-colors text-sm">
-            <Send className="w-4 h-4 mr-2" />
-            {selectedItem.isFlowRequest ? 'Gửi biên bản cho Kế toán' : 'Lưu & hoàn tất kiểm tra'}
-         </button>
+        <button onClick={handleSave} className="px-6 py-2.5 border border-[#B7705F] text-[#B7705F] hover:bg-[#F3E1DC]/30 rounded-lg font-medium flex items-center transition-colors text-sm">
+          <Save className="w-4 h-4 mr-2" />
+          Lưu thông tin
+        </button>
+        <button onClick={handleSendToAccountant} className="px-6 py-2.5 bg-[#B7705F] text-white hover:bg-[#A06050] rounded-lg font-medium flex items-center shadow-sm transition-colors text-sm">
+          <Send className="w-4 h-4 mr-2" />
+          {selectedItem.isFlowRequest ? 'Gửi biên bản cho Kế toán' : 'Lưu & hoàn tất kiểm tra'}
+        </button>
       </div>
 
     </div>

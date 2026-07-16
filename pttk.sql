@@ -55,7 +55,7 @@ CREATE TABLE LICH_NHAN_PHONG (
 	MaPhieuCoc CHAR(6),
 	NgayGioHen DATETIME,
 	GhiChu     NVARCHAR(100),
-	TrangThai  NVARCHAR(100)
+	TrangThai  NVARCHAR(100) CHECK(TrangThai IN(N'Chưa xếp lịch', N'Sắp nhận phòng')),
 
 	PRIMARY KEY (MaPhieuCoc, NgayGioHen)
 );
@@ -469,12 +469,12 @@ ALTER TABLE THONG_BAO_TAI_KHOAN ADD CONSTRAINT FK_TBTK_KHACH_HANG FOREIGN KEY (M
 -- Đảm bảo mỗi phiếu đăng ký chỉ được tạo 1 phiếu cọc duy nhất (trừ khi đã bị hủy)
 CREATE UNIQUE NONCLUSTERED INDEX UQ_PHIEU_COC_Active 
 ON PHIEU_COC (MaPhieuDangKy) 
-WHERE MaPhieuDangKy IS NOT NULL AND TrangThai NOT IN (N'Đã hủy', N'Quá hạn thanh toán');
+WHERE MaPhieuDangKy IS NOT NULL AND TrangThai <> N'Đã hủy' AND TrangThai <> N'Quá hạn thanh toán';
 
 -- Đảm bảo mỗi phiếu cọc chỉ được tạo 1 hợp đồng thuê duy nhất (trừ khi đã thanh lý)
 CREATE UNIQUE NONCLUSTERED INDEX UQ_HOP_DONG_THUE_Active 
 ON HOP_DONG_THUE (MaPhieuCoc) 
-WHERE MaPhieuCoc IS NOT NULL AND TrangThai NOT IN (N'Đã thanh lý');
+WHERE MaPhieuCoc IS NOT NULL AND TrangThai <> N'Đã thanh lý';
 
 GO
 
@@ -694,17 +694,17 @@ INSERT INTO PHIEU_COC (MaPhieuCoc, SoTienCoc, NgayDatCoc, HanThanhToan, HinhThuc
 
 -- 14. LICH_NHAN_PHONG
 INSERT INTO LICH_NHAN_PHONG (MaPhieuCoc, NgayGioHen, GhiChu, TrangThai) VALUES
-('PC0001', '2026-06-05 14:00:00', N'Khách nhận phòng đúng hẹn', N'Đã nhận phòng'),
-('PC0002', '2026-06-10 15:00:00', N'', N'Đã nhận phòng'),
-('PC0003', '2026-06-15 10:00:00', N'Khách đến trễ 30 phút', N'Đã nhận phòng'),
-('PC0004', '2026-06-20 09:00:00', N'', N'Đã nhận phòng'),
-('PC0005', '2026-06-25 16:00:00', N'', N'Đã nhận phòng'),
+('PC0001', '2026-06-05 14:00:00', N'Khách nhận phòng đúng hẹn', N'Sắp nhận phòng'),
+('PC0002', '2026-06-10 15:00:00', N'', N'Sắp nhận phòng'),
+('PC0003', '2026-06-15 10:00:00', N'Khách đến trễ 30 phút', N'Sắp nhận phòng'),
+('PC0004', '2026-06-20 09:00:00', N'', N'Sắp nhận phòng'),
+('PC0005', '2026-06-25 16:00:00', N'', N'Sắp nhận phòng'),
 ('PC0007', '2026-07-10 13:00:00', N'', N'Sắp nhận phòng'),
-('PC0011', '2026-07-15 14:00:00', N'', N'Đã nhận phòng'),
-('PC0012', '2026-07-16 10:00:00', N'', N'Đã nhận phòng'),
-('PC0013', '2026-07-17 09:00:00', N'', N'Đã nhận phòng'),
-('PC0014', '2026-07-18 14:00:00', N'', N'Đã nhận phòng'),
-('PC0015', '2026-07-19 15:00:00', N'', N'Đã nhận phòng');
+('PC0011', '2026-07-15 14:00:00', N'', N'Sắp nhận phòng'),
+('PC0012', '2026-07-16 10:00:00', N'', N'Sắp nhận phòng'),
+('PC0013', '2026-07-17 09:00:00', N'', N'Sắp nhận phòng'),
+('PC0014', '2026-07-18 14:00:00', N'', N'Sắp nhận phòng'),
+('PC0015', '2026-07-19 15:00:00', N'', N'Sắp nhận phòng');
 
 -- 15. PHIEUCOC_PHONG / PHIEUCOC_GIUONG
 INSERT INTO PHIEUCOC_PHONG (MaPhieuCoc, MaPhong) VALUES

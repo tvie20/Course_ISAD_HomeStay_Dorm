@@ -58,7 +58,7 @@ export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?:
                className="border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#B7705F]"
              >
                <option value="">Tất cả trạng thái</option>
-               <option value="Đã thanh toán">Cần xếp lịch</option>
+               <option value="Chưa xếp lịch">Chưa xếp lịch</option>
                <option value="Sắp nhận phòng">Sắp nhận phòng</option>
              </select>
            </div>
@@ -81,7 +81,7 @@ export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?:
               <tbody className="divide-y divide-gray-100">
                  {list
                     .filter((item: any) => {
-                       const statusToShow = item.checkinStatus === 'Sắp nhận phòng' ? 'Sắp nhận phòng' : 'Đã thanh toán';
+                       const statusToShow = item.checkinStatus || 'Chưa xếp lịch';
                        const matchStatus = !statusFilter || statusToShow === statusFilter;
                        const matchSearch = !searchTerm || 
                           (item.customer && String(item.customer).toLowerCase().includes(searchTerm.toLowerCase())) || 
@@ -90,7 +90,7 @@ export default function CheckIn({ branchId = '', employeeId = '' }: { branchId?:
                        return matchStatus && matchSearch;
                     })
                     .map((item: any, idx) => {
-                        const statusToShowUI = item.checkinStatus === 'Sắp nhận phòng' ? 'Sắp nhận phòng' : 'Chưa xếp lịch';
+                        const statusToShowUI = item.checkinStatus || 'Chưa xếp lịch';
                         return (
                         <tr key={idx} className="hover:bg-gray-50">
                            <td className="px-6 py-4 font-medium text-[#B7705F]">{item.id}</td>

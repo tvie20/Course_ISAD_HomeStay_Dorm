@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import API_URL from '../../api';
 import { X, Printer, Zap, Droplets, Wifi, ParkingCircle, CheckCircle } from 'lucide-react';
 
@@ -14,6 +14,31 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
    const [showSaveSuccess, setShowSaveSuccess] = useState(false);
    const roommates = initialData?.roommates || [];
    const [roommateBeds, setRoommateBeds] = useState<string[]>(roommates.map(() => ''));
+
+   const [managerInfo, setManagerInfo] = useState({ name: 'Đang tải...', phone: '...' });
+
+   useEffect(() => {
+      if (initialData?.branchId) {
+         fetch(`${API_URL}/api/v1/branches`)
+            .then(res => res.json())
+            .then(data => {
+               if (data.status === 'success') {
+                  const branch = data.data.find((b: any) => b.id === initialData.branchId);
+                  if (branch) {
+                     setManagerInfo({ name: branch.manager || 'Chưa cập nhật', phone: branch.managerPhone || branch.hotline });
+                  } else {
+                     setManagerInfo({ name: 'Chưa cập nhật', phone: 'Chưa cập nhật' });
+                  }
+               }
+            })
+            .catch(err => {
+               console.error(err);
+               setManagerInfo({ name: 'Lỗi tải dữ liệu', phone: 'Lỗi' });
+            });
+      } else {
+          setManagerInfo({ name: 'Nguyễn Văn Quản Lý', phone: '0909 123 456' });
+      }
+   }, [initialData?.branchId]);
 
    const handleSaveContract = async () => {
       try {
@@ -112,7 +137,7 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
                         <div className="space-y-3">
                            <div>
                               <label className="block text-xs text-[#666666] font-medium mb-1">Đại diện</label>
-                              <p className="text-sm text-[#222222] font-semibold">Nguyễn Văn Quản Lý</p>
+                              <p className="text-sm text-[#222222] font-semibold">{managerInfo.name}</p>
                            </div>
                            <div>
                               <label className="block text-xs text-[#666666] font-medium mb-1">Chức vụ</label>
@@ -120,7 +145,7 @@ export default function CreateLease({ onCancel, onSuccess, initialData }: { onCa
                            </div>
                            <div>
                               <label className="block text-xs text-[#666666] font-medium mb-1">Số điện thoại</label>
-                              <p className="text-sm text-[#222222]">0909 123 456</p>
+                              <p className="text-sm text-[#222222]">{managerInfo.phone}</p>
                            </div>
                         </div>
                      </div>

@@ -175,6 +175,7 @@ exports.getAll = async (data) => {
                 
                 depositsMap[row.id] = {
                     id: row.id,
+                    branchId: row.branchId,
                     room: row.room,
                     customer: row.customer,
                     customerId: row.customerId,
@@ -183,6 +184,7 @@ exports.getAll = async (data) => {
                     email: row.email,
                     address: row.address,
                     status: row.status,
+                    checkinStatus: row.checkinStatus,
                     amount: formattedAmount,
                     rawAmount: row.amount,
                     rentPrice: row.rentPrice || 0,

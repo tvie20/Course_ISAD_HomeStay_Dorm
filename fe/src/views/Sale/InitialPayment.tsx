@@ -31,7 +31,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
          .then(res => res.json())
          .then(data => {
             if (data.status === 'success') {
-               setList(data.data.filter((d: any) => d.checkinStatus !== 'Sắp nhận phòng'));
+               setList(data.data);
             }
          });
    };
@@ -537,7 +537,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
                      console.error(err);
                      alert('Không thể kết nối đến server');
                   }
-               }} className="flex-1 py-4 bg-red-100 text-red-600 rounded-xl text-sm font-bold shadow-sm hover:bg-red-200 transition-colors flex items-center justify-center">
+               }} className="px-8 py-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold shadow-sm hover:bg-red-100 transition-colors flex items-center justify-center whitespace-nowrap">
                   Hủy Phiếu Cọc
                </button>
             )}
@@ -556,7 +556,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
                       fetch(`${API_URL}/api/v1/deposits`)
                          .then(r => r.json())
                          .then(d => {
-                            if (d.status === 'success') setList(d.data.filter((x: any) => x.checkinStatus !== 'Sắp nhận phòng'));
+                            if (d.status === 'success') setList(d.data);
                          });
                    } else {
                       alert('Lỗi: ' + data.message);
@@ -565,7 +565,7 @@ export default function InitialPayment({ branchId = '', employeeId = '' }: { bra
                    console.error(err);
                    alert('Không thể kết nối đến server');
                 }
-             }} className="w-full py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
+             }} className="flex-1 py-4 bg-[#B7705F] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#a06050] transition-colors flex items-center justify-center">
                <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận đã thanh toán
             </button>
             )}
